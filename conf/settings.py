@@ -3,8 +3,6 @@ import os
 from dotenv import load_dotenv
 from django.core.management.utils import get_random_secret_key
 
-load_dotenv()
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -16,7 +14,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get("SECRET_KEY", get_random_secret_key())
-DEBUG = os.environ.get("DEBUG", "0") == "1"
+DEBUG = os.environ.get("DEBUG", "").lower() in ("1", "true", "yes", "on")
+
 
 ALLOWED_HOSTS = []
 
@@ -28,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_vite',
     "django_browser_reload",
     'accounts',
 ]
@@ -116,3 +116,9 @@ LOGIN_URL = "/login/"
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
+
+DJANGO_VITE = {
+    "default": {
+        "dev_mode": DEBUG,
+    }
+}

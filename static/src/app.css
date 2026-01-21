@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* Scan Django templates */
+@source "../../templates/**/*.html";
+@source "../../../**/templates/**/*.html";
+
+/* DaisyUI with all themes enabled */
+@plugin "daisyui" {
+  themes: all;
+}

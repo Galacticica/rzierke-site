@@ -1,7 +1,7 @@
-{% load static %}
+{% load static django_vite %}
 
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" class="h-full" data-theme="luxury">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,6 +17,9 @@
             display: none;
         }
       </style>
+    {% vite_hmr_client %}
+    {% vite_asset 'static/src/app.js' %}
+
     <title>Site Title</title>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -25,6 +28,15 @@
             <h1>This is a header</h1>
         </div>
     </header>
+    
+    <div class="bg-red-500 text-white p-6 rounded-xl">
+        Tailwind works
+    </div>
+
+    <button class="btn btn-primary">
+        DaisyUI works
+    </button>
+
     <main class="flex-grow">
         {% block content %}{% endblock %}
     </main>
