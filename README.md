@@ -5,6 +5,9 @@ A page explaining who I am and linking my socials
 ### Blog
 A page showing a feed of occasional blog posts giving updates on whatever I feel like, jobs, bible studies, etc.
 
+### Resources
+A page with resources I've used, as well as resources I've created (like the django scripts)
+
 # Projects 
 A page for each project with images, 
 Maybe you can search for specific projects or filter?
@@ -30,7 +33,7 @@ Each character is connected to:
 - projects they are in
 - allies
 - enemies
-- familial connections (arrows for children?)
+- familial connections (arrows for direction)
 - romantic relationships
 - variants
 
