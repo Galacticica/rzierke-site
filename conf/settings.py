@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'django_vite',
     "django_browser_reload",
     'accounts',
+    'home',
 ]
 
 MIDDLEWARE = [
