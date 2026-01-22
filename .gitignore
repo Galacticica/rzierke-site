@@ -6,9 +6,10 @@ dist/
 wheels/
 *.egg-info
 
-# Virtual environments
+# Virtual environments and database files
 .venv
 *.sqlite3
 .env
 
+# Node.js dependencies
 node_modules/
