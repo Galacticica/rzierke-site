@@ -4,6 +4,10 @@ A page explaining who I am and linking my socials
 
 ### Blog
 A page showing a feed of occasional blog posts giving updates on whatever I feel like, jobs, bible studies, etc.
+- needs to handle embeds
+- all one page
+- maybe can filter by type?
+
 
 ### Resources
 A page with resources I've used, as well as resources I've created (like the django scripts)
