@@ -20,3 +20,7 @@ class AboutView(View):
 class BlogView(View):
     def get(self, request, *args, **kwargs):
         return render(request, 'home/blog.html')
+    
+class ResourcesView(View):
+    def get(self, request, *args, **kwargs):
+        return render(request, 'home/resources.html')
