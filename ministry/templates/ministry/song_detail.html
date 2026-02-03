@@ -41,6 +41,7 @@
 
         <div class="flex gap-2 song-actions">
             <button type="button" class="btn btn-soft btn-secondary" onclick="window.print()">Print</button>
+            <a href="{% url 'song-export-pptx' slug=song.slug %}" class="btn btn-soft btn-primary">Export Slides</a>
         </div>
     </div>
 
