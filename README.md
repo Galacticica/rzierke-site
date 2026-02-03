@@ -1,4 +1,4 @@
-# Main Site
+# Main Sitez
 ### About 
 A page explaining who I am and linking my socials
 
@@ -12,17 +12,7 @@ A page showing a feed of occasional blog posts giving updates on whatever I feel
 ### Resources
 A page with resources I've used, as well as resources I've created (like the django scripts)
 
-# Ministry Materials
-A page with all hymns from the LSB, plus some others
-Also has LCMS theologically sound CCM songs
-
-To include in model
-- lyrics
-- style
-- name
-- tags (communion, baptism, lent, etc)
-
-# Development Portfolio
+# Projects 
 A page for each project with images, 
 Maybe you can search for specific projects or filter?
 
