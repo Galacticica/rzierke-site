@@ -67,7 +67,6 @@
 
   .collapse-title {
     display: block !important;
-    /* Tiny padding prevents ascenders from clipping in print */
     padding: 0.8mm 0 0 0 !important;
     margin: 0 0 2.5mm 0 !important;
     font-weight: 700 !important;

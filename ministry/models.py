@@ -16,7 +16,7 @@ class SongQuerySet(models.QuerySet):
     def search(self, query: str | None):
         """Filter songs by a free-text query.
 
-        Matches against title, artist name, tag name, LSB number, and CCLI number.
+        Matches against title, artist name, LSB number, and CCLI number.
         """
         q = (query or "").strip()
         if not q:
@@ -79,7 +79,7 @@ class Song(models.Model):
     
 
 class Artist(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.name
