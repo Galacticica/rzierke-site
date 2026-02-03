@@ -75,7 +75,6 @@ class SongAdmin(admin.ModelAdmin):
 
         song = form.instance
 
-        # If no arrangement yet, build it from existing sections
         if not song.arrangement_items.exists():
             sections = song.sections.all().order_by("id")
             bulk = []
@@ -84,7 +83,7 @@ class SongAdmin(admin.ModelAdmin):
                 bulk.append(
                     ArrangementItem(song=song, section=s, order=order, repeat_count=1)
                 )
-                order += 1
+                order += 5
             ArrangementItem.objects.bulk_create(bulk)
 
     def response_add(self, request, obj, post_url_continue=None):

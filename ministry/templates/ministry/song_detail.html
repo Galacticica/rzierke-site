@@ -24,7 +24,7 @@
             {% with artists=song.artist.all %}
                 {% if artists %}
                     <p class="mt-1 text-base-content/70">
-                        by {% for artist in artists %}{{ artist.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        by {% for artist in artists %}<a class="link" href="{% url 'song-list' %}?artist={{ artist.pk }}" title="View all songs by {{ artist.name }}">{{ artist.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}
                     </p>
                 {% endif %}
             {% endwith %}
@@ -58,7 +58,7 @@
                             <div class="stat-value text-base font-semibold">
                                 {% with artists=song.artist.all %}
                                     {% if artists %}
-                                        {% for artist in artists %}{{ artist.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                        {% for artist in artists %}<a class="link" href="{% url 'song-list' %}?artist={{ artist.pk }}" title="View all songs by {{ artist.name }}">{{ artist.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}
                                     {% else %}
                                         <span class="opacity-70">—</span>
                                     {% endif %}
@@ -83,7 +83,12 @@
                             <div class="stat-value text-base font-semibold">
                                 <div class="flex flex-wrap gap-2">
                                     {% for tag in song.tag.all %}
-                                        <span class="badge badge-primary badge-outline">{{ tag.name }}</span>
+                                        <a
+                                            class="badge badge-primary badge-outline"
+                                            href="{% url 'song-list' %}?tag={{ tag.pk }}"
+                                            title="View all songs tagged '{{ tag.name }}'">
+                                            {{ tag.name }}
+                                        </a>
                                     {% empty %}
                                         <span class="opacity-70">—</span>
                                     {% endfor %}
