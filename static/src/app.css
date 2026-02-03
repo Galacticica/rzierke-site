@@ -61,9 +61,19 @@
 
   /* Force collapsible sections to print expanded */
   .collapse > input,
-  .collapse-arrow:after,
-  .collapse-title {
+  .collapse-arrow:after {
     display: none !important;
+  }
+
+  .collapse-title {
+    display: block !important;
+    /* Tiny padding prevents ascenders from clipping in print */
+    padding: 0.8mm 0 0 0 !important;
+    margin: 0 0 2.5mm 0 !important;
+    font-weight: 700 !important;
+    font-size: 14pt !important;
+    line-height: 1.25 !important;
+    overflow: visible !important;
   }
 
   .collapse-content {
@@ -76,6 +86,7 @@
     background: transparent !important;
     break-inside: avoid;
     margin: 0 0 6mm 0 !important;
+    overflow: visible !important;
   }
 
   /* Make sure lyrics are readable even with dark theme typography classes */
