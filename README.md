@@ -8,9 +8,17 @@ A page showing a feed of occasional blog posts giving updates on whatever I feel
 - all one page
 - maybe can filter by type?
 
-
 ### Resources
 A page with resources I've used, as well as resources I've created (like the django scripts)
+
+# Ministry Materials
+LSB and CCM song lyrics
+Seperate page for each song
+
+Filtering options with tags and search
+
+- User can export slides
+- User can select order and repeats (eventually)
 
 # Projects 
 A page for each project with images, 
