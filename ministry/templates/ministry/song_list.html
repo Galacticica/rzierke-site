@@ -24,7 +24,6 @@
             </p>
         </div>
 
-        <!-- Search (GET querystring) -->
         <form method="get" action="{% url 'song-list' %}" class="flex w-full items-end gap-2 sm:w-auto song-actions">
             <div class="form-control w-full sm:w-72">
                 <label class="label">
@@ -44,12 +43,13 @@
         </form>
     </div>
 
+    <!-- filter -->
     <div class="mt-8 grid gap-6 lg:grid-cols-12 song-layout">
         <aside class="lg:col-span-4 song-sidebar">
             <div class="card border border-base-300 bg-base-100 shadow-sm">
                 <div class="card-body gap-4">
                     <div class="flex items-center justify-between">
-                        <h2 class="card-title text-base">Library</h2>
+                        <h2 class="card-title text-base">Filter</h2>
                     </div>
 
                     <div class="stats stats-vertical bg-base-200/50">
@@ -70,33 +70,22 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="alert border border-base-300 bg-base-200/40">
-                        <span class="text-sm">
-                            {% if q %}
-                                Searching for <span class="font-semibold">“{{ q }}”</span>
-                            {% else %}
-                                Search works via querystring (ex: <span class="font-mono">?q=grace</span>).
-                            {% endif %}
-                        </span>
-                    </div>
                 </div>
             </div>
         </aside>
 
-        <!-- Main list -->
         <section class="lg:col-span-8 song-content">
             <div class="card border border-base-300 bg-base-100 shadow-sm">
                 <div class="card-body">
                     <div class="flex items-center justify-between gap-3">
                         <h2 class="card-title">All songs</h2>
 
-                        <!-- tiny count on the right -->
                         <div class="text-sm opacity-70">
                             {% if songs %}{{ songs|length }}{% else %}0{% endif %} item{{ songs|length|pluralize }}
                         </div>
                     </div>
 
+                    <!-- song list -->
                     <div class="mt-4 space-y-3">
                         {% for song in songs %}
                             <a href="{% url 'song-detail' slug=song.slug %}"
