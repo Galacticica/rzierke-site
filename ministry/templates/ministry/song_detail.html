@@ -13,7 +13,8 @@
         <ul>
             <li><a href="{% url 'homepage' %}">Home</a></li>
             <li>Ministry</li>
-            <li class="font-medium">Song</li>
+            <li><a href="{% url 'song-list' %}">Songs</a></li>
+            <li class="font-medium">{{ song.title }}</li>
         </ul>
     </div>
 

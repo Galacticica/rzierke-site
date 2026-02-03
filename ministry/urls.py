@@ -6,8 +6,9 @@ Description: Song URLS
 """
 
 from django.urls import path
-from .views import SongDetailView
+from .views import SongDetailView, SongListView
 
 urlpatterns = [
+    path("songs/", SongListView.as_view(), name="song-list"),
     path("songs/<slug:slug>/", SongDetailView.as_view(), name="song-detail"),
 ]
