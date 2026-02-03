@@ -1,0 +1,13 @@
+"""
+File: urls.py
+Author: Reagan Zierke
+Date: 2026-02-02
+Description: Song URLS
+"""
+
+from django.urls import path
+from .views import SongDetailView
+
+urlpatterns = [
+    path("songs/<slug:slug>/", SongDetailView.as_view(), name="song-detail"),
+]

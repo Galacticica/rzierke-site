@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+{% load lyric_cleaner %}
+
+
+{% block title %}
+<title>{{ song.title }}</title>
+{% endblock %}
+
+{% block content %}
+<h1>{{ song.title }}</h1>
+{% with artists=song.artist.all %}
+    {% if artists %}
+        <h2>
+            by {% for artist in artists %}{{ artist.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </h2>
+    {% endif %}
+{% endwith %}
+
+<h3>{% if song.lsb_number %}LSB Number: {{ song.lsb_number }}{% endif %}</h3>
+<h3>{% if song.ccli_number %}CCLI Number: {{ song.ccli_number }}{% endif %}</h3>
+
+<div class="prose lg:prose-xl">
+    {% if song.arrangement_items.all %}
+        {% for item in song.arrangement_items.all %}
+            <h3>
+                {{ item.section.name|default:item.section.get_section_type_display }}
+                {% if item.repeat_count|default:1|add:0 > 1 %}(x{{ item.repeat_count }}){% endif %}
+            </h3>
+            {{ item.section.lyrics|lyrics_html }}
+        {% endfor %}
+    {% else %}
+        {% for section in song.sections.all %}
+            <h3>{{ section.name|default:section.get_section_type_display }}</h3>
+            {{ section.lyrics|lyrics_html }}
+        {% empty %}
+            <p><em>No lyrics available.</em></p>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<p>Tags: {% for tag in song.tag.all %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+
+{% endblock %}
