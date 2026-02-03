@@ -6,21 +6,31 @@ Description: This file contains the models for song resources used in ministry.
 """
 
 from django.db import models
-
-class SongQuerySet(models.QuerySet):
-    def with_display_related(self):
-        return self.prefetch_related(
-            "artist",
-            "tag",
-            "arrangement_items__section",
-        )
-
-from django.db import models
+from django.db.models import Q
 from django.utils.text import slugify
 
 class SongQuerySet(models.QuerySet):
     def with_display_related(self):
         return self.prefetch_related("artist", "tag", "arrangement_items__section")
+
+    def search(self, query: str | None):
+        """Filter songs by a free-text query.
+
+        Matches against title, artist name, tag name, LSB number, and CCLI number.
+        """
+        q = (query or "").strip()
+        if not q:
+            return self
+
+        return (
+            self.filter(
+                Q(title__icontains=q)
+                | Q(artist__name__icontains=q)
+                | Q(lsb_number__icontains=q)
+                | Q(ccli_number__icontains=q)
+            )
+            .distinct()
+        )
 
 
 class Song(models.Model):
