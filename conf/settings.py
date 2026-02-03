@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "django_browser_reload",
     'accounts',
     'home',
+    'ministry',
 ]
 
 MIDDLEWARE = [
