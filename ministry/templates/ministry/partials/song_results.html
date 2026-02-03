@@ -1,0 +1,71 @@
+{# HTMX fragment: replaces #song-results #}
+
+<div id="song-results" class="card border border-base-300 bg-base-100 shadow-sm">
+    <div class="card-body">
+        <div class="flex items-center justify-between gap-3">
+            <h2 class="card-title">All songs</h2>
+
+            <div class="text-sm opacity-70">
+                {% if songs %}{{ songs|length }}{% else %}0{% endif %} item{{ songs|length|pluralize }}
+            </div>
+        </div>
+
+        <span id="matching-count" hx-swap-oob="true" class="hidden">{{ filtered_count|default:0 }}</span>
+
+        <!-- song list -->
+        <div class="mt-4 space-y-3">
+            {% for song in songs %}
+                <a href="{% url 'song-detail' slug=song.slug %}"
+                   class="block rounded-2xl border border-base-300 bg-base-200/40 p-4 transition hover:bg-base-200/60 hover:border-base-300/80">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-lg font-semibold truncate">
+                                    {{ song.title }}
+                                </h3>
+                            </div>
+
+                            {% with artists=song.artist.all %}
+                                {% if artists %}
+                                    <p class="mt-1 text-sm text-base-content/70">
+                                        by
+                                        {% for artist in artists %}
+                                            {{ artist.name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </p>
+                                {% endif %}
+                            {% endwith %}
+
+                            <!-- tags -->
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                {% for tag in song.tag.all %}
+                                    <span class="badge badge-primary badge-outline">{{ tag.name }}</span>
+                                {% empty %}
+                                    <span class="text-xs opacity-60">No tags</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- numbers -->
+                        <div class="flex flex-col items-end gap-2">
+                            <div class="flex flex-wrap justify-end gap-2">
+                                {% if song.lsb_number %}
+                                    <span class="badge badge-outline">LSB {{ song.lsb_number }}</span>
+                                {% endif %}
+                                {% if song.ccli_number %}
+                                    <span class="badge badge-outline">CCLI {{ song.ccli_number }}</span>
+                                {% endif %}
+                            </div>
+
+                            <span class="text-xs opacity-70">Open →</span>
+                        </div>
+                    </div>
+                </a>
+            {% empty %}
+                <div class="alert">
+                    <span><em>No songs found.</em></span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

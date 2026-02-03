@@ -20,14 +20,22 @@ class SongListView(View):
         song_filter = SongFilter(request.GET, queryset=base_qs)
         songs = song_filter.qs
 
+        context = {
+            "songs": songs,
+            "filter": song_filter,
+            "q": request.GET.get("q", ""),
+            "total_count": Song.objects.count(),
+            "filtered_count": songs.count(),
+        }
+
+        if getattr(request, "htmx", False):
+            target = request.headers.get("HX-Target", "")
+            if target == "song-layout":
+                return render(request, "ministry/partials/song_layout.html", context)
+            return render(request, "ministry/partials/song_results.html", context)
+
         return render(
             request,
             "ministry/song_list.html",
-            {
-                "songs": songs,
-                "filter": song_filter,                 
-                "q": request.GET.get("q", ""),         
-                "total_count": Song.objects.count(),
-                "filtered_count": songs.count(),       
-            },
+            context,
         )

@@ -24,16 +24,17 @@
             </p>
         </div>
 
-        <form method="get" action="{% url 'song-list' %}" class="flex w-full items-end gap-2 sm:w-auto song-actions">
-            {% if filter.form.lsb_only.value %}
-                <input type="hidden" name="lsb_only" value="on" />
-            {% endif %}
-            {% for artist_id in filter.form.artist.value %}
-                <input type="hidden" name="artist" value="{{ artist_id }}" />
-            {% endfor %}
-            {% for tag_id in filter.form.tag.value %}
-                <input type="hidden" name="tag" value="{{ tag_id }}" />
-            {% endfor %}
+        <form
+            id="song-search-form"
+            method="get"
+            action="{% url 'song-list' %}"
+            class="flex w-full items-end gap-2 sm:w-auto song-actions"
+            hx-get="{% url 'song-list' %}"
+            hx-trigger="submit, keyup changed delay:250ms from:input[name='q']"
+            hx-target="#song-results"
+            hx-swap="outerHTML"
+            hx-include="#song-filter-form"
+            hx-push-url="true">
             <div class="form-control w-full sm:w-72">
                 <label class="label">
                     <span class="label-text">Search</span>
@@ -47,160 +48,20 @@
             </div>
             <button type="submit" class="btn btn-secondary">Search</button>
             {% if q %}
-                <a class="btn btn-ghost" href="{% url 'song-list' %}">Clear</a>
+                <a
+                    class="btn btn-ghost"
+                    href="{% url 'song-list' %}"
+                    hx-get="{% url 'song-list' %}"
+                    hx-target="#song-layout"
+                    hx-swap="outerHTML"
+                    hx-params="none"
+                    hx-push-url="true">
+                    Clear
+                </a>
             {% endif %}
         </form>
     </div>
 
-    <!-- filter -->
-    <div class="mt-8 grid gap-6 lg:grid-cols-12 song-layout">
-        <aside class="lg:col-span-4 song-sidebar">
-            <div class="card border border-base-300 bg-base-100 shadow-sm">
-                <div class="card-body gap-4">
-                    <div class="flex items-center justify-between">
-                        <h2 class="card-title text-base">Filter</h2>
-                    </div>
-
-                    <div class="stats stats-vertical bg-base-200/50">
-                        <div class="stat">
-                            <div class="stat-title">Total songs</div>
-                            <div class="stat-value text-base font-semibold">
-                                {{ total_count|default:0 }}
-                            </div>
-                        </div>
-
-                        <div class="stat">
-                            <div class="stat-title">Matching</div>
-                            <div class="stat-value text-base font-semibold">
-                                {{ filtered_count|default:0 }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <form method="get" action="{% url 'song-list' %}" class="space-y-4">
-                        {% if q %}
-                            <input type="hidden" name="q" value="{{ q }}" />
-                        {% endif %}
-
-                        <div class="form-control">
-                            <label class="label cursor-pointer justify-start gap-3">
-                                <span class="label-text font-medium">LSB only</span>
-                                {{ filter.form.lsb_only }}
-                            </label>
-                        </div>
-
-                        <details class="collapse collapse-arrow border border-base-300 bg-base-200/30">
-                            <summary class="collapse-title text-sm font-medium flex items-center justify-between">
-                                <span>Artists</span>
-                                <span class="badge badge-sm badge-outline">{{ filter.form.artist.value|length }}</span>
-                            </summary>
-                            <div class="collapse-content pt-0">
-                                <div class="form-control">
-                                    <div class="max-h-48 overflow-y-auto pr-1">
-                                        {{ filter.form.artist }}
-                                    </div>
-                                </div>
-                            </div>
-                        </details>
-
-                        <details class="collapse collapse-arrow border border-base-300 bg-base-200/30">
-                            <summary class="collapse-title text-sm font-medium flex items-center justify-between">
-                                <span>Tags</span>
-                                <span class="badge badge-sm badge-outline">{{ filter.form.tag.value|length }}</span>
-                            </summary>
-                            <div class="collapse-content pt-0">
-                                <div class="form-control">
-                                    <div class="max-h-48 overflow-y-auto pr-1">
-                                        {{ filter.form.tag }}
-                                    </div>
-                                </div>
-                            </div>
-                        </details>
-
-                        <div class="flex flex-wrap gap-2">
-                            <button type="submit" class="btn btn-primary">Apply</button>
-                            {% if filter.form.lsb_only.value or filter.form.artist.value or filter.form.tag.value %}
-                                {% if q %}
-                                    <a class="btn btn-ghost" href="{% url 'song-list' %}?q={{ q|urlencode }}">Clear filters</a>
-                                {% else %}
-                                    <a class="btn btn-ghost" href="{% url 'song-list' %}">Clear filters</a>
-                                {% endif %}
-                            {% endif %}
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </aside>
-
-        <section class="lg:col-span-8 song-content">
-            <div class="card border border-base-300 bg-base-100 shadow-sm">
-                <div class="card-body">
-                    <div class="flex items-center justify-between gap-3">
-                        <h2 class="card-title">All songs</h2>
-
-                        <div class="text-sm opacity-70">
-                            {% if songs %}{{ songs|length }}{% else %}0{% endif %} item{{ songs|length|pluralize }}
-                        </div>
-                    </div>
-
-                    <!-- song list -->
-                    <div class="mt-4 space-y-3">
-                        {% for song in songs %}
-                            <a href="{% url 'song-detail' slug=song.slug %}"
-                               class="block rounded-2xl border border-base-300 bg-base-200/40 p-4 transition hover:bg-base-200/60 hover:border-base-300/80">
-                                <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <div class="flex items-center gap-2">
-                                            <h3 class="text-lg font-semibold truncate">
-                                                {{ song.title }}
-                                            </h3>
-                                        </div>
-
-                                        {% with artists=song.artist.all %}
-                                            {% if artists %}
-                                                <p class="mt-1 text-sm text-base-content/70">
-                                                    by
-                                                    {% for artist in artists %}
-                                                        {{ artist.name }}{% if not forloop.last %}, {% endif %}
-                                                    {% endfor %}
-                                                </p>
-                                            {% endif %}
-                                        {% endwith %}
-
-                                        <!-- tags -->
-                                        <div class="mt-3 flex flex-wrap gap-2">
-                                            {% for tag in song.tag.all %}
-                                                <span class="badge badge-primary badge-outline">{{ tag.name }}</span>
-                                            {% empty %}
-                                                <span class="text-xs opacity-60">No tags</span>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-
-                                    <!-- numbers -->
-                                    <div class="flex flex-col items-end gap-2">
-                                        <div class="flex flex-wrap justify-end gap-2">
-                                            {% if song.lsb_number %}
-                                                <span class="badge badge-outline">LSB {{ song.lsb_number }}</span>
-                                            {% endif %}
-                                            {% if song.ccli_number %}
-                                                <span class="badge badge-outline">CCLI {{ song.ccli_number }}</span>
-                                            {% endif %}
-                                        </div>
-
-                                        <span class="text-xs opacity-70">Open →</span>
-                                    </div>
-                                </div>
-                            </a>
-                        {% empty %}
-                            <div class="alert">
-                                <span><em>No songs found.</em></span>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </section>
-    </div>
+    {% include "ministry/partials/song_layout.html" %}
 </div>
 {% endblock %}

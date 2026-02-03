@@ -1,0 +1,110 @@
+{# HTMX fragment: replaces #song-layout (sidebar + results) #}
+
+<div id="song-layout" class="mt-8 grid gap-6 lg:grid-cols-12 song-layout">
+    <aside class="lg:col-span-4 song-sidebar">
+        <div class="card border border-base-300 bg-base-100 shadow-sm">
+            <div class="card-body gap-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="card-title text-base">Filter</h2>
+                </div>
+
+                <div class="stats stats-vertical bg-base-200/50">
+                    <div class="stat">
+                        <div class="stat-title">Total songs</div>
+                        <div class="stat-value text-base font-semibold">
+                            {{ total_count|default:0 }}
+                        </div>
+                    </div>
+
+                    <div class="stat">
+                        <div class="stat-title">Matching</div>
+                        <div class="stat-value text-base font-semibold">
+                            <span id="matching-count">{{ filtered_count|default:0 }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <form
+                    id="song-filter-form"
+                    method="get"
+                    action="{% url 'song-list' %}"
+                    class="space-y-4"
+                    hx-get="{% url 'song-list' %}"
+                    hx-trigger="change delay:150ms, submit"
+                    hx-target="#song-results"
+                    hx-swap="outerHTML"
+                    hx-include="#song-search-form"
+                    hx-push-url="true">
+
+                    <div class="form-control">
+                        <label class="label cursor-pointer justify-start gap-3">
+                            <span class="label-text font-medium">LSB only</span>
+                            {{ filter.form.lsb_only }}
+                        </label>
+                    </div>
+
+                    <details class="collapse collapse-arrow border border-base-300 bg-base-200/30">
+                        <summary class="collapse-title text-sm font-medium flex items-center justify-between">
+                            <span>Artists</span>
+                            <span class="badge badge-sm badge-outline">{{ filter.form.artist.value|length }}</span>
+                        </summary>
+                        <div class="collapse-content pt-0">
+                            <div class="form-control">
+                                <div class="max-h-48 overflow-y-auto pr-1">
+                                    {{ filter.form.artist }}
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="collapse collapse-arrow border border-base-300 bg-base-200/30">
+                        <summary class="collapse-title text-sm font-medium flex items-center justify-between">
+                            <span>Tags</span>
+                            <span class="badge badge-sm badge-outline">{{ filter.form.tag.value|length }}</span>
+                        </summary>
+                        <div class="collapse-content pt-0">
+                            <div class="form-control">
+                                <div class="max-h-48 overflow-y-auto pr-1">
+                                    {{ filter.form.tag }}
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="btn btn-ghost"
+                            hx-get="{% url 'song-list' %}"
+                            hx-target="#song-layout"
+                            hx-swap="outerHTML"
+                            hx-include="#song-search-form"
+                            hx-params="q"
+                            hx-push-url="true">
+                            Clear filters
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn btn-ghost"
+                            hx-get="{% url 'song-list' %}"
+                            hx-target="#song-layout"
+                            hx-swap="outerHTML"
+                            hx-params="none"
+                            hx-push-url="true">
+                            Clear all
+                        </button>
+
+                        <noscript>
+                            <button type="submit" class="btn btn-primary">Apply</button>
+                        </noscript>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <section class="lg:col-span-8 song-content">
+        {% include "ministry/partials/song_results.html" %}
+    </section>
+</div>

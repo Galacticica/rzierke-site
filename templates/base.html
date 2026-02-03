@@ -1,4 +1,5 @@
 {% load static django_vite %}
+{% load django_htmx %}
 
 <!DOCTYPE html>
 {% block theme %}
@@ -7,9 +8,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/trix/1.3.1/trix.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/trix/1.3.1/trix.js"></script>
     <style>
         trix-toolbar [data-trix-button-group="block-tools"] { 
             display: none;
@@ -21,11 +20,12 @@
       </style>
     {% vite_hmr_client %}
     {% vite_asset 'static/src/app.js' %}
+    {% htmx_script %}
     {% block title %}
     <title>Site Title</title>
     {% endblock %}
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col" hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
 <header>
     <div class="navbar bg-base-100 shadow-sm">
         <div class="navbar-start">
