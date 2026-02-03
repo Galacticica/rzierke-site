@@ -4,6 +4,7 @@ from django.views.generic import DetailView
 from django.utils.text import slugify
 from django.http import HttpResponse
 from .utils.build_slides import build_song_pptx_bytes
+from .utils.build_pdf import build_song_print_pdf_bytes
 from .models import Song
 from .filters import SongFilter
 
@@ -64,3 +65,15 @@ class SongPPTXExportView(View):
         )
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
+
+
+class SongPrintPDFView(View):
+    def get(self, request, slug: str, *args, **kwargs):
+        song = get_object_or_404(Song, slug=slug)
+
+        pdf_bytes = build_song_print_pdf_bytes(song)
+
+        filename = f"{slugify(song.title) or 'song'}-handout.pdf"
+        resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+        resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return resp

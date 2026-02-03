@@ -19,7 +19,7 @@
     </div>
 
     <div class="mt-4 flex flex-wrap items-start justify-between gap-3 song-header">
-        <div class="song-print">
+        <div>
             <h1 class="text-3xl font-bold tracking-tight md:text-4xl">{{ song.title }}</h1>
             {% with artists=song.artist.all %}
                 {% if artists %}
@@ -40,7 +40,7 @@
         </div>
 
         <div class="flex gap-2 song-actions">
-            <button type="button" class="btn btn-soft btn-secondary" onclick="window.print()">Print</button>
+            <a href="{% url 'song-export-handout-pdf' song.slug %}" class="btn btn-soft btn-secondary">Download PDF</a>
             <a href="{% url 'song-export-pptx' slug=song.slug %}" class="btn btn-soft btn-primary">Export Slides</a>
         </div>
     </div>
