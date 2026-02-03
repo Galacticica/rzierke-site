@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_filters',
     'django_vite',
+    "django_htmx",
     "django_browser_reload",
     'accounts',
     'home',
@@ -43,6 +44,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django_htmx.middleware.HtmxMiddleware",
     "django_browser_reload.middleware.BrowserReloadMiddleware",
 ]
 
