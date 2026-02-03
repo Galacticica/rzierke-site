@@ -12,7 +12,17 @@ A page showing a feed of occasional blog posts giving updates on whatever I feel
 ### Resources
 A page with resources I've used, as well as resources I've created (like the django scripts)
 
-# Projects 
+# Ministry Materials
+A page with all hymns from the LSB, plus some others
+Also has LCMS theologically sound CCM songs
+
+To include in model
+- lyrics
+- style
+- name
+- tags (communion, baptism, lent, etc)
+
+# Development Portfolio
 A page for each project with images, 
 Maybe you can search for specific projects or filter?
 

@@ -1,0 +1,61 @@
+<h1>Ministry Test</h1>
+
+{% if songs %}
+	<p>Loaded {{ songs|length }} song{{ songs|length|pluralize }}.</p>
+	<hr />
+
+	{% for song in songs %}
+		<h2>{{ song.title }}</h2>
+		<ul>
+			<li><strong>LSB:</strong> {{ song.lsb_number|default:"-" }}</li>
+			<li><strong>CCLI:</strong> {{ song.ccli_number|default:"-" }}</li>
+			<li>
+				<strong>Artists:</strong>
+				{% for a in song.artist.all %}
+					{{ a.name }}{% if not forloop.last %}, {% endif %}
+				{% empty %}
+					-
+				{% endfor %}
+			</li>
+			<li>
+				<strong>Tags:</strong>
+				{% for t in song.tag.all %}
+					{{ t.name }}{% if not forloop.last %}, {% endif %}
+				{% empty %}
+					-
+				{% endfor %}
+			</li>
+		</ul>
+
+		<h3>Sections</h3>
+		<ol>
+			{% for s in song.sections.all %}
+				<li>
+					<strong>{{ s.section_type }}</strong>
+					{% if s.name %}({{ s.name }}){% endif %}
+					<pre style="white-space: pre-wrap;">{{ s.lyrics }}</pre>
+				</li>
+			{% empty %}
+				<li>-</li>
+			{% endfor %}
+		</ol>
+
+		<h3>Arrangement</h3>
+		<ol>
+			{% for item in song.arrangement_items.all %}
+				<li>
+					#{{ item.order }} — {{ item.section.section_type }}
+					{% if item.section.name %}({{ item.section.name }}){% endif %}
+					×{{ item.repeat_count }}
+				</li>
+			{% empty %}
+				<li>-</li>
+			{% endfor %}
+		</ol>
+
+		<hr />
+	{% endfor %}
+{% else %}
+	<p>No songs found.</p>
+{% endif %}
+
