@@ -10,7 +10,7 @@
             </div>
         </div>
 
-        <span id="matching-count" hx-swap-oob="true" class="hidden">{{ filtered_count|default:0 }}</span>
+        <span id="matching-count" hx-swap-oob="innerHTML">{{ filtered_count|default:0 }}</span>
 
         <!-- song list -->
         <div class="mt-4 space-y-3">
