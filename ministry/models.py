@@ -114,7 +114,7 @@ class SectionDefinition(models.Model):
     ]
 
     song = models.ForeignKey(Song, on_delete=models.CASCADE, related_name='sections')
-    section_type = models.CharField(max_length=20, choices=SECTION_TYPES)
+    section_type = models.CharField(max_length=20, choices=SECTION_TYPES, default=VERSE)
     name = models.CharField(max_length=100, null=True, blank=True, help_text="Optional custom name for the section. E.g., 'Chorus', 'Verse 1'.")
     lyrics = models.TextField(help_text="Lyrics for this section. Use line breaks to separate lines. Use double line breaks to separate slides.")
 
@@ -124,7 +124,7 @@ class SectionDefinition(models.Model):
 
 class ArrangementItem(models.Model):
     song = models.ForeignKey(Song, on_delete=models.CASCADE, related_name='arrangement_items')
-    section = models.ForeignKey(SectionDefinition, on_delete=models.PROTECT, related_name='arrangement_items')
+    section = models.ForeignKey(SectionDefinition, on_delete=models.CASCADE, related_name='arrangement_items')
     order = models.PositiveIntegerField(help_text="Order of this section in the arrangement.")
     repeat_count = models.PositiveIntegerField(default=1, help_text="Number of times to repeat this section.")
 

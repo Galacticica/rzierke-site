@@ -15,13 +15,12 @@
         <!-- song list -->
         <div class="mt-4 space-y-3">
             {% for song in songs %}
-                <a href="{% url 'song-detail' slug=song.slug %}"
-                   class="block rounded-2xl border border-base-300 bg-base-200/40 p-4 transition hover:bg-base-200/60 hover:border-base-300/80">
+                <div class="block rounded-2xl border border-base-300 bg-base-200/40 p-4 transition hover:bg-base-200/60 hover:border-base-300/80">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
                                 <h3 class="text-lg font-semibold truncate">
-                                    {{ song.title }}
+                                    <a class="link" href="{% url 'song-detail' slug=song.slug %}">{{ song.title }}</a>
                                 </h3>
                             </div>
 
@@ -30,7 +29,16 @@
                                     <p class="mt-1 text-sm text-base-content/70">
                                         by
                                         {% for artist in artists %}
-                                            {{ artist.name }}{% if not forloop.last %}, {% endif %}
+                                            <a
+                                                class="link"
+                                                href="{% url 'song-list' %}?artist={{ artist.pk }}"
+                                                hx-get="{% url 'song-list' %}?artist={{ artist.pk }}"
+                                                hx-target="#song-layout"
+                                                hx-swap="outerHTML"
+                                                hx-push-url="true"
+                                                title="Filter by {{ artist.name }}">
+                                                {{ artist.name }}
+                                            </a>{% if not forloop.last %}, {% endif %}
                                         {% endfor %}
                                     </p>
                                 {% endif %}
@@ -39,7 +47,16 @@
                             <!-- tags -->
                             <div class="mt-3 flex flex-wrap gap-2">
                                 {% for tag in song.tag.all %}
-                                    <span class="badge badge-primary badge-outline">{{ tag.name }}</span>
+                                    <a
+                                        class="badge badge-primary badge-outline"
+                                        href="{% url 'song-list' %}?tag={{ tag.pk }}"
+                                        hx-get="{% url 'song-list' %}?tag={{ tag.pk }}"
+                                        hx-target="#song-layout"
+                                        hx-swap="outerHTML"
+                                        hx-push-url="true"
+                                        title="Filter by tag '{{ tag.name }}'">
+                                        {{ tag.name }}
+                                    </a>
                                 {% empty %}
                                     <span class="text-xs opacity-60">No tags</span>
                                 {% endfor %}
@@ -57,10 +74,10 @@
                                 {% endif %}
                             </div>
 
-                            <span class="text-xs opacity-70">Open →</span>
+                            <a class="text-xs opacity-70 link" href="{% url 'song-detail' slug=song.slug %}">Open →</a>
                         </div>
                     </div>
-                </a>
+                </div>
             {% empty %}
                 <div class="alert">
                     <span><em>No songs found.</em></span>
