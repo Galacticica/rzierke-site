@@ -33,6 +33,8 @@ class Song(models.Model):
                                    help_text="CCLI number, if applicable.")
     tag = models.ManyToManyField('Tag', blank=True, related_name='tagged_songs',
                                  help_text="Tags for categorizing songs.")
+    public_domain = models.BooleanField(default=False,
+                                        help_text="Indicates if the song is in the public domain.")
 
     objects = SongQuerySet.as_manager()
 
