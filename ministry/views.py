@@ -1,6 +1,9 @@
 from django.shortcuts import render, get_object_or_404
 from django.views import View
 from django.views.generic import DetailView
+from django.utils.text import slugify
+from django.http import HttpResponse
+from .utils.build_slides import build_song_pptx_bytes
 from .models import Song
 from .filters import SongFilter
 
@@ -39,3 +42,25 @@ class SongListView(View):
             "ministry/song_list.html",
             context,
         )
+    
+
+class SongPPTXExportView(View):
+    """
+    GET /ministry/songs/<slug>/export/pptx/
+    Returns a PPTX with:
+      - Title slide (90pt, Yu Gothic UI Semilight, white on black)
+      - Blank slide
+      - Lyric slides (80pt, Yu Gothic UI Semilight, white on black)
+    """
+    def get(self, request, slug: str, *args, **kwargs):
+        song = get_object_or_404(Song, slug=slug)
+
+        pptx_bytes = build_song_pptx_bytes(song)
+
+        filename = f"{slugify(song.title) or 'song'}.pptx"
+        response = HttpResponse(
+            pptx_bytes,
+            content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
