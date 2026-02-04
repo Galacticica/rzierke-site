@@ -195,17 +195,10 @@ def build_song_print_pdf_bytes(song: Song) -> bytes:
 
         section_flowables.append(Paragraph(b.label, section_style))
 
-        paragraphs = [
-            p.strip()
-            for p in (b.lyrics.replace("\r\n", "\n").replace("\r", "\n")).split("\n\n")
-        ]
-
-        for p in paragraphs:
-            if not p:
-                section_flowables.append(Spacer(1, 6))
-                continue
-
-            html = "<br/>".join(line.strip() for line in p.split("\n"))
+        normalized_lyrics = b.lyrics.replace("\r\n", "\n").replace("\r", "\n")
+        lyric_lines = [line.strip() for line in normalized_lyrics.split("\n") if line.strip()]
+        if lyric_lines:
+            html = "<br/>".join(lyric_lines)
             section_flowables.append(Paragraph(html, lyric_style))
 
         section_flowables.append(Spacer(1, 8))
