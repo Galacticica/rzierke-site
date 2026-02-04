@@ -77,3 +77,8 @@ class SongPrintPDFView(View):
         resp = HttpResponse(pdf_bytes, content_type="application/pdf")
         resp["Content-Disposition"] = f'attachment; filename="{filename}"'
         return resp
+    
+
+class MinHomeView(View):
+    def get(self, request):
+        return render(request, "ministry/min_home.html")
