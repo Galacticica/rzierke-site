@@ -10,7 +10,7 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass
 
-from reportlab.lib.pagesizes import letter  # or A4
+from reportlab.lib.pagesizes import letter  
 from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import (
@@ -24,7 +24,7 @@ from reportlab.platypus import (
 from reportlab.platypus.flowables import HRFlowable
 from reportlab.lib.enums import TA_LEFT
 
-from ministry.models import Song  # adjust app label if needed
+from ministry.models import Song  
 
 
 @dataclass
@@ -44,18 +44,15 @@ def build_song_print_pdf_bytes(song: Song) -> bytes:
     """
     buf = io.BytesIO()
 
-    # ---- Doc + layout constants ----
     page_w, page_h = letter
     margin = 0.6 * inch
-    gutter = 0.25 * inch  # space between columns
-    header_h = 0.9 * inch  # reserved for title/meta
+    gutter = 0.25 * inch  
+    header_h = 0.9 * inch  
 
-    # Two equal columns inside margins
     usable_w = page_w - 2 * margin
     col_w = (usable_w - gutter) / 2
     col_h = page_h - 2 * margin - header_h
 
-    # Frames for body (two columns)
     left_frame = Frame(
         margin,
         margin,
@@ -104,7 +101,7 @@ def build_song_print_pdf_bytes(song: Song) -> bytes:
         spaceBefore=6,
         spaceAfter=2,
     )
-    # Use <br/> line breaks; blank lines become extra Spacer via parsing below
+
     lyric_style = ParagraphStyle(
         "Lyrics",
         parent=styles["Normal"],
@@ -118,11 +115,9 @@ def build_song_print_pdf_bytes(song: Song) -> bytes:
         x = margin
         y = page_h - margin
 
-        # Title
         canvas.setFont("Helvetica-Bold", 16)
         canvas.drawString(x, y - 18, song.title)
 
-        # Meta line
         meta_parts = []
 
         artists = song.artist.all()
@@ -143,7 +138,6 @@ def build_song_print_pdf_bytes(song: Song) -> bytes:
             canvas.drawString(x, y - 36, meta_text)
             canvas.setFillGray(0)
 
-        # Optional divider
         canvas.setLineWidth(0.5)
         canvas.setStrokeGray(0.7)
         canvas.line(margin, page_h - margin - header_h + 10, page_w - margin, page_h - margin - header_h + 10)
@@ -172,7 +166,6 @@ def build_song_print_pdf_bytes(song: Song) -> bytes:
         ]
     )
 
-    # ---- Build arranged blocks ----
     items = song.arrangement_items.select_related("section").all()
     blocks: list[PrintBlock] = []
 
@@ -184,10 +177,8 @@ def build_song_print_pdf_bytes(song: Song) -> bytes:
         for _ in range(item.repeat_count):
             blocks.append(PrintBlock(label=label, lyrics=lyrics))
 
-    # ---- Story ----
     story = []
 
-    # Add a little spacing under the header area on first frame content
     story.append(Spacer(1, 6))
 
     for b in blocks:
