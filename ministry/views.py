@@ -3,6 +3,7 @@ from django.views import View
 from django.views.generic import DetailView
 from django.utils.text import slugify
 from django.http import HttpResponse
+from django.core.paginator import Paginator
 from .utils.build_slides import build_song_pptx_bytes
 from .utils.build_pdf import build_song_print_pdf_bytes
 from .models import Devotion, Song
@@ -24,8 +25,15 @@ class SongListView(View):
         song_filter = SongFilter(request.GET, queryset=base_qs)
         songs = song_filter.qs
 
+        # Pagination
+        paginator = Paginator(songs, 25)  # 25 items per page
+        page_number = request.GET.get("page", 1)
+        page_obj = paginator.get_page(page_number)
+
         context = {
-            "songs": songs,
+            "songs": page_obj.object_list,
+            "page_obj": page_obj,
+            "paginator": paginator,
             "filter": song_filter,
             "q": request.GET.get("q", ""),
             "total_count": Song.objects.count(),
