@@ -1,10 +1,93 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load devo_format %}
 {% block title %}
 <title>Devotions</title>
 {% endblock %}
 
 {% block content %}
 
+<section class="mx-auto w-full max-w-5xl px-4 py-10">
+	<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h1 class="text-3xl font-bold tracking-tight">Devotions</h1>
+		</div>
+
+		<div class="flex flex-col items-start gap-2 sm:items-end">
+			<div class="join">
+				<a
+					class="btn join-item {% if order == 'newest' %}btn-primary{% else %}btn-ghost{% endif %}"
+					href="?order=newest"
+					aria-current="{% if order == 'newest' %}page{% endif %}"
+				>
+					Newest
+				</a>
+				<a
+					class="btn join-item {% if order == 'oldest' %}btn-primary{% else %}btn-ghost{% endif %}"
+					href="?order=oldest"
+					aria-current="{% if order == 'oldest' %}page{% endif %}"
+				>
+					Oldest
+				</a>
+			</div>
+
+			<div class="text-sm text-base-content/60">
+				{{ devotions|length }} devotion{{ devotions|length|pluralize }}
+			</div>
+		</div>
+	</div>
+
+	<div class="mt-8 space-y-6">
+		{% for devo in devotions %}
+			<article class="card bg-base-100 border border-base-300/60 shadow-sm">
+				<div class="card-body">
+					<header>
+						<h2 class="text-2xl font-bold leading-tight">{{ devo.title }}</h2>
+						<div class="mt-2 text-base-content/70">
+							{% if devo.bible_passage %}
+								Based on <span class="font-medium">{{ devo.bible_passage }}</span>
+							{% else %}
+								<span class="italic">Bible passage not specified</span>
+							{% endif %}
+						</div>
+					</header>
+
+					{% if devo.embedded_media_url %}
+						<div class="mt-4">
+							<div class="text-sm font-medium text-base-content/70 mb-2">Listen</div>
+							<div class="overflow-hidden rounded-xl border border-base-300/60 bg-base-200">
+								<iframe
+									style="border-radius:12px"
+									src="{{ devo.embedded_media_url }}"
+									width="100%"
+									height="152"
+									frameborder="0"
+									allowfullscreen=""
+									allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+									loading="lazy"
+									title="Spotify embed for {{ devo.title }}"
+								></iframe>
+							</div>
+						</div>
+					{% endif %}
+
+					<div class="mt-5 leading-relaxed text-base-content/90">
+						<div class="break-words">{{ devo.content|devo_paragraphs }}</div>
+					</div>
+
+					<footer class="mt-6 flex items-center justify-between gap-3">
+						<div class="text-sm text-base-content/60">
+							{{ devo.date|date:"F j, Y" }}
+						</div>
+					</footer>
+				</div>
+			</article>
+		{% empty %}
+			<div class="alert">
+				<span>No devotions yet.</span>
+			</div>
+		{% endfor %}
+	</div>
+</section>
 
 {% endblock %}

@@ -5,6 +5,69 @@
 {% endblock %}
 
 {% block content %}
-tbd
+
+<section class="mx-auto w-full max-w-6xl px-4 py-14">
+	<div class="relative overflow-hidden rounded-3xl border border-base-300/60 bg-base-200/40 p-8 shadow-sm">
+		<div class="pointer-events-none absolute inset-0 opacity-70">
+			<div class="absolute -left-24 -top-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl"></div>
+			<div class="absolute -right-24 -bottom-24 h-64 w-64 rounded-full bg-secondary/20 blur-3xl"></div>
+		</div>
+
+		<div class="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+			<div class="max-w-2xl">
+				<h1 class="text-4xl font-bold tracking-tight">Ministry Materials</h1>
+				<div class="mt-5 flex flex-wrap gap-2 text-sm">
+					<span class="badge badge-outline">Searchable</span>
+					<span class="badge badge-outline">Export-friendly</span>
+					<span class="badge badge-outline">Simple + fast</span>
+				</div>
+			</div>
+
+			<div class="flex flex-col gap-3 sm:flex-row">
+				<a class="btn btn-primary btn-lg" href="{% url 'song-list' %}">Browse songs</a>
+				<a class="btn btn-secondary btn-outline btn-lg" href="{% url 'devotions' %}">Read devotions</a>
+			</div>
+		</div>
+	</div>
+
+	<div class="mt-10 grid gap-6 md:grid-cols-2">
+		<div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+			<div class="flex items-start gap-4">
+				<div class="rounded-xl bg-primary/10 p-3 text-primary">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6">
+						<path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm0 16.5A7.5 7.5 0 1 1 19.5 12 7.51 7.51 0 0 1 12 19.5Z"/>
+						<path d="M10.25 8.5a.75.75 0 0 1 .75-.75h.5a3.25 3.25 0 0 1 0 6.5h-.75v1a.75.75 0 0 1-1.5 0v-6.75Zm1.5.75v3.5h.75a1.75 1.75 0 0 0 0-3.5Z"/>
+					</svg>
+				</div>
+				<div class="flex-1">
+					<h2 class="text-2xl font-semibold">Songs</h2>
+					<p class="mt-1 text-base-content/70">Search, filter, and export in a couple clicks.</p>
+					
+					<div class="mt-6">
+						<a class="btn btn-primary" href="{% url 'song-list' %}">Open songs</a>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+			<div class="flex items-start gap-4">
+				<div class="rounded-xl bg-secondary/10 p-3 text-secondary">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6">
+						<path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm0 16H5V5h14Z"/>
+						<path d="M7 8h10v1.5H7ZM7 11h10v1.5H7ZM7 14h7v1.5H7Z"/>
+					</svg>
+				</div>
+				<div class="flex-1">
+					<h2 class="text-2xl font-semibold">Devotions</h2>
+                    <p class="mt-1 text-base-content/70">Devotions written by me for various occasions.</p>
+					<div class="mt-6 flex flex-wrap gap-2">
+						<a class="btn btn-secondary" href="{% url 'devotions' %}">Open devotions</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
 
 {% endblock %}

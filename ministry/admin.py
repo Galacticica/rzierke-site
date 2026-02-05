@@ -3,8 +3,13 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Song, Artist, Tag, SectionDefinition, ArrangementItem
+from .models import Song, Artist, Tag, SectionDefinition, ArrangementItem, Devotion
 
+@admin.register(Devotion)
+class DevotionAdmin(admin.ModelAdmin):
+    list_display = ("title", "date")
+    date_hierarchy = "date"
+    search_fields = ("title", "bible_passage")
 
 @admin.register(Artist)
 class ArtistAdmin(admin.ModelAdmin):

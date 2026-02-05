@@ -5,7 +5,7 @@ from django.utils.text import slugify
 from django.http import HttpResponse
 from .utils.build_slides import build_song_pptx_bytes
 from .utils.build_pdf import build_song_print_pdf_bytes
-from .models import Song
+from .models import Devotion, Song
 from .filters import SongFilter
 
 class SongDetailView(DetailView):
@@ -82,3 +82,13 @@ class SongPrintPDFView(View):
 class MinHomeView(View):
     def get(self, request):
         return render(request, "ministry/min_home.html")
+    
+class DevotionsView(View):
+    def get(self, request):
+        order = request.GET.get("order", "newest")
+        if order not in {"newest", "oldest"}:
+            order = "newest"
+
+        devotions = Devotion.objects.order_by_date(newest_first=(order == "newest"))
+        context = {"devotions": devotions, "order": order}
+        return render(request, "ministry/devos.html", context)
