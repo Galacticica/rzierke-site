@@ -6,10 +6,18 @@ Description: Song URLS
 """
 
 from django.urls import path
-from .views import SongDetailView, SongListView, SongPPTXExportView, SongPrintPDFView, MinHomeView
+from .views import (
+    DevotionsView,
+    MinHomeView,
+    SongDetailView,
+    SongListView,
+    SongPPTXExportView,
+    SongPrintPDFView,
+)
 
 urlpatterns = [
     path("", MinHomeView.as_view(), name="min-home"),
+    path("devotions/", DevotionsView.as_view(), name="devotions"),
     path("songs/", SongListView.as_view(), name="song-list"),
     path("songs/<slug:slug>/", SongDetailView.as_view(), name="song-detail"),
     path("songs/<slug:slug>/export/pptx/", SongPPTXExportView.as_view(), name="song-export-pptx"),

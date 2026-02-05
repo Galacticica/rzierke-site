@@ -59,7 +59,6 @@ class Song(models.Model):
         slug = base
         i = 2
 
-        # Exclude self when editing an existing object
         qs = Song.objects.all()
         if self.pk:
             qs = qs.exclude(pk=self.pk)
@@ -139,5 +138,24 @@ class ArrangementItem(models.Model):
 
 
 
+class DevotionQuerySet(models.QuerySet):
+    def order_by_date(self, newest_first: bool = True):
+        return self.order_by("-date" if newest_first else "date")
 
+
+
+class Devotion(models.Model):
+    title = models.CharField(max_length=200)
+    bible_passage = models.CharField(max_length=200, null=True, blank=True, help_text="Bible passage reference for the devotion.")
+    content = models.TextField(help_text="Content of the devotion.")
+    date = models.DateField(help_text="Date of the devotion.")
+    embedded_media_url = models.URLField(null=True, blank=True, help_text="Optional URL for embedded media (e.g., YouTube video, Spotify Podcast).")
+
+    objects = DevotionQuerySet.as_manager()
     
+    def __str__(self):
+        return f"{self.title} based on {self.bible_passage} ({self.date})"
+    
+    class Meta:
+        ordering = ['-date']
+
