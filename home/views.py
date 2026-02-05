@@ -17,10 +17,3 @@ class AboutView(View):
     def get(self, request, *args, **kwargs):
         return render(request, 'home/about.html')
     
-class BlogView(View):
-    def get(self, request, *args, **kwargs):
-        return render(request, 'home/blog.html')
-    
-class ResourcesView(View):
-    def get(self, request, *args, **kwargs):
-        return render(request, 'home/resources.html')

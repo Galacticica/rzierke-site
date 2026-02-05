@@ -1,0 +1,110 @@
+{% load devo_format %}
+
+<section id="devos-section" class="mx-auto w-full max-w-5xl px-4 py-10">
+	<div class="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-center">
+
+		<div class="flex items-center justify-between sm:justify-self-start">
+			<a
+				href="{% url 'min-home' %}"
+				class="btn btn-ghost btn-sm"
+				onclick="if (window.history.length > 1) { event.preventDefault(); window.history.back(); }"
+			>← Back</a>
+    	</div>
+
+		<div class="text-center sm:justify-self-center">
+			<h1 class="text-3xl font-bold tracking-tight">Devotions</h1>
+		</div>
+
+		<div class="flex items-center sm:justify-self-end sm:justify-end">
+			{% if order == 'newest' %}
+				<a
+					class="btn btn-primary btn-outline"
+					href="?order=oldest"
+					title="Switch to oldest first"
+					aria-label="Switch to oldest first"
+					hx-get="?order=oldest"
+					hx-target="#devos-section"
+					hx-swap="outerHTML"
+					hx-push-url="true"
+				>
+					<span class="inline-flex items-center gap-2">
+						<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-4 w-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v14m0 0l6-6m-6 6l-6-6" />
+						</svg>
+						<span>Newest</span>
+					</span>
+				</a>
+			{% else %}
+				<a
+					class="btn btn-primary btn-outline"
+					href="?order=newest"
+					title="Switch to newest first"
+					aria-label="Switch to newest first"
+					hx-get="?order=newest"
+					hx-target="#devos-section"
+					hx-swap="outerHTML"
+					hx-push-url="true"
+				>
+					<span class="inline-flex items-center gap-2">
+						<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-4 w-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 20V6m0 0l6 6m-6-6l-6 6" />
+						</svg>
+						<span>Oldest</span>
+					</span>
+				</a>
+			{% endif %}
+		</div>
+	</div>
+
+	<div class="mt-8 space-y-6">
+		{% for devo in devotions %}
+			<article class="card bg-base-100 border border-base-300/60 shadow-sm">
+				<div class="card-body">
+					<header>
+						<h2 class="text-2xl font-bold leading-tight">{{ devo.title }}</h2>
+						<div class="mt-2 text-base-content/70">
+							{% if devo.bible_passage %}
+								Based on <span class="font-medium">{{ devo.bible_passage }}</span>
+							{% else %}
+								<span class="italic">Bible passage not specified</span>
+							{% endif %}
+						</div>
+					</header>
+
+					{% if devo.embedded_media_url %}
+						<div class="mt-4">
+							<div class="text-sm font-medium text-base-content/70 mb-2">Listen</div>
+							<div class="overflow-hidden rounded-xl border border-base-300/60 bg-base-200">
+								<iframe
+									style="border-radius:12px"
+									src="{{ devo.embedded_media_url }}"
+									width="100%"
+									height="152"
+									frameborder="0"
+									allowfullscreen=""
+									allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+									loading="lazy"
+									title="Spotify embed for {{ devo.title }}"
+								></iframe>
+							</div>
+						</div>
+					{% endif %}
+
+					<div class="mt-5 leading-relaxed text-base-content/90">
+						<div class="break-words">{{ devo.content|devo_paragraphs }}</div>
+					</div>
+
+					<footer class="mt-6 flex items-center justify-between gap-3">
+						<div class="text-sm text-base-content/60">
+							{{ devo.date|date:"F j, Y" }}
+						</div>
+					</footer>
+				</div>
+			</article>
+		{% empty %}
+			<div class="alert">
+				<span>No devotions yet.</span>
+			</div>
+		{% endfor %}
+	</div>
+</section>
