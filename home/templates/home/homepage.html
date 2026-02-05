@@ -6,33 +6,91 @@
 {% endblock %}
 
 {% block content %}
-<div class="hero bg-base-200 min-h-screen">
-  <div class="hero-content text-center">
-    <div class="max-w-md">
-      <h1 class="text-5xl font-bold">Welcome To RZWorld!</h1>
-      <p class="py-6">
-        Explore what I've been working on, read my latest updates, and learn more about me.
-      </p>
-      <div class="flex justify-center gap-4">
-        <a href="{% url 'about' %}" class="btn btn-primary">About RZ</a>
-        <a href="{% url 'blog' %}" class="btn btn-secondary">RZ's Side Quests</a>
-        <a href="{% url 'resources' %}" class="btn btn-accent">Resources</a>
+<div class="mx-auto max-w-6xl px-4 py-10 sm:py-14">
+  
+
+  <div class="card mb-6 bg-base-100 shadow-sm border border-base-300">
+    <div class="card-body py-5">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">About RZ</h1>
+          <p class="mt-1 text-base-content/80">
+            A quick intro, plus what I'm currently working on.
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <a href="{% url 'about' %}" class="btn btn-primary btn-sm">Read</a>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<div class="hero min-h-[80vh]" style="background-image: url({% static 'perc_hero.png' %}); background-size: cover; background-position: top;">
-    <div class="hero-overlay bg-opacity-60"></div>
-    <div class="hero-content text-center text-neutral-content">
-        <div class="max-w-md">
-            <h1 class="mb-5 text-5xl font-bold">RZPercussion</h1>
-            <p class="mb-5">
-                Check out my percussion page to see my latest performances, compositons, and more!
-            </p>    
-            <a href="youtube.com" class="btn btn-primary">Visit RZPercussion</a>
-            
+  <div id="sections" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div class="card bg-base-100 shadow-md border border-base-300 transition-all hover:-translate-y-1 hover:shadow-xl">
+      <div class="h-1 w-full bg-primary"></div>
+      <div class="card-body">
+        <h2 class="card-title">Ministry Materials</h2>
+        <p class="text-base-content/80">
+          Songs, devotionals, and exports for slides and handouts.
+        </p>
+        <div class="card-actions mt-2">
+          <a href="{% url 'min-home' %}" class="btn btn-primary btn-sm">Open</a>
+          <a href="{% url 'song-list' %}" class="btn btn-ghost btn-sm">Songs</a>
+          <a href="{% url 'devotions' %}" class="btn btn-ghost btn-sm">Devotions</a>
         </div>
+      </div>
     </div>
+
+    <div class="card bg-base-100 shadow-md border border-base-300 transition-all hover:-translate-y-1 hover:shadow-xl">
+      <div class="h-1 w-full bg-warning"></div>
+      <div class="card-body">
+        <div class="flex items-start justify-between gap-4">
+          <h2 class="card-title">Development Portfolio</h2>
+          <span class="badge badge-warning badge-outline">Soon</span>
+        </div>
+        <p class="text-base-content/80">
+          Not built on the site yet — linking to GitHub for now.
+        </p>
+        <div class="card-actions mt-2">
+          <a
+            class="btn btn-primary btn-sm"
+            href="https://github.com/Galacticica"
+            target="_blank"
+            rel="noopener"
+          >GitHub</a>
+          <a
+            class="btn btn-outline btn-sm"
+            href="https://github.com/Galacticica?tab=repositories"
+            target="_blank"
+            rel="noopener"
+          >Repos</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-md border border-base-300 transition-all hover:-translate-y-1 hover:shadow-xl">
+      <div class="h-1 w-full bg-secondary"></div>
+      <div class="card-body">
+        <h2 class="card-title">RZPercussion</h2>
+        <span class="badge badge-secondary badge-outline">Soon</span>
+        <p class="text-base-content/80">Performances, compositions, and updates.</p>
+        <div class="card-actions mt-2">
+          <a
+            href="https://www.youtube.com/@Galacticica"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-primary btn-sm"
+          >YouTube</a>
+          <a
+            href="https://www.instagram.com/reagan.z127/"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-ghost btn-sm"
+          >Instagram</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
 {% endblock %}

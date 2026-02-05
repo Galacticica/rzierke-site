@@ -91,4 +91,8 @@ class DevotionsView(View):
 
         devotions = Devotion.objects.order_by_date(newest_first=(order == "newest"))
         context = {"devotions": devotions, "order": order}
+
+        if getattr(request, "htmx", False):
+            return render(request, "ministry/partials/devos_section.html", context)
+
         return render(request, "ministry/devos.html", context)

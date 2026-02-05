@@ -1,9 +1,121 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}
 <title>About RZ</title>
 {% endblock %}
 
 {% block content %}
-I am RZ
+<section class="relative overflow-hidden">
+	<div class="absolute inset-0">
+		<img
+			src="{% static 'perc_hero.png' %}"
+			alt=""
+			aria-hidden="true"
+			class="h-full w-full object-cover object-top opacity-60"
+		/>
+		<div class="absolute inset-0 bg-gradient-to-b from-base-100/40 via-base-100/70 to-base-100/95"></div>
+	</div>
+
+	<div class="relative mx-auto max-w-6xl px-4 py-12 sm:py-16">
+		<div class="max-w-2xl">
+			
+			<h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl">Reagan Zierke</h1>
+			<p class="mt-4 text-base-content/80 sm:text-lg">
+				Percussionist. Builder. Ministry-minded. I'll add the full story here soon.
+			</p>
+
+			<div class="mt-7 flex flex-col gap-2 sm:flex-row">
+				<a href="{% url 'homepage' %}" class="btn btn-primary btn-sm">Back to Home</a>
+			</div>
+		</div>
+	</div>
+</section>
+
+<section class="mx-auto max-w-6xl px-4 pb-12 sm:pb-16">
+	<div class="grid gap-6 lg:grid-cols-3">
+		<div class="card bg-base-100 shadow-md border border-base-300 lg:col-span-2">
+			<div class="card-body">
+				<h2 class="card-title">Quick Bio</h2>
+				<p class="text-base-content/80">
+					<span class="opacity-80">(Placeholder)</span> Write a short paragraph about who you are, what you do,
+					and what you care about.
+				</p>
+				<div class="mt-3 flex flex-wrap gap-2">
+					<span class="badge badge-outline">Percussion</span>
+					<span class="badge badge-outline">Composition</span>
+					<span class="badge badge-outline">Web Dev</span>
+					<span class="badge badge-outline">Ministry</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="card bg-base-100 shadow-md border border-base-300">
+			<div class="card-body">
+				<h2 class="card-title">Links</h2>
+				<div class="space-y-2">
+					<a
+						class="btn btn-outline btn-sm w-full justify-start"
+						href="https://www.youtube.com/@Galacticica"
+						target="_blank"
+						rel="noopener"
+					>YouTube</a>
+					<a
+						class="btn btn-outline btn-sm w-full justify-start"
+						href="https://www.instagram.com/reagan.z127/"
+						target="_blank"
+						rel="noopener"
+					>Instagram</a>
+					<a
+						class="btn btn-outline btn-sm w-full justify-start"
+						href="https://www.linkedin.com/in/reagan-zierke-0b69412a4/"
+						target="_blank"
+						rel="noopener"
+					>LinkedIn</a>
+					<a
+						class="btn btn-outline btn-sm w-full justify-start"
+						href="https://github.com/Galacticica"
+						target="_blank"
+						rel="noopener"
+					>GitHub</a>
+				</div>
+			</div>
+		</div>
+
+		<div class="card bg-base-100 shadow-md border border-base-300">
+			<div class="card-body">
+				<h2 class="card-title">Highlights</h2>
+				<ul class="list-disc space-y-1 pl-5 text-base-content/80">
+					<li><span class="opacity-80">(Placeholder)</span> Favorite projects / performances</li>
+					<li><span class="opacity-80">(Placeholder)</span> Recent milestones</li>
+					<li><span class="opacity-80">(Placeholder)</span> What you’re learning</li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="card bg-base-100 shadow-md border border-base-300 lg:col-span-2">
+			<div class="card-body">
+				<h2 class="card-title">What I’m Working On</h2>
+				<div class="grid gap-3 sm:grid-cols-2">
+					<div class="rounded-box border border-base-300 bg-base-200 p-4">
+						<div class="font-semibold">Ministry Tools</div>
+						<div class="mt-1 text-sm text-base-content/80">Song library, slides, handouts, devotionals.</div>
+					</div>
+					<div class="rounded-box border border-base-300 bg-base-200 p-4">
+						<div class="font-semibold">Music</div>
+						<div class="mt-1 text-sm text-base-content/80">Performances, recording, writing.</div>
+					</div>
+					<div class="rounded-box border border-base-300 bg-base-200 p-4">
+						<div class="font-semibold">Development</div>
+						<div class="mt-1 text-sm text-base-content/80">Django + Vite experiments, shipping features.</div>
+					</div>
+					<div class="rounded-box border border-base-300 bg-base-200 p-4">
+						<div class="font-semibold">Next Up</div>
+						<div class="mt-1 text-sm text-base-content/80">Fill this with what’s coming soon.</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
 {% endblock %}
