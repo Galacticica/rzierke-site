@@ -1,3 +1,12 @@
+"""
+File: admin.py
+Author: Reagan Zierke <reaganzierke@gmail.com>
+Date: 2026-02-05
+Description: The admin configurations for ministry models.
+- Provides enhanced interfaces for managing songs, artists, tags, sections, and arrangements.
+"""
+
+
 from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -7,6 +16,7 @@ from .models import Song, Artist, Tag, SectionDefinition, ArrangementItem, Devot
 
 @admin.register(Devotion)
 class DevotionAdmin(admin.ModelAdmin):
+    """Register Devotion model in admin with basic configurations."""
     list_display = ("title", "date")
     date_hierarchy = "date"
     search_fields = ("title", "bible_passage")
@@ -22,6 +32,7 @@ class TagAdmin(admin.ModelAdmin):
 
 
 class SectionDefinitionInline(admin.StackedInline):
+    """Register SectionDefinition as inline in Song admin."""
     model = SectionDefinition
     extra = 0
     fields = ("section_type", "name", "lyrics")
@@ -30,16 +41,18 @@ class SectionDefinitionInline(admin.StackedInline):
 
 
 class ArrangementItemInline(admin.TabularInline):
+    """Register ArrangementItem as inline in Song admin."""
     model = ArrangementItem
     extra = 0
     fields = ("order", "section", "repeat_count")
     ordering = ("order",)
     autocomplete_fields = ("section",)
-    classes = ("collapse",)  # collapses the whole inline block
+    classes = ("collapse",)  
 
 
 @admin.register(SectionDefinition)
 class SectionDefinitionAdmin(admin.ModelAdmin):
+    """Register SectionDefinition model in admin with basic configurations."""
     list_display = ("song", "section_type", "name")
     list_filter = ("section_type",)
     search_fields = ("name", "lyrics", "song__title")
@@ -47,6 +60,11 @@ class SectionDefinitionAdmin(admin.ModelAdmin):
 
 @admin.register(Song)
 class SongAdmin(admin.ModelAdmin):
+    """
+    Register Song model in admin with enhanced configurations.
+    This includes inlines for sections and arrangement items,
+    custom list displays, search fields, and optimized queryset.
+    """
     list_display = ("title", "artists", "lsb_number", "ccli_number", "public_link")
     search_fields = ("title", "lsb_number", "ccli_number", "artist__name", "tag__name")
     filter_horizontal = ("artist", "tag")

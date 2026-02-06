@@ -1,3 +1,11 @@
+"""
+File: views.py
+Author: Reagan Zierke <reaganzierke@gmail.com>
+Date: 2026-02-05
+Description: Views for user authentication and registration.
+"""
+
+
 from django.shortcuts import redirect
 from django.contrib.auth.views import LoginView
 from django.views.generic.edit import FormView
@@ -11,11 +19,13 @@ from .forms import LoginForm, SignupForm
 User = get_user_model()
 
 class MyLoginView(LoginView):
+    """The login view for user authentication."""
     form_class = LoginForm
     template_name = "accounts/login.html"
     redirect_authenticated_user = True
 
 class MySignupView(FormView):
+    """The signup view for new user registration."""
     form_class = SignupForm
     template_name = "accounts/signup.html"
     success_url = "/" 
@@ -35,6 +45,7 @@ class MySignupView(FormView):
         return super().form_invalid(form)
 
 class MyLogoutView(View):
+    """The logout view for user sign out."""
     def get(self, request, *args, **kwargs):
         logout(request)  
         return redirect("/")  

@@ -2,7 +2,7 @@
 File: urls.py
 Author: Reagan Zierke
 Date: 2026-02-02
-Description: Song URLS
+Description: URL configuration for the ministry app.
 """
 
 from django.urls import path

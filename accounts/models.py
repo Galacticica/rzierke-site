@@ -1,3 +1,11 @@
+"""
+File: models.py
+Author: Reagan Zierke <reaganzierke@gmail.com>
+Date: 2026-02-05
+Description: Custom User model with email as the unique identifier.
+"""
+
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 

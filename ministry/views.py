@@ -1,3 +1,12 @@
+"""
+File: views.py
+Author: Reagan Zierke <reaganzierke@gmail.com>
+Date: 2026-02-05
+Description: The views for the ministry app. This includes views for displaying songs,
+devotions, and exporting song data in various formats.
+"""
+
+
 from django.shortcuts import render, get_object_or_404
 from django.views import View
 from django.views.generic import DetailView
@@ -10,6 +19,11 @@ from .models import Devotion, Song
 from .filters import SongFilter
 
 class SongDetailView(DetailView):
+    """
+    The detail view for a single song.
+    Uses the queryset with related objects for display optimization.
+    """
+
     model = Song
     template_name = 'ministry/song_detail.html'
     context_object_name = 'song'
@@ -19,6 +33,12 @@ class SongDetailView(DetailView):
     
 
 class SongListView(View):
+    """
+    The list view for songs, with filtering and pagination.
+    25 songs per page.
+    Supports HTMX for partial updates.
+    """
+
     def get(self, request):
         base_qs = Song.objects.with_display_related().order_by("title")
 
@@ -60,6 +80,7 @@ class SongPPTXExportView(View):
       - Blank slide
       - Lyric slides (80pt, Yu Gothic UI Semilight, white on black)
     """
+
     def get(self, request, slug: str, *args, **kwargs):
         song = get_object_or_404(Song, slug=slug)
 
@@ -75,6 +96,11 @@ class SongPPTXExportView(View):
 
 
 class SongPrintPDFView(View):
+    """
+    GET /ministry/songs/<slug>/export/print/
+    Returns a PDF suitable for printing handouts.
+    """
+
     def get(self, request, slug: str, *args, **kwargs):
         song = get_object_or_404(Song, slug=slug)
 
@@ -87,10 +113,17 @@ class SongPrintPDFView(View):
     
 
 class MinHomeView(View):
+    """The ministry homepage view."""
     def get(self, request):
         return render(request, "ministry/min_home.html")
     
 class DevotionsView(View):
+    """
+    The devotions list view.
+    Supports ordering by newest or oldest first by using the queryset parameter 'order'.
+    Supports HTMX for partial updates.
+    """
+    
     def get(self, request):
         order = request.GET.get("order", "newest")
         if order not in {"newest", "oldest"}:

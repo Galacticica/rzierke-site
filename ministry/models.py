@@ -10,6 +10,8 @@ from django.db.models import Q
 from django.utils.text import slugify
 
 class SongQuerySet(models.QuerySet):
+    """The custom QuerySet for Song model with additional filtering methods."""
+
     def with_display_related(self):
         return self.prefetch_related("artist", "tag", "arrangement_items__section")
 
@@ -34,6 +36,11 @@ class SongQuerySet(models.QuerySet):
 
 
 class Song(models.Model):
+    """
+    The Song model represents a musical song with associated metadata.
+    It includes fields for title, slug, artists, LSB and CCLI numbers, tags, and public domain status.
+    """
+
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True, blank=True)
     artist = models.ManyToManyField('Artist', blank=True, related_name='artist_songs')
@@ -78,12 +85,14 @@ class Song(models.Model):
     
 
 class Artist(models.Model):
+    """The Artist model represents a musical artist or band."""
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.name
 
 class Tag(models.Model):
+    """The Tag model represents a category or label for songs."""
     name = models.CharField(max_length=50)
 
     def __str__(self):
@@ -91,6 +100,7 @@ class Tag(models.Model):
 
 
 class SectionDefinition(models.Model):
+    """The SectionDefinition model represents a section of a song, such as verse or chorus."""
 
     VERSE = "verse"
     CHORUS = "chorus"
@@ -122,6 +132,8 @@ class SectionDefinition(models.Model):
 
 
 class ArrangementItem(models.Model):
+    """The ArrangementItem model represents an item in a song's arrangement."""
+
     song = models.ForeignKey(Song, on_delete=models.CASCADE, related_name='arrangement_items')
     section = models.ForeignKey(SectionDefinition, on_delete=models.CASCADE, related_name='arrangement_items')
     order = models.PositiveIntegerField(help_text="Order of this section in the arrangement.")
@@ -139,12 +151,16 @@ class ArrangementItem(models.Model):
 
 
 class DevotionQuerySet(models.QuerySet):
+    """A simple QuerySet for Devotion model with ordering method."""
+
     def order_by_date(self, newest_first: bool = True):
         return self.order_by("-date" if newest_first else "date")
 
 
 
 class Devotion(models.Model):
+    """The Devotion model represents a daily devotion entry."""
+
     title = models.CharField(max_length=200)
     bible_passage = models.CharField(max_length=200, null=True, blank=True, help_text="Bible passage reference for the devotion.")
     content = models.TextField(help_text="Content of the devotion.")
