@@ -25,8 +25,7 @@ class SongListView(View):
         song_filter = SongFilter(request.GET, queryset=base_qs)
         songs = song_filter.qs
 
-        # Pagination
-        paginator = Paginator(songs, 25)  # 25 items per page
+        paginator = Paginator(songs, 25)  
         page_number = request.GET.get("page", 1)
         page_obj = paginator.get_page(page_number)
 
