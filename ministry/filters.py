@@ -2,11 +2,9 @@
 File: filters.py
 Author: Reagan Zierke <reaganzierke@gmail.com>
 Date: 2026-02-03
-Description: description
+Description: Filtering logic for song resources in ministry.
 """
 
-
-# filters.py
 import django_filters as django_filter
 from django import forms
 
@@ -14,6 +12,7 @@ from .models import Song, Artist, Tag
 
 
 class SongFilter(django_filter.FilterSet):
+    """A filter set for filtering Song instances based on various criteria."""
     q = django_filter.CharFilter(
         method="filter_q",
         label="Search",

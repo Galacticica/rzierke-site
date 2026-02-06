@@ -1,3 +1,12 @@
+"""
+File: devo_format.py
+Author: Reagan Zierke <reaganzierke@gmail.com>
+Date: 2026-02-05
+Description: Template filters for formatting devotion content. 
+- Provides consistent paragraph wrapping and spacing.
+"""
+
+
 import re
 
 from django import template
@@ -21,7 +30,6 @@ def devo_paragraphs(value: str | None):
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", text) if p.strip()]
 
     def normalize_paragraph(p: str) -> str:
-        # Collapse internal newlines/tabs into single spaces for consistent flow.
         p = re.sub(r"[\t\n]+", " ", p)
         p = re.sub(r"\s{2,}", " ", p)
         return p.strip()
