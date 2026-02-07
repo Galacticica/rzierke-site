@@ -1,0 +1,129 @@
+<!--
+file: piece_detail.html
+Author: Reagan Zierke
+Date: 2026-02-07
+Description: Template for piece detail view.
+-->
+
+{% extends "base.html" %}
+{% load static %}
+
+
+{% block title %}
+<title>{{ piece.title }}</title>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto max-w-6xl px-4 py-8 piece-detail">
+
+    <div class="flex items-center justify-between">
+        <a
+            href="{% url 'pieces-list' %}"
+            class="btn btn-ghost btn-sm"
+        >← Back</a>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-start justify-between gap-3 piece-header">
+        <div>
+            <h1 class="text-3xl font-bold tracking-tight md:text-4xl">{{ piece.title }}</h1>
+            <p class="mt-1 text-base-content/70">by {{ piece.composer }}</p>
+        </div>
+    </div>
+
+    <div class="mt-8 grid gap-6 lg:grid-cols-12 piece-layout">
+        <aside class="lg:col-span-4 piece-sidebar">
+            <div class="card border border-base-300 bg-base-100 shadow-sm">
+                <div class="card-body gap-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="card-title text-base">Details</h2>
+                    </div>
+
+                    <div class="stats stats-vertical bg-base-200/50">
+                        {% if piece.piece_type %}
+                            <div class="stat">
+                                <div class="stat-title">Type</div>
+                                <div class="stat-value text-base font-semibold">
+                                    {{ piece.piece_type.name }}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <div class="stat">
+                            <div class="stat-title">Performers</div>
+                            <div class="stat-value text-base font-semibold">
+                                {% with performers=piece.performer.all %}
+                                    {% if performers %}
+                                        <div class="flex flex-wrap gap-2">
+                                            {% for performer in performers %}
+                                                <span class="badge badge-neutral">{{ performer.name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <span class="opacity-70">—</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+
+                        <div class="stat">
+                            <div class="stat-title">Instruments</div>
+                            <div class="stat-value text-base font-semibold">
+                                {% with instruments=piece.instrument.all %}
+                                    {% if instruments %}
+                                        <div class="flex flex-wrap gap-2">
+                                            {% for instrument in instruments %}
+                                                <span class="badge badge-primary badge-outline">{{ instrument.name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <span class="opacity-70">—</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+
+                        {% if piece.date_performed %}
+                            <div class="stat">
+                                <div class="stat-title">Date Performed</div>
+                                <div class="stat-value text-base font-semibold">
+                                    {{ piece.date_performed|date:"M d, Y" }}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% if piece.description %}
+                        <div class="mt-4 border-t border-base-300 pt-4">
+                            <h3 class="font-semibold mb-2">Description</h3>
+                            <p class="text-sm text-base-content/80">{{ piece.description }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+
+        <section class="lg:col-span-8 piece-content">
+            <div class="card border border-base-300 bg-base-100 shadow-sm">
+                <div class="card-body">
+
+                    <div class="mt-4">
+                        {% if piece.recording_url %}
+                                <div class="aspect-video bg-base-200 rounded-lg overflow-hidden">
+                                    <iframe class="h-full w-full" src="{{piece.recording_url}}?rel=0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                            </div>
+                            <a href="{{ piece.recording_url }}" target="_blank" rel="noopener noreferrer" class="mt-3 link text-sm">
+                                Watch on YouTube →
+                            </a>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <span>No recording available for this piece.</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+{% endblock %}

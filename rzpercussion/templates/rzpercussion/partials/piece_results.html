@@ -43,12 +43,7 @@ Description: Template for piece results section. This partial is intended to be 
                                     {% if performers %}
                                         | 
                                         {% for performer in performers %}
-                                            <a
-                                                class="link"
-                                                href="{% url 'pieces-list' %}"
-                                                title="View pieces">
-                                                {{ performer.name }}
-                                            </a>{% if not forloop.last %}, {% endif %}
+                                            {{ performer.name }}{% if not forloop.last %}, {% endif %}
                                         {% endfor %}
                                     {% endif %}
                                 {% endwith %}
