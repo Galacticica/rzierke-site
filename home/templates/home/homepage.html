@@ -45,8 +45,8 @@ Description: Template for the homepage.
         </p>
         <div class="card-actions mt-2">
           <a href="{% url 'min-home' %}" class="btn btn-primary btn-sm">Open</a>
-          <a href="{% url 'song-list' %}" class="btn btn-ghost btn-sm">Songs</a>
-          <a href="{% url 'devotions' %}" class="btn btn-ghost btn-sm">Devotions</a>
+          <a href="{% url 'song-list' %}" class="btn btn-outline btn-sm">Songs</a>
+          <a href="{% url 'devotions' %}" class="btn btn-outline btn-sm">Devotions</a>
         </div>
       </div>
     </div>
@@ -83,22 +83,22 @@ Description: Template for the homepage.
       <div class="card-body">
         <div class="flex items-start justify-between gap-4">
           <h2 class="card-title">RZPercussion</h2>
-          <span class="badge badge-secondary badge-outline">Soon</span>
         </div>
-        <p class="text-base-content/80">Performances, compositions, and updates.</p>
+        <p class="text-base-content/80">View my performances.</p>
         <div class="card-actions mt-2">
-          <a
-            href="https://www.youtube.com/@Galacticica"
-            target="_blank"
-            rel="noopener"
-            class="btn btn-primary btn-sm"
-          >YouTube</a>
+          <a href="{% url 'pieces-list' %}" class="btn btn-primary btn-sm">View</a>
           <a
             href="https://www.instagram.com/reagan.z127/"
             target="_blank"
             rel="noopener"
-            class="btn btn-ghost btn-sm"
+            class="btn btn-outline btn-sm"
           >Instagram</a>
+          <a
+            href="https://www.tiktok.com/@rzpercussion"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-outline btn-sm"
+          >TikTok</a>
         </div>
       </div>
     </div>
