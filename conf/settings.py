@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'accounts',
     'home',
     'ministry',
+    'rzpercussion',
 ]
 
 MIDDLEWARE = [
