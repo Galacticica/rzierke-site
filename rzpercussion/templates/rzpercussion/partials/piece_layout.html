@@ -1,0 +1,110 @@
+<!--
+file: piece_layout.html
+Author: Reagan Zierke
+Date: 2026-02-07
+Description: Template for piece layout. This partial is intended to be included via HTMX.
+-->
+
+{# HTMX fragment: replaces #piece-layout (sidebar + results) #}
+
+<div id="piece-layout" class="mt-8 grid gap-6 lg:grid-cols-12 piece-layout">
+    <aside class="lg:col-span-4 piece-sidebar">
+        <div class="card border border-base-300 bg-base-100 shadow-sm">
+            <div class="card-body gap-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="card-title text-base">Filter</h2>
+                </div>
+
+                <div class="stats stats-vertical bg-base-200/50">
+                    <div class="stat">
+                        <div class="stat-title">Total pieces</div>
+                        <div class="stat-value text-base font-semibold">
+                            {{ total_count|default:0 }}
+                        </div>
+                    </div>
+
+                    <div class="stat">
+                        <div class="stat-title">Matching</div>
+                        <div class="stat-value text-base font-semibold">
+                            <span id="matching-count">{{ filtered_count|default:0 }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <form
+                    id="piece-filter-form"
+                    method="get"
+                    action="{% url 'pieces-list' %}"
+                    class="space-y-4"
+                    hx-get="{% url 'pieces-list' %}"
+                    hx-trigger="change delay:150ms, submit"
+                    hx-target="#piece-results"
+                    hx-swap="outerHTML"
+                    hx-include="#piece-search-form"
+                    hx-push-url="true">
+
+                    <details class="collapse collapse-arrow border border-base-300 bg-base-200/30">
+                        <summary class="collapse-title text-sm font-medium flex items-center justify-between">
+                            <span>Piece Types</span>
+                            <span class="badge badge-sm badge-outline">{{ filter.form.piece_type.value|length }}</span>
+                        </summary>
+                        <div class="collapse-content pt-0">
+                            <div class="form-control">
+                                <div class="max-h-48 overflow-y-auto pr-1">
+                                    {{ filter.form.piece_type }}
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="collapse collapse-arrow border border-base-300 bg-base-200/30">
+                        <summary class="collapse-title text-sm font-medium flex items-center justify-between">
+                            <span>Instruments</span>
+                            <span class="badge badge-sm badge-outline">{{ filter.form.instrument.value|length }}</span>
+                        </summary>
+                        <div class="collapse-content pt-0">
+                            <div class="form-control">
+                                <div class="max-h-48 overflow-y-auto pr-1">
+                                    {{ filter.form.instrument }}
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="btn btn-ghost"
+                            hx-get="{% url 'pieces-list' %}"
+                            hx-target="#piece-layout"
+                            hx-swap="outerHTML"
+                            hx-include="#piece-search-form"
+                            hx-params="q"
+                            hx-push-url="true">
+                            Clear filters
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn btn-ghost"
+                            hx-get="{% url 'pieces-list' %}"
+                            hx-target="#piece-layout"
+                            hx-swap="outerHTML"
+                            hx-params="none"
+                            hx-push-url="true">
+                            Clear all
+                        </button>
+
+                        <noscript>
+                            <button type="submit" class="btn btn-primary">Apply</button>
+                        </noscript>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <section class="lg:col-span-8 piece-content">
+        {% include "rzpercussion/partials/piece_results.html" %}
+    </section>
+</div>
