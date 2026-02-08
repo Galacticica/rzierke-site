@@ -8,47 +8,78 @@ Description: Template for user signup page.
 {% load static %}
 
 {% block content %}
-<div>
-    <div>
-        <h2>Sign Up</h2>
-        <form method="post" action="{% url 'signup_page' %}">
-            {% csrf_token %}
-            {{ form.non_field_errors }}
-            <div>
-                {{ form.first_name.label_tag }}
-                {{ form.first_name }}
-                {{ form.first_name.errors }}
-            </div>
-            <div>
-                {{ form.last_name.label_tag }}
-                {{ form.last_name }}
-                {{ form.last_name.errors }}
-            </div>
-            <div>
-                {{ form.email.label_tag }}
-                {{ form.email }}
-                {{ form.email.errors }}
-            </div>
-            <div>
-                {{ form.password.label_tag }}
-                {{ form.password }}
-                {{ form.password.errors }}
-            </div>
-            <div>
-                {{ form.confirm_password.label_tag }}
-                {{ form.confirm_password }}
-                {{ form.confirm_password.errors }}
-            </div>
-            <div>
-                {{ form.role.label_tag }}
-                {{ form.role }}
-                {{ form.role.errors }}
-            </div>
-            <button type="submit">Sign Up</button>
-        </form>
-        <div>
-            <p>Already have an account? 
-                <a href="{% url 'login_page' %}">Log In</a>
+<div class="container mx-auto max-w-md px-4 py-12">
+    <div class="card bg-base-100 shadow-xl border border-base-300">
+        <div class="card-body">
+            <h2 class="card-title text-3xl font-bold mb-6">Sign Up</h2>
+            <form method="post" action="{% url 'signup_page' %}">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-error mb-4">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+                <div class="form-control w-full mb-4">
+                    <label class="label">
+                        <span class="label-text">{{ form.first_name.label }}</span>
+                    </label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.first_name.errors }}</span>
+                        </label>
+                    {% endif %}
+                </div>
+                <div class="form-control w-full mb-4">
+                    <label class="label">
+                        <span class="label-text">{{ form.last_name.label }}</span>
+                    </label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.last_name.errors }}</span>
+                        </label>
+                    {% endif %}
+                </div>
+                <div class="form-control w-full mb-4">
+                    <label class="label">
+                        <span class="label-text">{{ form.email.label }}</span>
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.email.errors }}</span>
+                        </label>
+                    {% endif %}
+                </div>
+                <div class="form-control w-full mb-4">
+                    <label class="label">
+                        <span class="label-text">{{ form.password.label }}</span>
+                    </label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.password.errors }}</span>
+                        </label>
+                    {% endif %}
+                </div>
+                <div class="form-control w-full mb-6">
+                    <label class="label">
+                        <span class="label-text">{{ form.confirm_password.label }}</span>
+                    </label>
+                    {{ form.confirm_password }}
+                    {% if form.confirm_password.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.confirm_password.errors }}</span>
+                        </label>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn btn-primary w-full">Sign Up</button>
+            </form>
+            <div class="divider"></div>
+            <p class="text-center text-base-content/70">
+                Already have an account? 
+                <a href="{% url 'login_page' %}" class="link link-primary">Log In</a>
             </p>
         </div>
     </div>

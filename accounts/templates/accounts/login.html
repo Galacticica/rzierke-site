@@ -8,26 +8,45 @@ Description: Template for user login page.
 {% load static %}
 
 {% block content %}
-<div>
-    <div>
-        <h2>Log In</h2>
-        <form method="post" action="{% url 'login_page' %}">
-            {% csrf_token %}
-            {{ form.non_field_errors }}
-            <div>
-                <label for="id_email">Email</label>
-                {{ form.email }}
-                {{ form.email.errors }}
-            </div>
-            <div>
-                <label for="id_password">Password</label>
-                {{ form.password }}
-                {{ form.password.errors }}
-            </div>
-            <button type="submit">Log In</button>
-        </form>
-        <div>
-            <p>No Account Yet? <a href="{% url 'signup_page' %}">Sign Up</a></p>
+<div class="container mx-auto max-w-md px-4 py-12">
+    <div class="card bg-base-100 shadow-xl border border-base-300">
+        <div class="card-body">
+            <h2 class="card-title text-3xl font-bold mb-6">Log In</h2>
+            <form method="post" action="{% url 'login_page' %}">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-error mb-4">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+                <div class="form-control w-full mb-4">
+                    <label class="label" for="id_email">
+                        <span class="label-text">Email</span>
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.email.errors }}</span>
+                        </label>
+                    {% endif %}
+                </div>
+                <div class="form-control w-full mb-6">
+                    <label class="label" for="id_password">
+                        <span class="label-text">Password</span>
+                    </label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.password.errors }}</span>
+                        </label>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn btn-primary w-full">Log In</button>
+            </form>
+            <div class="divider"></div>
+            <p class="text-center text-base-content/70">
+                No Account Yet? <a href="{% url 'signup_page' %}" class="link link-primary">Sign Up</a>
+            </p>
         </div>
     </div>
 </div>

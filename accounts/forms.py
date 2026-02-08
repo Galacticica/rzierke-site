@@ -18,13 +18,19 @@ class LoginForm(forms.Form):
     email = forms.EmailField(
         max_length=254,
         required=True, 
-        widget=forms.TextInput(attrs={"placeholder": "Email Address", "class": "form-control"}),
+        widget=forms.TextInput(attrs={
+            "placeholder": "Email Address", 
+            "class": "input input-bordered w-full"
+        }),
         label="Email"
     )
     password = forms.CharField(
         max_length=128,
         required=True,
-        widget=forms.PasswordInput(attrs={"placeholder": "Password", "class": "form-control"}),
+        widget=forms.PasswordInput(attrs={
+            "placeholder": "Password", 
+            "class": "input input-bordered w-full"
+        }),
         label="Password"
     )
 
@@ -54,31 +60,46 @@ class SignupForm(forms.Form):
     email = forms.EmailField(
         max_length=254,
         required=True,
-        widget=forms.TextInput(attrs={"placeholder": "Email Address", "class": "form-control"}),
+        widget=forms.TextInput(attrs={
+            "placeholder": "Email Address", 
+            "class": "input input-bordered w-full"
+        }),
         label="Email"
     )
     password = forms.CharField(
         max_length=128,
         required=True,
-        widget=forms.PasswordInput(attrs={"placeholder": "Password", "class": "form-control"}),
+        widget=forms.PasswordInput(attrs={
+            "placeholder": "Password", 
+            "class": "input input-bordered w-full"
+        }),
         label="Password"
     )
     confirm_password = forms.CharField(
         max_length=128,
         required=True,
-        widget=forms.PasswordInput(attrs={"placeholder": "Confirm Password", "class": "form-control"}),
+        widget=forms.PasswordInput(attrs={
+            "placeholder": "Confirm Password", 
+            "class": "input input-bordered w-full"
+        }),
         label="Confirm Password"
     )
     first_name = forms.CharField(
         max_length=30,
         required=True,
-        widget=forms.TextInput(attrs={"placeholder": "First Name", "class": "form-control"}),
+        widget=forms.TextInput(attrs={
+            "placeholder": "First Name", 
+            "class": "input input-bordered w-full"
+        }),
         label="First Name"
     )
     last_name = forms.CharField(
         max_length=30,
         required=True,
-        widget=forms.TextInput(attrs={"placeholder": "Last Name", "class": "form-control"}),
+        widget=forms.TextInput(attrs={
+            "placeholder": "Last Name", 
+            "class": "input input-bordered w-full"
+        }),
         label="Last Name"
     )
 
