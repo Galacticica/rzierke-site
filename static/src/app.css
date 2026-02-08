@@ -5,6 +5,41 @@
 @source "../../../**/templates/**/*.html";
 
 /* DaisyUI with all themes enabled */
+@plugin "daisyui/theme" {
+  name: "nebula";
+  default: false;
+  prefersdark: false;
+  color-scheme: "dark";
+  --color-base-100: #12061F;
+  --color-base-200: #1A0B2C;
+  --color-base-300: #24103A;
+  --color-base-content: #c9cbd0;
+  --color-primary: #8B5CF6;
+  --color-primary-content: #0B0610;
+  --color-secondary: #22D3EE;
+  --color-secondary-content: #041014;
+  --color-accent: #E879F9;
+  --color-accent-content: #160018;
+  --color-neutral: #2A1841;
+  --color-neutral-content: #a7b4c8;
+  --color-info: #38BDF8;
+  --color-info-content: #041018;
+  --color-success: #34D399;
+  --color-success-content: #04110B;
+  --color-warning: #FBBF24;
+  --color-warning-content: #140E02;
+  --color-error: #FB7185;
+  --color-error-content: #1A060A;
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
 @plugin "daisyui" {
   themes: all;
 }
