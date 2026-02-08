@@ -24,7 +24,7 @@ class PiecesListView(View):
     """
 
     def get(self, request):
-        base_qs = Piece.objects.with_display_related().order_by("title")
+        base_qs = Piece.objects.with_display_related().order_by("-date_performed", "title")
 
         piece_filter = PieceFilter(request.GET, queryset=base_qs)
         pieces = piece_filter.qs
