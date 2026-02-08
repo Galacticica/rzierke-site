@@ -21,7 +21,6 @@ Description: Template for song detail view.
         <a
             href="{% url 'song-list' %}"
             class="btn btn-ghost btn-sm"
-            onclick="if (window.history.length > 1) { event.preventDefault(); window.history.back(); }"
         >← Back</a>
     </div>
 
@@ -47,8 +46,10 @@ Description: Template for song detail view.
         </div>
 
         <div class="flex gap-2 song-actions">
-            <a href="{% url 'song-export-handout-pdf' song.slug %}" class="btn btn-soft btn-secondary">Download PDF</a>
-            <a href="{% url 'song-export-pptx' slug=song.slug %}" class="btn btn-soft btn-primary">Export Slides</a>
+            {% if song.public_domain or user.is_authenticated and user.private_lyrics %}
+                <a href="{% url 'song-export-handout-pdf' song.slug %}" class="btn btn-soft btn-secondary">Download PDF</a>
+                <a href="{% url 'song-export-pptx' slug=song.slug %}" class="btn btn-soft btn-primary">Export Slides</a>
+            {% endif %}
         </div>
     </div>
 
@@ -111,48 +112,79 @@ Description: Template for song detail view.
         <section class="lg:col-span-8 song-content">
             <div class="card border border-base-300 bg-base-100 shadow-sm">
                 <div class="card-body">
-                    <div class="flex items-center justify-between gap-3">
-                        <h2 class="card-title">Lyrics</h2>
-                    </div>
+                    {% if song.public_domain or user.is_authenticated and user.private_lyrics %}
+                        <div class="flex items-center justify-between gap-3">
+                            <h2 class="card-title">Lyrics</h2>
+                        </div>
 
-                    <div class="mt-2 space-y-3 song-lyrics">
-                        {% if song.arrangement_items.all %}
-                            {% for item in song.arrangement_items.all %}
-                                <div class="collapse collapse-arrow border border-base-300 bg-base-200/40" id="section-{{ item.section.name|default:item.section.get_section_type_display|slugify }}">
-                                    <input type="checkbox" checked />
-                                    <div class="collapse-title text-base font-semibold">
-                                        <span>{{ item.section.name|default:item.section.get_section_type_display }}</span>
-                                        {% if item.repeat_count|default:1|add:0 > 1 %}
-                                            <span class="ml-2 badge badge-outline">{{ item.repeat_count }}x</span>
-                                        {% endif %}
-                                    </div>
-                                    <div class="collapse-content">
-                                        <div class="prose prose-invert max-w-none">
-                                            {{ item.section.lyrics|lyrics_html }}
+                        <div class="mt-2 space-y-3 song-lyrics">
+                            {% if song.arrangement_items.all %}
+                                {% for item in song.arrangement_items.all %}
+                                    <div class="collapse collapse-arrow border border-base-300 bg-base-200/40" id="section-{{ item.section.name|default:item.section.get_section_type_display|slugify }}">
+                                        <input type="checkbox" checked />
+                                        <div class="collapse-title text-base font-semibold">
+                                            <span>{{ item.section.name|default:item.section.get_section_type_display }}</span>
+                                            {% if item.repeat_count|default:1|add:0 > 1 %}
+                                                <span class="ml-2 badge badge-outline">{{ item.repeat_count }}x</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="collapse-content">
+                                            <div class="prose prose-invert max-w-none">
+                                                {{ item.section.lyrics|lyrics_html }}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            {% for section in song.sections.all %}
-                                <div class="collapse collapse-arrow border border-base-300 bg-base-200/40" id="section-{{ section.name|default:section.get_section_type_display|slugify }}">
-                                    <input type="checkbox" checked />
-                                    <div class="collapse-title text-base font-semibold">
-                                        {{ section.name|default:section.get_section_type_display }}
-                                    </div>
-                                    <div class="collapse-content">
-                                        <div class="prose prose-invert max-w-none">
-                                            {{ section.lyrics|lyrics_html }}
+                                {% endfor %}
+                            {% else %}
+                                {% for section in song.sections.all %}
+                                    <div class="collapse collapse-arrow border border-base-300 bg-base-200/40" id="section-{{ section.name|default:section.get_section_type_display|slugify }}">
+                                        <input type="checkbox" checked />
+                                        <div class="collapse-title text-base font-semibold">
+                                            {{ section.name|default:section.get_section_type_display }}
+                                        </div>
+                                        <div class="collapse-content">
+                                            <div class="prose prose-invert max-w-none">
+                                                {{ section.lyrics|lyrics_html }}
+                                            </div>
                                         </div>
                                     </div>
+                                {% empty %}
+                                    <div class="alert">
+                                        <span><em>No lyrics available.</em></span>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    {% elif user.is_authenticated %}
+                        <div class="flex items-center justify-center py-12" id="access-request-container-lyrics">
+                            <div class="text-center px-6">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                <p class="text-lg font-semibold mb-2">Lyrics Locked</p>
+                                <p class="text-base-content/70 mb-4 text-sm">This song's lyrics are only available to users with special access.</p>
+                                <form hx-post="{% url 'request_access' %}" hx-target="#access-request-container-lyrics" hx-swap="innerHTML">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="request_type" value="lyrics">
+                                    <button type="submit" class="btn btn-primary btn-sm">Request Access</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="flex items-center justify-center py-12" id="access-request-container-lyrics-nologin">
+                            <div class="text-center px-6">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                <p class="text-lg font-semibold mb-2">Lyrics Locked</p>
+                                <p class="text-base-content/70 mb-4 text-sm">This song's lyrics are only available to logged-in users.</p>
+                                <div class="flex gap-2 justify-center">
+                                    <a href="{% url 'login_page' %}?next={{ request.path }}" class="btn btn-primary btn-sm">Log In</a>
+
                                 </div>
-                            {% empty %}
-                                <div class="alert">
-                                    <span><em>No lyrics available.</em></span>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </section>
