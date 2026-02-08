@@ -40,6 +40,8 @@ class User(AbstractUser):
     """Custom user model with email as the unique identifier."""
     username = None  
     email = models.EmailField(unique=True)
+    private_lyrics = models.BooleanField(default=False)
+    
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
