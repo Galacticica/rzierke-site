@@ -55,7 +55,11 @@ Description: Base template for the site. This is where it loads common assets an
             <a class="btn btn-ghost text-xl" href="{% url 'homepage' %}">RZWorld</a>
         </div>
         <div class="navbar-end">
-            <!-- Filler to balance the navbar -->
+            {% if user.is_authenticated %}
+                <a href="{% url 'logout_page' %}?next={{ request.path }}" class="btn btn-ghost">Log Out</a>
+            {% else %}
+                <a href="{% url 'login_page' %}?next={{ request.path }}" class="btn btn-ghost">Log In</a>
+            {% endif %}
         </div>
     </div>
 </header>

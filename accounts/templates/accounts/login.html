@@ -14,6 +14,7 @@ Description: Template for user login page.
             <h2 class="card-title text-3xl font-bold mb-6">Log In</h2>
             <form method="post" action="{% url 'login_page' %}">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next|default:'/' }}">
                 {% if form.non_field_errors %}
                     <div class="alert alert-error mb-4">
                         {{ form.non_field_errors }}
@@ -45,7 +46,7 @@ Description: Template for user login page.
             </form>
             <div class="divider"></div>
             <p class="text-center text-base-content/70">
-                No Account Yet? <a href="{% url 'signup_page' %}" class="link link-primary">Sign Up</a>
+                No Account Yet? <a href="{% url 'signup_page' %}{% if next %}?next={{ next }}{% endif %}" class="link link-primary">Sign Up</a>
             </p>
         </div>
     </div>

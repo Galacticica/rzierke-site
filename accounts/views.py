@@ -30,6 +30,17 @@ class MySignupView(FormView):
     template_name = "accounts/signup.html"
     success_url = "/" 
 
+    def get_context_data(self, **kwargs):
+        """Add 'next' parameter to template context."""
+        context = super().get_context_data(**kwargs)
+        context['next'] = self.request.GET.get('next', '')
+        return context
+
+    def get_success_url(self):
+        """Redirect to 'next' parameter if present, otherwise to home."""
+        next_url = self.request.GET.get('next') or self.request.POST.get('next')
+        return next_url if next_url else self.success_url
+
     def form_valid(self, form):
         user = User.objects.create(
             email=form.cleaned_data["email"],
@@ -47,6 +58,9 @@ class MySignupView(FormView):
 class MyLogoutView(View):
     """The logout view for user sign out."""
     def get(self, request, *args, **kwargs):
-        logout(request)  
-        return redirect("/")  
+        logout(request)
+        next_url = request.GET.get('next')
+        if not next_url:
+            next_url = request.META.get('HTTP_REFERER', '/')
+        return redirect(next_url)  
 
