@@ -108,12 +108,18 @@ Description: Template for piece detail view.
 
                     <div class="mt-4">
                         {% if piece.recording_url %}
+                            {% if piece.public or user.is_authenticated %}
                                 <div class="aspect-video bg-base-200 rounded-lg overflow-hidden">
                                     <iframe class="h-full w-full" src="{{piece.recording_url}}?rel=0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-                            </div>
-                            <a href="{{ piece.recording_url }}" target="_blank" rel="noopener noreferrer" class="mt-3 link text-sm">
-                                Watch on YouTube →
-                            </a>
+                                </div>
+                                <a href="{{ piece.recording_url }}" target="_blank" rel="noopener noreferrer" class="mt-3 link text-sm">
+                                    Watch on YouTube →
+                                </a>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <span>This recording is only available to logged-in users.</span>
+                                </div>
+                            {% endif %}
                         {% else %}
                             <div class="alert alert-info">
                                 <span>No recording available for this piece.</span>

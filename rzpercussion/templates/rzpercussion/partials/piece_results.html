@@ -38,15 +38,7 @@ Description: Template for piece results section. This partial is intended to be 
 
                             <!-- composer and artist -->
                             <p class="mt-1 text-sm text-base-content/70">
-                                by {{ piece.composer }}
-                                {% with performers=piece.performer.all %}
-                                    {% if performers %}
-                                        | 
-                                        {% for performer in performers %}
-                                            {{ performer.name }}{% if not forloop.last %}, {% endif %}
-                                        {% endfor %}
-                                    {% endif %}
-                                {% endwith %}
+                                by {{ piece.composer }} | {{piece.date_performed|date:"m/d/Y" }}
                             </p>
 
                             <!-- piece type -->

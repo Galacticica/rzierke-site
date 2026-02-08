@@ -24,7 +24,7 @@ class PiecesListView(View):
     """
 
     def get(self, request):
-        base_qs = Piece.objects.with_display_related().filter(public=True).order_by("title")
+        base_qs = Piece.objects.with_display_related().order_by("title")
 
         piece_filter = PieceFilter(request.GET, queryset=base_qs)
         pieces = piece_filter.qs
@@ -39,7 +39,7 @@ class PiecesListView(View):
             "paginator": paginator,
             "filter": piece_filter,
             "q": request.GET.get("q", ""),
-            "total_count": Piece.objects.filter(public=True).count(),
+            "total_count": Piece.objects.count(),
             "filtered_count": pieces.count(),
         }
 
@@ -67,4 +67,4 @@ class PieceDetailView(DetailView):
     context_object_name = 'piece'
 
     def get_queryset(self):
-        return Piece.objects.with_display_related().filter(public=True)
+        return Piece.objects.with_display_related()
