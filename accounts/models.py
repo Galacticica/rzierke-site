@@ -41,7 +41,8 @@ class User(AbstractUser):
     username = None  
     email = models.EmailField(unique=True)
     private_lyrics = models.BooleanField(default=False)
-    
+    private_performances = models.BooleanField(default=False)
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
@@ -49,3 +50,20 @@ class User(AbstractUser):
 
     def __str__(self):
         return (self.first_name + " " + self.last_name).strip()
+
+
+class AccessRequest(models.Model):
+    """
+    Model to track access requests for private performances or lyrics.
+    """
+    REQUEST_TYPE_CHOICES = [
+        ('lyrics', 'Lyrics Access'),
+        ('performance', 'Performance Access'),
+    ]
+
+    email = models.EmailField()
+    request_type = models.CharField(max_length=20, choices=REQUEST_TYPE_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Access Request ({self.request_type}) from {self.email} at {self.created_at}"

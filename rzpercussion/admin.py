@@ -51,7 +51,7 @@ class PieceAdmin(admin.ModelAdmin):
             "fields": ("performer", "instrument", "piece_type")
         }),
         ("Metadata", {
-            "fields": ("public", "date_performed", "recording_url")
+            "fields": ("public", "super_private", "date_performed", "recording_url")
         }),
     )
 

@@ -35,6 +35,7 @@ class Piece(models.Model):
     composer = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     public = models.BooleanField(default=True)
+    super_private = models.BooleanField(default=False)
     date_performed = models.DateField(null=True, blank=True)
     performer = models.ManyToManyField('Performer', blank=True)
     piece_type = models.ForeignKey('PieceType', on_delete=models.SET_NULL, null=True, blank=True)
@@ -89,7 +90,6 @@ class PieceType(models.Model):
 
     def __str__(self):
         return self.name
-
 
 
 

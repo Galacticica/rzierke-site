@@ -13,7 +13,9 @@ from django.contrib.auth import login, logout
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.views import View
+from django.http import HttpResponse
 from .forms import LoginForm, SignupForm
+from .models import AccessRequest
 
 
 User = get_user_model()
@@ -62,5 +64,34 @@ class MyLogoutView(View):
         next_url = request.GET.get('next')
         if not next_url:
             next_url = request.META.get('HTTP_REFERER', '/')
-        return redirect(next_url)  
+        return redirect(next_url)
+
+
+class RequestAccessView(View):
+    """View to handle access requests for private content."""
+    
+    def post(self, request, *args, **kwargs):
+        request_type = request.POST.get('request_type', 'performance')
+        
+        if request.user.is_authenticated:
+            email = request.user.email
+        else:
+            email = request.POST.get('email', 'anonymous')
+        
+        # Create the access request
+        AccessRequest.objects.create(
+            email=email,
+            request_type=request_type
+        )
+        
+        # Return success message for HTMX
+        return HttpResponse("""
+            <div class="text-center px-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p class="text-lg font-semibold mb-2">Request Submitted</p>
+                <p class="text-base-content/70 text-sm">Your access request has been logged and will be reviewed.</p>
+            </div>
+        """)  
 
