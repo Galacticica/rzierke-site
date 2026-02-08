@@ -68,3 +68,5 @@ class PieceDetailView(DetailView):
 
     def get_queryset(self):
         return Piece.objects.with_display_related()
+    
+

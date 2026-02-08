@@ -108,14 +108,14 @@ Description: Template for piece detail view.
 
                     <div class="mt-4">
                         {% if piece.recording_url %}
-                            {% if piece.public or user.is_authenticated %}
+                            {% if piece.public %}
                                 <div class="aspect-video bg-base-200 rounded-lg overflow-hidden">
                                     <iframe class="h-full w-full" src="{{piece.recording_url}}?rel=0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
                                 </div>
                                 <a href="{{ piece.recording_url }}" target="_blank" rel="noopener noreferrer" class="mt-3 link text-sm">
                                     Watch on YouTube →
                                 </a>
-                            {% else %}
+                            {% elif not user.is_authenticated %}
                                 <div class="aspect-video bg-base-200 rounded-lg overflow-hidden flex items-center justify-center">
                                     <div class="text-center px-6">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -126,6 +126,28 @@ Description: Template for piece detail view.
                                         <a href="{% url 'login_page' %}?next={{ request.path }}" class="btn btn-primary btn-sm">Log In to Watch</a>
                                     </div>
                                 </div>
+                            {% elif piece.super_private and not user.private_performances %}
+                                <div class="aspect-video bg-base-200 rounded-lg overflow-hidden flex items-center justify-center" id="access-request-container">
+                                    <div class="text-center px-6">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                        <p class="text-lg font-semibold mb-2">Recording Locked</p>
+                                        <p class="text-base-content/70 mb-4 text-sm">This recording is only available to users with special access.</p>
+                                        <form hx-post="{% url 'request_access' %}" hx-target="#access-request-container" hx-swap="innerHTML">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="request_type" value="performance">
+                                            <button type="submit" class="btn btn-primary btn-sm">Request Access</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="aspect-video bg-base-200 rounded-lg overflow-hidden">
+                                    <iframe class="h-full w-full" src="{{piece.recording_url}}?rel=0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                                </div>
+                                <a href="{{ piece.recording_url }}" target="_blank" rel="noopener noreferrer" class="mt-3 link text-sm">
+                                    Watch on YouTube →
+                                </a>
                             {% endif %}
                         {% else %}
                             <div class="alert alert-info">
