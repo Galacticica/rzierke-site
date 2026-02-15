@@ -20,7 +20,8 @@ Pages Include:
 - CIVIC
 - Lock Out Hero
 - God Talk
-- Nebulark
+- Discord Bots
+- GPS
 
 ### Marvel Connections
 A website that shows all the connections between Marvel Characters (and maybe other fandoms in the future) 
