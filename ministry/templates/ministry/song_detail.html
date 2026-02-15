@@ -79,8 +79,8 @@ Description: Template for song detail view.
                             <div class="stat-value text-base font-semibold">
                                 {% if song.lsb_number or song.ccli_number %}
                                     <div class="flex flex-wrap gap-2">
-                                        {% if song.lsb_number %}<span class="badge badge-neutral">LSB {{ song.lsb_number }}</span>{% endif %}
-                                        {% if song.ccli_number %}<span class="badge badge-neutral">CCLI {{ song.ccli_number }}</span>{% endif %}
+                                        {% if song.lsb_number %}<span class="badge badge-secondary badge-outline">LSB {{ song.lsb_number }}</span>{% endif %}
+                                        {% if song.ccli_number %}<span class="badge badge-secondary badge-outline">CCLI {{ song.ccli_number }}</span>{% endif %}
                                     </div>
                                 {% else %}
                                     <span class="opacity-70">—</span>
