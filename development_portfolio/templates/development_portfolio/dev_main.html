@@ -1,17 +1,106 @@
 <!--
 file: dev_main.html
 Author: Reagan Zierke
-Date: 2026-02-15
-Description: Template for development portfolio home page. 
+Date: 2026-02-06
+Description: Template for the development portfolio homepage.
 -->
 
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}
-<title>Development Portfolio</title>
+    <title>Development Portfolio</title>
 {% endblock %}
 
 {% block content %}
 
+<section class="mx-auto w-full max-w-6xl px-4 py-14">
+    <div class="mb-10">
+        <h1 class="text-3xl font-bold tracking-tight">Development Portfolio</h1>
+        <p class="mt-2 text-base-content/70">Building solutions that matter</p>
+    </div>
+
+    <div class="mt-10 grid gap-6 lg:grid-cols-4 items-start">
+        <!-- Sidebar: About/Bio Section (1/4) -->
+        <div class="space-y-6">
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+                <h2 class="text-2xl font-semibold mb-3">About</h2>
+                <p class="text-base-content/70 text-sm leading-relaxed">
+                    I've been programming for over 10 years, first being introduced to Scratch in the 4th grade. 
+                    The summer after, I decided to take a Python class and continued to occasionally use it through the years. 
+                    In 2020, when Covid hit, I decided to make a GitHub account and build a ton of Discord bots to keep myself busy. 
+                    When we started back up at school, I took a computer science class, as well as a couple dual credit CS classes, and have been hooked ever since.
+                </p>
+            </div>
+
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+                <h2 class="text-2xl font-semibold mb-4">Skills</h2>
+                <div class="space-y-3">
+                    {% for skill in skills %}
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium">{{ skill.name }}</span>
+                        <span class="badge badge-outline text-xs">{{ skill.experience_display }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content: Cards in 2x2 grid (3/4) -->
+        <div class="grid gap-6 lg:col-span-3 md:grid-cols-2">
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+                <div class="flex items-start gap-4">
+                    <div class="rounded-xl bg-primary/10 p-3 text-primary flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6">
+                            <path d="M7 3h10a2 2 0 0 1 2 2v3H5V5a2 2 0 0 1 2-2Zm12 7v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-9h14Z"/>
+                            <path d="M8 13h8v1.5H8ZM8 16h6v1.5H8Z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-semibold">Projects</h2>
+                        <p class="mt-1 text-base-content/70">Case studies with real outcomes and live links.</p>
+                        <div class="mt-6">
+                            <a class="btn btn-primary" href="{% url 'dev-home' %}">Open projects</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+                <div class="flex items-start gap-4">
+                    <div class="rounded-xl bg-secondary/10 p-3 text-secondary flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6">
+                            <path d="M12 2a6 6 0 0 0-6 6v1H5a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3h1v1a6 6 0 0 0 12 0v-1h1a3 3 0 0 0 3-3v-2a3 3 0 0 0-3-3h-1V8a6 6 0 0 0-6-6Zm4 7H8V8a4 4 0 1 1 8 0v1Z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-semibold">Skills</h2>
+                        <p class="mt-1 text-base-content/70">Frontend, backend, and design systems in one place.</p>
+                        <div class="mt-6">
+                            <a class="btn btn-secondary" href="#skills">View stack</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+                <div class="flex items-start gap-4">
+                    <div class="rounded-xl bg-accent/10 p-3 text-accent flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6">
+                            <path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm-1 5h2v5h-2Zm0 7h2v2h-2Z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-semibold">Process</h2>
+                        <p class="mt-1 text-base-content/70">How I scope, build, test, and ship.</p>
+                        <div class="mt-6">
+                            <a class="btn btn-accent" href="#process">Read process</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
 {% endblock %}
