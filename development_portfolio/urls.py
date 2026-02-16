@@ -9,5 +9,6 @@ from django.urls import path, include
 from . import views
 
 urlpatterns = [
+    path('', views.DevHomeView.as_view(), name='dev-home'),
     path('/projects', views.DevPortfolioListView.as_view(), name='dev_project_list'),
 ]
