@@ -11,7 +11,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Project, ProjectImage, Tool
+from .models import Project, ProjectImage, Tool, Skill
 
 
 class ProjectImageInline(admin.StackedInline):
@@ -26,6 +26,15 @@ class ProjectImageInline(admin.StackedInline):
 class ToolAdmin(admin.ModelAdmin):
     """Register Tool model in admin with basic configurations."""
     search_fields = ("name",)
+
+
+@admin.register(Skill)
+class SkillAdmin(admin.ModelAdmin):
+    """Register Skill model in admin with basic configurations."""
+    list_display = ("name", "date_started")
+    list_filter = ("date_started",)
+    search_fields = ("name",)
+    ordering = ("-date_started",)
 
 
 @admin.register(Project)

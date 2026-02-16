@@ -28,7 +28,6 @@ class ProjectQuerySet(models.QuerySet):
         return (
             self.filter(
                 Q(project_name__icontains=q)
-                | Q(description__icontains=q)
                 | Q(event__icontains=q)
                 | Q(category__icontains=q)
                 | Q(tool_used__name__icontains=q)
@@ -81,3 +80,51 @@ class Tool(models.Model):
     
     def __str__(self):
         return self.name
+
+
+class Skill(models.Model):
+    name = models.CharField(max_length=100)
+    date_started = models.DateField(help_text="The date you started learning this skill.")
+    
+    class Meta:
+        ordering = ['-date_started']
+    
+    def __str__(self):
+        return self.name
+    
+    def years_of_experience(self):
+        """Calculate years of experience with this skill."""
+        from datetime import date
+        today = date.today()
+        years = today.year - self.date_started.year
+        # Adjust if birthday hasn't occurred this year
+        if (today.month, today.day) < (self.date_started.month, self.date_started.day):
+            years -= 1
+        return years
+    
+    def experience_display(self):
+        """Return a human-readable duration string (e.g., '2 yrs' or '5 mos')."""
+        from datetime import date
+        
+        today = date.today()
+        
+        # Calculate years
+        years = today.year - self.date_started.year
+        if (today.month, today.day) < (self.date_started.month, self.date_started.day):
+            years -= 1
+        
+        if years >= 1:
+            return f"{years} yr{'s' if years != 1 else ''}"
+        
+        # Calculate months
+        months = today.month - self.date_started.month
+        if today.day < self.date_started.day:
+            months -= 1
+        if months < 0:
+            months += 12
+        
+        # Ensure at least 1 month
+        if months == 0:
+            months = 1
+        
+        return f"{months} mo{'s' if months != 1 else ''}"
