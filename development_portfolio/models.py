@@ -97,7 +97,6 @@ class Skill(models.Model):
         from datetime import date
         today = date.today()
         years = today.year - self.date_started.year
-        # Adjust if birthday hasn't occurred this year
         if (today.month, today.day) < (self.date_started.month, self.date_started.day):
             years -= 1
         return years
@@ -108,7 +107,6 @@ class Skill(models.Model):
         
         today = date.today()
         
-        # Calculate years
         years = today.year - self.date_started.year
         if (today.month, today.day) < (self.date_started.month, self.date_started.day):
             years -= 1
@@ -116,14 +114,12 @@ class Skill(models.Model):
         if years >= 1:
             return f"{years} yr{'s' if years != 1 else ''}"
         
-        # Calculate months
         months = today.month - self.date_started.month
         if today.day < self.date_started.day:
             months -= 1
         if months < 0:
             months += 12
         
-        # Ensure at least 1 month
         if months == 0:
             months = 1
         
