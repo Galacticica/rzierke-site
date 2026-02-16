@@ -16,4 +16,5 @@ urlpatterns = [
     path('', include('home.urls')),
     path('ministry/', include('ministry.urls')),
     path('rzpercussion/', include('rzpercussion.urls')),
+    path('development-portfolio/', include('development_portfolio.urls')),
 ]
