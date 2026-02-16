@@ -59,21 +59,19 @@ Description: Template for the homepage.
           <span class="badge badge-warning badge-outline">Soon</span>
         </div>
         <p class="text-base-content/80">
-          Not built on the site yet — linking to GitHub for now.
+          Projects I've worked on, skills I've developed, and resources I've found helpful.
         </p>
         <div class="card-actions mt-2">
           <a
             class="btn btn-primary btn-sm"
+            href="{% url 'dev-home' %}"
+          >Open</a>
+          <a
+            class="btn btn-outline btn-sm"
             href="https://github.com/Galacticica"
             target="_blank"
             rel="noopener"
           >GitHub</a>
-          <a
-            class="btn btn-outline btn-sm"
-            href="https://github.com/Galacticica?tab=repositories"
-            target="_blank"
-            rel="noopener"
-          >Repos</a>
         </div>
       </div>
     </div>
