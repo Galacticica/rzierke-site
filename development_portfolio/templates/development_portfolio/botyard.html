@@ -1,0 +1,330 @@
+<!--
+file: botyard.html
+Author: Reagan Zierke
+Date: 2026-02-06
+Description: Template for the development portfolio bot graveyard page.
+-->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    <title>Development Portfolio - Bot Graveyard</title>
+{% endblock %}
+
+{% block content %}
+<style>
+    .botyard-container {
+        max-width: 1000px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+
+    .botyard-title {
+        text-align: center;
+        margin-bottom: 60px;
+        color: #333;
+    }
+
+    .tombstone-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 35px;
+        padding: 20px 0;
+    }
+
+    .tombstone-wrapper {
+        perspective: 1000px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        min-height: 420px;
+    }
+
+    .tombstone {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 35px 25px;
+        border-radius: 35% 35% 8px 8px;
+        color: #1a1a1a;
+        font-family: 'Georgia', serif;
+        overflow: hidden;
+        background-size: 100% 100%;
+        background-position: 0 0;
+    }
+
+    .tombstone::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+            linear-gradient(45deg, transparent 48%, rgba(0, 0, 0, 0.03) 49%, rgba(0, 0, 0, 0.03) 51%, transparent 52%),
+            linear-gradient(-45deg, transparent 48%, rgba(0, 0, 0, 0.05) 49%, rgba(0, 0, 0, 0.05) 51%, transparent 52%),
+            radial-gradient(circle at 12% 25%, rgba(76, 110, 68, 0.08) 0%, transparent 12%),
+            radial-gradient(circle at 85% 60%, rgba(0, 0, 0, 0.1) 0%, transparent 15%),
+            radial-gradient(circle at 70% 15%, rgba(76, 110, 68, 0.06) 0%, transparent 8%),
+            radial-gradient(circle at 25% 75%, rgba(76, 110, 68, 0.07) 0%, transparent 10%),
+            radial-gradient(circle at 90% 35%, rgba(0, 0, 0, 0.08) 0%, transparent 12%);
+        background-size: 3px 3px, 3px 3px, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+        background-position: 0 0, 1px 1px, 0 0, 0 0, 0 0, 0 0, 0 0;
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0.6;
+        box-shadow: inset -1px -1px 4px rgba(0, 0, 0, 0.3), inset 1px 1px 3px rgba(0, 0, 0, 0.15);
+    }
+
+    .tombstone::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+            radial-gradient(circle at 18% 20%, rgba(100, 140, 90, 0.12) 0%, transparent 20%),
+            radial-gradient(circle at 82% 65%, rgba(100, 140, 90, 0.1) 0%, transparent 18%),
+            radial-gradient(circle at 35% 80%, rgba(100, 140, 90, 0.09) 0%, transparent 15%),
+            radial-gradient(ellipse 200% 80% at 10% 35%, rgba(100, 140, 90, 0.06) 0%, transparent 25%);
+        background-size: 100% 100%;
+        background-position: 0 0;
+        pointer-events: none;
+        z-index: 0;
+        opacity: 0.4;
+    }
+
+    .tombstone-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .tombstone-name {
+        font-size: 24px;
+        font-weight: bold;
+        line-height: 1.3;
+        word-break: break-word;
+        word-wrap: break-word;
+        max-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 5px;
+    }
+
+    .tombstone-divider {
+        height: 2px;
+        background: rgba(0, 0, 0, 0.3);
+        margin: 10px 0;
+    }
+
+    .tombstone-date-range {
+        font-size: 12px;
+        font-style: italic;
+        color: rgba(0, 0, 0, 0.7);
+        margin: 5px 0;
+    }
+
+    .tombstone-description {
+        font-size: 13px;
+        line-height: 1.5;
+        color: rgba(0, 0, 0, 0.8);
+        word-wrap: break-word;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+
+    .tombstone-repo {
+        margin-top: 10px;
+        font-size: 11px;
+    }
+
+    .tombstone-repo a {
+        color: rgba(0, 0, 0, 0.7);
+        text-decoration: underline;
+        word-break: break-word;
+    }
+
+    .tombstone-repo a:hover {
+        color: rgba(0, 0, 0, 0.9);
+    }
+
+    /* Tombstone Style Variations */
+    .tombstone.style-1 {
+        width: 240px;
+        min-height: 360px;
+        background: linear-gradient(135deg, #8b8b8b 0%, #6b7280 50%, #5a6370 100%);
+        box-shadow: 
+            0 15px 40px rgba(0, 0, 0, 0.5),
+            inset -2px -2px 6px rgba(0, 0, 0, 0.3),
+            inset 2px 2px 6px rgba(0, 0, 0, 0.2),
+            -6px 10px 15px rgba(0, 0, 0, 0.35);
+    }
+
+    .tombstone.style-2 {
+        width: 270px;
+        min-height: 310px;
+        background: linear-gradient(135deg, #9e9e9e 0%, #757575 50%, #616161 100%);
+        box-shadow: 
+            0 18px 35px rgba(0, 0, 0, 0.45),
+            inset -1px -1px 5px rgba(0, 0, 0, 0.25),
+            inset 1px 1px 5px rgba(0, 0, 0, 0.15),
+            -4px 8px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .tombstone.style-3 {
+        width: 245px;
+        min-height: 380px;
+        background: linear-gradient(135deg, #a4a4a4 0%, #777777 50%, #555555 100%);
+        box-shadow: 
+            0 16px 42px rgba(0, 0, 0, 0.52),
+            inset -2px -2px 7px rgba(0, 0, 0, 0.32),
+            inset 2px 2px 7px rgba(0, 0, 0, 0.22),
+            -7px 11px 16px rgba(0, 0, 0, 0.36);
+    }
+
+    .tombstone.style-4 {
+        width: 265px;
+        min-height: 330px;
+        background: linear-gradient(135deg, #bebebe 0%, #888888 50%, #696969 100%);
+        box-shadow: 
+            0 17px 38px rgba(0, 0, 0, 0.48),
+            inset -1px -1px 5px rgba(0, 0, 0, 0.28),
+            inset 1px 1px 5px rgba(0, 0, 0, 0.18),
+            -5px 9px 13px rgba(0, 0, 0, 0.32);
+    }
+
+    .tombstone.style-5 {
+        width: 235px;
+        min-height: 400px;
+        background: linear-gradient(135deg, #a8a8a8 0%, #7d7d7d 50%, #5d5d5d 100%);
+        box-shadow: 
+            0 19px 45px rgba(0, 0, 0, 0.54),
+            inset -2px -2px 8px rgba(0, 0, 0, 0.34),
+            inset 2px 2px 8px rgba(0, 0, 0, 0.24),
+            -8px 12px 18px rgba(0, 0, 0, 0.38);
+    }
+
+    .tombstone.style-6 {
+        width: 275px;
+        min-height: 300px;
+        background: linear-gradient(135deg, #9a9a9a 0%, #6d6d6d 50%, #545454 100%);
+        box-shadow: 
+            0 16px 36px rgba(0, 0, 0, 0.46),
+            inset -1px -1px 5px rgba(0, 0, 0, 0.26),
+            inset 1px 1px 5px rgba(0, 0, 0, 0.16),
+            -4px 7px 11px rgba(0, 0, 0, 0.28);
+    }
+
+    .tombstone.style-7 {
+        width: 242px;
+        min-height: 370px;
+        background: linear-gradient(135deg, #b0b0b0 0%, #828282 50%, #626262 100%);
+        box-shadow: 
+            0 16px 41px rgba(0, 0, 0, 0.5),
+            inset -2px -2px 6px rgba(0, 0, 0, 0.3),
+            inset 2px 2px 6px rgba(0, 0, 0, 0.2),
+            -6px 10px 15px rgba(0, 0, 0, 0.34);
+    }
+
+    .tombstone.style-8 {
+        width: 268px;
+        min-height: 320px;
+        background: linear-gradient(135deg, #969696 0%, #717171 50%, #505050 100%);
+        box-shadow: 
+            0 17px 39px rgba(0, 0, 0, 0.47),
+            inset -1px -1px 5px rgba(0, 0, 0, 0.27),
+            inset 1px 1px 5px rgba(0, 0, 0, 0.17),
+            -5px 8px 12px rgba(0, 0, 0, 0.31);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .tombstone-grid {
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .tombstone-name {
+            font-size: 20px;
+        }
+
+        .tombstone-description {
+            font-size: 12px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .botyard-container {
+            padding: 10px;
+        }
+
+        .tombstone-name {
+            font-size: 18px;
+            max-height: 50px;
+        }
+
+        .tombstone-description {
+            font-size: 11px;
+        }
+    }
+</style>
+
+<div class="botyard-container">
+    <h1 class="botyard-title">🪦 Bot Graveyard 🪦</h1>
+    
+    <div class="tombstone-grid">
+        {% for item in bots_with_styles %}
+            <div class="tombstone-wrapper">
+                <div class="tombstone {{ item.style }}">
+                    <div class="tombstone-content">
+                        <div class="tombstone-name">{{ item.bot.name }}</div>
+                        <div class="tombstone-divider"></div>
+                        
+                        {% if item.bot.date_created or item.bot.date_retired %}
+                            <div class="tombstone-date-range">
+                                {% if item.bot.date_created %}
+                                    {{ item.bot.date_created|date:"M d, Y" }}
+                                {% endif %}
+                                {% if item.bot.date_retired %}
+                                    — {{ item.bot.date_retired|date:"M d, Y" }}
+                                {% else %}
+                                    — Present
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="tombstone-divider"></div>
+                        
+                        {% if item.bot.description %}
+                            <div class="tombstone-description">{{ item.bot.description }}</div>
+                        {% endif %}
+                        
+                        {% if item.bot.repository_url %}
+                            <div class="tombstone-repo">
+                                <a href="{{ item.bot.repository_url }}" target="_blank" rel="noopener noreferrer">
+                                    View Repository
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p style="grid-column: 1 / -1; text-align: center; color: #666; padding: 40px;">
+                No bots in the graveyard yet...
+            </p>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
