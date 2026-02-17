@@ -135,3 +135,13 @@ class Resource(models.Model):
     
     def __str__(self):
         return self.name
+
+class Bot(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, help_text="A brief description of the bot.")
+    repository_url = models.URLField(blank=True, help_text="URL to the bot's code repository.")
+    date_created = models.DateField(null=True, blank=True, help_text="The date the bot was created.")
+    date_retired = models.DateField(null=True, blank=True, help_text="The date the bot was retired.")
+
+    def __str__(self):
+        return self.name
