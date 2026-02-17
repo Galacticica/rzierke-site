@@ -92,14 +92,15 @@ Description: Template for the development portfolio homepage.
                 <div class="flex items-start gap-4">
                     <div class="rounded-xl bg-accent/10 p-3 text-accent flex-shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6">
-                            <path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm-1 5h2v5h-2Zm0 7h2v2h-2Z"/>
+                            <path d="M7 22h10v-6a5 5 0 0 0-10 0v6Z"/>
+                            <path d="M9 10h6v2H9z"/>
                         </svg>
                     </div>
                     <div class="flex-1">
-                        <h2 class="text-2xl font-semibold">Process</h2>
-                        <p class="mt-1 text-base-content/70">How I scope, build, test, and ship.</p>
+                        <h2 class="text-2xl font-semibold">Discord Bot Graveyard</h2>
+                        <p class="mt-1 text-base-content/70">A collection of Discord bots that were built and then retired.</p>
                         <div class="mt-6">
-                            <a class="btn btn-accent" href="#process">Read process</a>
+                            <a class="btn btn-accent" href="{% url 'dev-resources' %}#graveyard">Visit Graveyard</a>
                         </div>
                     </div>
                 </div>
