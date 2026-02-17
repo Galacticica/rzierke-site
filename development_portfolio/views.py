@@ -5,10 +5,9 @@ Date: 2026-02-15
 Description: Views for the development portfolio section of the website.
 """
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render
 from django.views import View
 from django.views.generic import DetailView
-from django.http import HttpResponse
 
 from .models import Project, Skill
 from .filters import ProjectFilter
@@ -33,7 +32,7 @@ class DevPortfolioListView(View):
     """The list view for the development portfolio section, showing a list of projects with filtering."""
 
     def get(self, request):
-        base_qs = Project.objects.all().order_by("-date_started", "title")
+        base_qs = Project.objects.all().order_by("-date", "project_name")
 
         project_filter = ProjectFilter(request.GET, queryset=base_qs)
         projects = project_filter.qs
@@ -46,9 +45,22 @@ class DevPortfolioListView(View):
             "filtered_count": projects.count(),
         }
 
+        if getattr(request, "htmx", False):
+            return render(request, "development_portfolio/partials/project_results.html", context)
+
         return render(
             request,
             "development_portfolio/dev_project_list.html",
             context,
         )
     
+class DevProjectDetailView(DetailView):
+    model = Project
+    template_name = "development_portfolio/project_detail.html"
+    context_object_name = "project"
+    slug_field = "slug"
+    slug_url_kwarg = "slug"
+
+    def get_queryset(self):
+        return Project.objects.with_related()
+

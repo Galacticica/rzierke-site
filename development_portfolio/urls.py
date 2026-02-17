@@ -10,5 +10,6 @@ from . import views
 
 urlpatterns = [
     path('', views.DevHomeView.as_view(), name='dev-home'),
-    path('/projects', views.DevPortfolioListView.as_view(), name='dev_project_list'),
+    path('projects', views.DevPortfolioListView.as_view(), name='dev-project-list'),
+    path('projects/<slug:slug>/', views.DevProjectDetailView.as_view(), name='dev-project-detail'),
 ]
