@@ -11,7 +11,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Project, ProjectImage, Tool, Skill
+from .models import Project, ProjectImage, Tool, Skill, Resource
 
 
 class ProjectImageInline(admin.StackedInline):
@@ -37,6 +37,14 @@ class SkillAdmin(admin.ModelAdmin):
     ordering = ("-date_started",)
 
 
+@admin.register(Resource)
+class ResourceAdmin(admin.ModelAdmin):
+    """Register Resource model in admin with basic configurations."""
+    list_display = ("name", "url", "description")
+    search_fields = ("name", "description")
+    ordering = ("name",)
+
+
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     """
@@ -60,3 +68,4 @@ class ProjectAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.prefetch_related("tool_used", "images")
+
