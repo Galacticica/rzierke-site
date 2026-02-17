@@ -74,14 +74,15 @@ Description: Template for the development portfolio homepage.
                 <div class="flex items-start gap-4">
                     <div class="rounded-xl bg-secondary/10 p-3 text-secondary flex-shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6">
-                            <path d="M12 2a6 6 0 0 0-6 6v1H5a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3h1v1a6 6 0 0 0 12 0v-1h1a3 3 0 0 0 3-3v-2a3 3 0 0 0-3-3h-1V8a6 6 0 0 0-6-6Zm4 7H8V8a4 4 0 1 1 8 0v1Z"/>
+                            <path d="M12 6.042A8.967 8.967 0 0 0 8.5 5a8.967 8.967 0 0 0-4.5 1.17v11.66A8.967 8.967 0 0 1 8.5 16.66c1.614 0 3.142.425 4.5 1.17V6.042Z"/>
+                            <path d="M12 6.042A8.967 8.967 0 0 1 15.5 5a8.967 8.967 0 0 1 4.5 1.17v11.66a8.967 8.967 0 0 0-4.5-1.17c-1.614 0-3.142.425-4.5 1.17V6.042Z"/>
                         </svg>
                     </div>
                     <div class="flex-1">
-                        <h2 class="text-2xl font-semibold">Skills</h2>
-                        <p class="mt-1 text-base-content/70">Frontend, backend, and design systems in one place.</p>
+                        <h2 class="text-2xl font-semibold">Resources</h2>
+                        <p class="mt-1 text-base-content/70">Useful links and references for development. Also some scripts I've created.</p>
                         <div class="mt-6">
-                            <a class="btn btn-secondary" href="#skills">View stack</a>
+                            <a class="btn btn-secondary" href="{% url 'dev-resources' %}">View resources</a>
                         </div>
                     </div>
                 </div>
