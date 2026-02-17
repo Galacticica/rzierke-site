@@ -17,10 +17,9 @@ Pages Include:
 ### Possible Projects
 - peel exchange
 - peterson strength systems
-- CIVIC
 - Lock Out Hero
 - God Talk
-- Discord Bots
+- Discord Bots graveyard
 - GPS
 
 ### Marvel Connections
