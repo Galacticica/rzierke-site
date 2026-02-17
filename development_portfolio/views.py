@@ -9,7 +9,7 @@ from django.shortcuts import render
 from django.views import View
 from django.views.generic import DetailView
 
-from .models import Project, Resource, Skill
+from .models import Project, Resource, Skill, Bot
 from .filters import ProjectFilter
 
 
@@ -74,3 +74,20 @@ class ResourcesView(View):
             "resources": resources,
         }
         return render(request, "development_portfolio/resources.html", context)
+
+class BotGraveyardView(View):
+    """A view to display a list of retired bots."""
+
+    def get(self, request):
+        bots = Bot.objects.all()
+        bots_with_styles = []
+        for i, bot in enumerate(bots):
+            style_num = (i % 8) + 1
+            bots_with_styles.append({
+                'bot': bot,
+                'style': f'style-{style_num}'
+            })
+        context = {
+            "bots_with_styles": bots_with_styles,
+        }
+        return render(request, "development_portfolio/botyard.html", context)
