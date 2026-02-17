@@ -38,6 +38,7 @@ class ProjectQuerySet(models.QuerySet):
 class Project(models.Model):
     project_name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True, blank=True)
+    short_description = models.CharField(max_length=300, blank=True, help_text="A brief one-line description of the project.")
     description = models.TextField(blank=True, help_text="A brief description of the project.")
     event = models.CharField(max_length=200, blank=True, help_text="The event or context for the project.")
     date = models.DateField(null=True, blank=True, help_text="The date of the project or event.")
@@ -45,6 +46,7 @@ class Project(models.Model):
     tool_used = models.ManyToManyField('Tool', blank=True, related_name='projects_using_tool',
                                        help_text="Tools used in the project.")
     public = models.BooleanField(default=False, help_text="Whether the project is publicly visible.")
+    repository_url = models.URLField(blank=True, help_text="URL to the project's code repository.")
 
     objects = ProjectQuerySet.as_manager()
 
