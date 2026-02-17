@@ -126,3 +126,12 @@ class Skill(models.Model):
             months = 1
         
         return f"{months} mo{'s' if months != 1 else ''}"
+
+
+class Resource(models.Model):
+    name = models.CharField(max_length=200)
+    url = models.URLField(help_text="URL to the resource.")
+    description = models.TextField(blank=True, help_text="A brief description of the resource.")
+    
+    def __str__(self):
+        return self.name
