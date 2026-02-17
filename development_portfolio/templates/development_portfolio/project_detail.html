@@ -32,25 +32,22 @@ Description: Template for development portfolio project detail page.
 				{% endif %}
 			</div>
 
+			{% if project.images.exists %}
 			<div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
 				<div class="flex items-center justify-between">
 					<h2 class="text-2xl font-semibold">Image Gallery</h2>
 					<span class="text-sm text-base-content/60">{{ project.images.count }} image{{ project.images.count|pluralize }}</span>
 				</div>
-				{% if project.images.exists %}
-					<div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-						{% for image in project.images.all %}
-							<figure class="overflow-hidden rounded-xl border border-base-300/60 bg-base-200 cursor-pointer" onclick="document.getElementById('imageModal').showModal(); document.getElementById('modalImage').src='{% static image.image_source %}'; document.getElementById('modalImageAlt').textContent='{{ image.image_alt_text|default:project.project_name }}';">
-								<img
-									src="{% static image.image_source %}"
-									alt="{{ image.image_alt_text|default:project.project_name }}"
-									class="h-48 w-full object-cover transition-transform duration-300 hover:scale-105" />
-							</figure>
-						{% endfor %}
-					</div>
-				{% else %}
-					<p class="mt-4 text-base-content/60">No images have been added for this project yet.</p>
-				{% endif %}
+				<div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+					{% for image in project.images.all %}
+						<figure class="overflow-hidden rounded-xl border border-base-300/60 bg-base-200 cursor-pointer" onclick="document.getElementById('imageModal').showModal(); document.getElementById('modalImage').src='{% static image.image_source %}'; document.getElementById('modalImageAlt').textContent='{{ image.image_alt_text|default:project.project_name }}';">
+							<img
+								src="{% static image.image_source %}"
+								alt="{{ image.image_alt_text|default:project.project_name }}"
+								class="h-48 w-full object-cover transition-transform duration-300 hover:scale-105" />
+						</figure>
+					{% endfor %}
+				</div>
 			</div>
 
 			<!-- Image Expansion Modal -->
@@ -68,6 +65,7 @@ Description: Template for development portfolio project detail page.
 					<button>close</button>
 				</form>
 			</dialog>
+			{% endif %}
 		</div>
 
 		<aside class="space-y-6">
