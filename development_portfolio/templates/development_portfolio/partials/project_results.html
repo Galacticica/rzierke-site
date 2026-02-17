@@ -1,0 +1,48 @@
+<!--
+file: project_results.html
+Author: Reagan Zierke
+Date: 2026-02-16
+Description: Partial template for project results grid. This partial is intended to be included via HTMX.
+-->
+
+{# HTMX fragment: replaces #project-results #}
+
+<div id="project-results" class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+	{% for project in projects %}
+		<article class="rounded-2xl border border-base-300/60 bg-base-100 p-6 shadow-sm">
+			<div class="flex items-start justify-between gap-3">
+				<h2 class="text-xl font-semibold leading-tight">
+					{{ project.project_name }}
+				</h2>
+			</div>
+			{% if project.short_description %}
+				<p class="mt-2 text-sm text-base-content/70">
+					{{ project.short_description }}
+				</p>
+			{% else %}
+				<p class="mt-2 text-sm text-base-content/50">
+					No short description available yet.
+				</p>
+			{% endif %}
+			<div class="mt-4 flex items-end justify-between gap-3">
+				<div>
+					<div class="text-xs uppercase tracking-wide text-base-content/60">
+						Date completed
+					</div>
+					<div class="mt-1 text-sm font-medium">
+						{% if project.date %}
+							{{ project.date|date:"M d, Y" }}
+						{% else %}
+							In progress
+						{% endif %}
+					</div>
+				</div>
+				<a href="{% url 'dev-project-detail' project.slug %}" class="btn btn-primary btn-sm">Open</a>
+			</div>
+		</article>
+	{% empty %}
+		<div class="rounded-2xl border border-dashed border-base-300/70 p-8 text-center text-base-content/70 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+			No projects found. Try adjusting your search.
+		</div>
+	{% endfor %}
+</div>

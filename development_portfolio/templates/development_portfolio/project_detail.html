@@ -1,0 +1,134 @@
+<!--
+file: project_detail.html
+Author: Reagan Zierke
+Date: 2026-02-15
+Description: Template for development portfolio project detail page. 
+-->
+
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}
+<title>Development Portfolio Projects</title>
+{% endblock %}
+
+{% block content %}
+
+<section class="mx-auto w-full max-w-6xl px-4 py-10">
+	<div class="flex items-center justify-between">
+		<a href="{% url 'dev-project-list' %}" class="btn btn-ghost btn-sm">← Back to projects</a>
+	</div>
+
+	<div class="mt-6 grid gap-8 lg:grid-cols-[2fr_1fr]">
+		<div class="space-y-6">
+			<div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+				<h1 class="text-3xl font-bold tracking-tight md:text-4xl">{{ project.project_name }}</h1>
+				{% if project.short_description %}
+					<p class="mt-2 text-lg text-base-content/80">{{ project.short_description }}</p>
+				{% endif %}
+				{% if project.description %}
+					<div class="mt-4 text-base-content/70 leading-relaxed whitespace-pre-wrap">{{ project.description }}</div>
+				{% else %}
+					<p class="mt-4 text-base-content/60">No description provided yet.</p>
+				{% endif %}
+			</div>
+
+			<div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+				<div class="flex items-center justify-between">
+					<h2 class="text-2xl font-semibold">Image Gallery</h2>
+					<span class="text-sm text-base-content/60">{{ project.images.count }} image{{ project.images.count|pluralize }}</span>
+				</div>
+				{% if project.images.exists %}
+					<div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{% for image in project.images.all %}
+							<figure class="overflow-hidden rounded-xl border border-base-300/60 bg-base-200 cursor-pointer" onclick="document.getElementById('imageModal').showModal(); document.getElementById('modalImage').src='{% static image.image_source %}'; document.getElementById('modalImageAlt').textContent='{{ image.image_alt_text|default:project.project_name }}';">
+								<img
+									src="{% static image.image_source %}"
+									alt="{{ image.image_alt_text|default:project.project_name }}"
+									class="h-48 w-full object-cover transition-transform duration-300 hover:scale-105" />
+							</figure>
+						{% endfor %}
+					</div>
+				{% else %}
+					<p class="mt-4 text-base-content/60">No images have been added for this project yet.</p>
+				{% endif %}
+			</div>
+
+			<!-- Image Expansion Modal -->
+			<dialog id="imageModal" class="modal">
+				<div class="modal-box max-w-2xl">
+					<form method="dialog">
+						<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+					</form>
+					<figure class="mt-4">
+						<img id="modalImage" src="" alt="" class="w-full rounded-lg" />
+						<figcaption id="modalImageAlt" class="mt-3 text-center text-sm text-base-content/70"></figcaption>
+					</figure>
+				</div>
+				<form method="dialog" class="modal-backdrop">
+					<button>close</button>
+				</form>
+			</dialog>
+		</div>
+
+		<aside class="space-y-6">
+			<div class="rounded-2xl border border-base-300/60 bg-base-100 p-6 shadow-sm">
+				<h2 class="text-xl font-semibold">Project Details</h2>
+				<dl class="mt-4 space-y-3 text-sm">
+					<div class="flex items-start justify-between gap-4">
+						<dt class="text-base-content/60">Event</dt>
+						<dd class="text-right font-medium">{{ project.event|default:"Not listed" }}</dd>
+					</div>
+					<div class="flex items-start justify-between gap-4">
+						<dt class="text-base-content/60">Date</dt>
+						<dd class="text-right font-medium">
+							{% if project.date %}
+								{{ project.date|date:"F j, Y" }}
+							{% else %}
+								Not listed
+							{% endif %}
+						</dd>
+					</div>
+					<div class="flex items-start justify-between gap-4">
+						<dt class="text-base-content/60">Category</dt>
+						<dd class="text-right font-medium">{{ project.category|default:"Not listed" }}</dd>
+					</div>
+					<div class="flex items-start justify-between gap-4">
+						<dt class="text-base-content/60">Visibility</dt>
+						<dd class="text-right font-medium">{% if project.public %}Public{% else %}Private{% endif %}</dd>
+					</div>
+				</dl>
+			</div>
+
+			<div class="rounded-2xl border border-base-300/60 bg-base-100 p-6 shadow-sm">
+				<h2 class="text-xl font-semibold">Tools Used</h2>
+				{% if project.tool_used.exists %}
+					<div class="mt-4 flex flex-wrap gap-2">
+						{% for tool in project.tool_used.all %}
+							<span class="badge badge-outline">{{ tool.name }}</span>
+						{% endfor %}
+					</div>
+				{% else %}
+					<p class="mt-4 text-sm text-base-content/60">No tools listed yet.</p>
+				{% endif %}
+			</div>
+            
+            {% if project.repository_url %}
+			<div class="rounded-2xl border border-base-300/60 bg-base-100 p-6 shadow-sm">
+				<a
+					href="{{ project.repository_url }}"
+					target="_blank"
+					rel="noopener"
+					class="inline-flex items-center gap-2 text-xl font-semibold text-primary hover:underline">
+					Repository
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4">
+						<path d="M13.5 3.75a.75.75 0 0 0 0 1.5h4.19l-7.72 7.72a.75.75 0 1 0 1.06 1.06l7.72-7.72v4.19a.75.75 0 0 0 1.5 0v-6a.75.75 0 0 0-.75-.75h-6Z" />
+						<path d="M6.75 4.5A2.25 2.25 0 0 0 4.5 6.75v10.5A2.25 2.25 0 0 0 6.75 19.5h10.5a2.25 2.25 0 0 0 2.25-2.25V12a.75.75 0 0 0-1.5 0v5.25a.75.75 0 0 1-.75.75H6.75a.75.75 0 0 1-.75-.75V6.75a.75.75 0 0 1 .75-.75H12a.75.75 0 0 0 0-1.5H6.75Z" />
+					</svg>
+				</a>
+			</div>
+			{% endif %}
+		</aside>
+	</div>
+</section>
+
+{% endblock %}
