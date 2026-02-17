@@ -15,15 +15,7 @@ Description: Template for the development portfolio bot graveyard page.
 {% block content %}
 <style>
     .botyard-container {
-        max-width: 1000px;
-        margin: 40px auto;
-        padding: 20px;
-    }
-
-    .botyard-title {
-        text-align: center;
-        margin-bottom: 60px;
-        color: #333;
+        max-width: 1200px;
     }
 
     .tombstone-grid {
@@ -279,10 +271,18 @@ Description: Template for the development portfolio bot graveyard page.
     }
 </style>
 
-<div class="botyard-container">
-    <h1 class="botyard-title">🪦 Bot Graveyard 🪦</h1>
-    
-    <div class="tombstone-grid">
+<section class="mx-auto w-full max-w-6xl px-4 py-10">
+    <div class="flex items-center justify-between mb-8">
+        <a href="{% url 'dev-home' %}" class="btn btn-ghost btn-sm">← Back</a>
+    </div>
+
+    <div class="mb-10">
+        <h1 class="text-3xl font-bold tracking-tight">Bot Graveyard</h1>
+        <p class="mt-2 text-base-content/70">Decommissioned Discord bots and projects</p>
+    </div>
+
+    <div class="botyard-container">
+        <div class="tombstone-grid">
         {% for item in bots_with_styles %}
             <div class="tombstone-wrapper">
                 <div class="tombstone {{ item.style }}">
@@ -326,5 +326,6 @@ Description: Template for the development portfolio bot graveyard page.
         {% endfor %}
     </div>
 </div>
+</section>
 
 {% endblock %}
