@@ -3,26 +3,10 @@
 ## Resources
 A page with resources I've used, as well as resources I've created (like the django scripts)
 
-## Projects 
-A page for each project with images, 
-Maybe you can search for specific projects or filter?
+## Discord Bot Graveyard
+- small description of all bots I made back in the day
 
-Pages Include:
-- title
-- description
-- event
-- category (hackathon, class, fun)
-- technologies used
-
-### Possible Projects
-- peel exchange
-- peterson strength systems
-- Lock Out Hero
-- God Talk
-- Discord Bots graveyard
-- GPS
-
-### Marvel Connections
+## Marvel Connections
 A website that shows all the connections between Marvel Characters (and maybe other fandoms in the future) 
 Each character is connected to:
 - projects they are in
