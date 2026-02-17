@@ -9,7 +9,7 @@ from django.shortcuts import render
 from django.views import View
 from django.views.generic import DetailView
 
-from .models import Project, Skill
+from .models import Project, Resource, Skill
 from .filters import ProjectFilter
 
 
@@ -64,3 +64,13 @@ class DevProjectDetailView(DetailView):
     def get_queryset(self):
         return Project.objects.with_related()
 
+
+class ResourcesView(View):
+    """A view to display a list of resources related to development."""
+
+    def get(self, request):
+        resources = Resource.objects.all()
+        context = {
+            "resources": resources,
+        }
+        return render(request, "development_portfolio/resources.html", context)
