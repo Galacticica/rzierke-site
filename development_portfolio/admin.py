@@ -11,7 +11,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Project, ProjectImage, Tool, Skill, Resource
+from .models import Project, ProjectImage, Tool, Skill, Resource, Bot
 
 
 class ProjectImageInline(admin.StackedInline):
@@ -69,3 +69,9 @@ class ProjectAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return qs.prefetch_related("tool_used", "images")
 
+@admin.register(Bot)
+class BotAdmin(admin.ModelAdmin):
+    """Register Bot model in admin with basic configurations."""
+    list_display = ("name", "description", "repository_url")
+    search_fields = ("name", "description")
+    ordering = ("name",)
