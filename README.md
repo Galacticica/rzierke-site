@@ -1,6 +1,5 @@
 # TODO
 
-## Fix filter number counter things
 
 ## Add OpenAI API section to dev portfolio (copy hackathon logic)
 ## Add Strudel to dev portfolio
