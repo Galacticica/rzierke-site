@@ -33,6 +33,9 @@ class PiecesListView(View):
         page_number = request.GET.get("page", 1)
         page_obj = paginator.get_page(page_number)
 
+        piece_type_filter_count = len(request.GET.getlist("piece_type"))
+        instrument_filter_count = len(request.GET.getlist("instrument"))
+
         context = {
             "pieces": page_obj.object_list,
             "page_obj": page_obj,
@@ -41,6 +44,8 @@ class PiecesListView(View):
             "q": request.GET.get("q", ""),
             "total_count": Piece.objects.count(),
             "filtered_count": pieces.count(),
+            "piece_type_filter_count": piece_type_filter_count,
+            "instrument_filter_count": instrument_filter_count,
         }
 
         if getattr(request, "htmx", False):

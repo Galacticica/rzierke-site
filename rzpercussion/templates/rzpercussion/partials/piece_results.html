@@ -22,8 +22,6 @@ Description: Template for piece results section. This partial is intended to be 
             </div>
         </div>
 
-        <span id="matching-count" hx-swap-oob="innerHTML">{{ filtered_count|default:0 }}</span>
-
         <!-- piece list -->
         <div class="mt-4 space-y-3">
             {% for piece in page_obj.object_list %}
@@ -133,3 +131,7 @@ Description: Template for piece results section. This partial is intended to be 
         {% endif %}
     </div>
 </div>
+
+{# Out-of-band swaps #}
+<span id="matching-count" hx-swap-oob="innerHTML">{{ filtered_count|default:0 }}</span>
+{% include "rzpercussion/partials/filter_counts.html" %}
