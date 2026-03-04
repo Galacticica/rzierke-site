@@ -22,8 +22,6 @@ Description: Template for song results section. This partial is intended to be i
             </div>
         </div>
 
-        <span id="matching-count" hx-swap-oob="innerHTML">{{ filtered_count|default:0 }}</span>
-
         <!-- song list -->
         <div class="mt-4 space-y-3">
             {% for song in page_obj.object_list %}
@@ -157,3 +155,7 @@ Description: Template for song results section. This partial is intended to be i
         {% endif %}
     </div>
 </div>
+
+{# Out-of-band swaps #}
+<span id="matching-count" hx-swap-oob="innerHTML">{{ filtered_count|default:0 }}</span>
+{% include "ministry/partials/filter_counts.html" %}
