@@ -1,10 +1,9 @@
 # TODO
 
-## Resources
-A page with resources I've used, as well as resources I've created (like the django scripts)
+## Fix filter number counter things
 
-## Discord Bot Graveyard
-- small description of all bots I made back in the day
+## Add OpenAI API section to dev portfolio (copy hackathon logic)
+## Add Strudel to dev portfolio
 
 ## Marvel Connections
 A website that shows all the connections between Marvel Characters (and maybe other fandoms in the future) 
