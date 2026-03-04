@@ -46,7 +46,7 @@ Description: Template for piece layout. This partial is intended to be included 
                     <details class="collapse collapse-arrow border border-base-300 bg-base-200/30">
                         <summary class="collapse-title text-sm font-medium flex items-center justify-between">
                             <span>Piece Types</span>
-                            <span class="badge badge-sm badge-outline">{{ filter.form.piece_type.value|length }}</span>
+                            <span id="piece-type-count-badge" class="badge badge-sm badge-outline">{{ piece_type_filter_count|default:0 }}</span>
                         </summary>
                         <div class="collapse-content pt-0">
                             <div class="form-control">
@@ -60,7 +60,7 @@ Description: Template for piece layout. This partial is intended to be included 
                     <details class="collapse collapse-arrow border border-base-300 bg-base-200/30">
                         <summary class="collapse-title text-sm font-medium flex items-center justify-between">
                             <span>Instruments</span>
-                            <span class="badge badge-sm badge-outline">{{ filter.form.instrument.value|length }}</span>
+                            <span id="instrument-count-badge" class="badge badge-sm badge-outline">{{ instrument_filter_count|default:0 }}</span>
                         </summary>
                         <div class="collapse-content pt-0">
                             <div class="form-control">
