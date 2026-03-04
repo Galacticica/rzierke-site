@@ -49,6 +49,9 @@ class SongListView(View):
         page_number = request.GET.get("page", 1)
         page_obj = paginator.get_page(page_number)
 
+        artist_filter_count = len(request.GET.getlist("artist"))
+        tag_filter_count = len(request.GET.getlist("tag"))
+
         context = {
             "songs": page_obj.object_list,
             "page_obj": page_obj,
@@ -57,6 +60,8 @@ class SongListView(View):
             "q": request.GET.get("q", ""),
             "total_count": Song.objects.count(),
             "filtered_count": songs.count(),
+            "artist_filter_count": artist_filter_count,
+            "tag_filter_count": tag_filter_count,
         }
 
         if getattr(request, "htmx", False):
