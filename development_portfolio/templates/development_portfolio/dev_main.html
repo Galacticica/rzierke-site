@@ -90,6 +90,25 @@ Description: Template for the development portfolio homepage.
 
             <div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
                 <div class="flex items-start gap-4">
+                    <div class="rounded-xl bg-primary/10 p-3 text-primary flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="h-6 w-6" aria-hidden="true">
+                            <path d="M5 6.5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-6.5L8 21v-3.5H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                            <path d="M12 3v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                            <text x="12" y="14.7" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">AI</text>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-semibold">Chatbot Playground</h2>
+                        <p class="mt-1 text-base-content/70">A place to experiment with and test chatbot ideas.</p>
+                        <div class="mt-6">
+                            <a class="btn btn-primary" href="{% url 'chatbot-home' %}">Visit Playground</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+                <div class="flex items-start gap-4">
                     <div class="rounded-xl bg-accent/10 p-3 text-accent flex-shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6">
                             <path d="M7 22h10v-6a5 5 0 0 0-10 0v6Z"/>

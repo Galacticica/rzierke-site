@@ -5,8 +5,12 @@
 {% endblock %}
 
 {% block content %}
-<section class="h-[calc(100vh-11rem)] p-3 md:p-5">
-  <div class="grid h-full grid-cols-1 gap-3 overflow-hidden rounded-2xl border border-base-300 bg-base-200/70 shadow-xl lg:grid-cols-[320px_1fr]">
+<section class="flex h-[calc(100vh-11rem)] flex-col p-3 md:p-5">
+  <div class="mb-3 flex items-center justify-between">
+    <a href="{% url 'dev-home' %}" class="btn btn-ghost btn-sm">&larr; Back</a>
+  </div>
+
+  <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden rounded-2xl border border-base-300 bg-base-200/70 shadow-xl lg:grid-cols-[320px_1fr]">
     <aside id="chat-sidebar" class="h-full overflow-y-auto border-b border-base-300 bg-base-100 lg:border-b-0 lg:border-r" hx-get="{% url 'chatbot-sidebar' %}" hx-trigger="conversations-changed from:body">
       {% include 'chatbot/partials/sidebar.html' with conversations=conversations selected_conversation_id=selected_conversation.id %}
     </aside>
