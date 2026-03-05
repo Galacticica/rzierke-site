@@ -1,0 +1,5 @@
+{% include 'chatbot/partials/chat_panel.html' with conversation=conversation messages=messages models=models selected_model=selected_model %}
+
+<aside id="chat-sidebar" class="h-full overflow-y-auto border-b border-base-300 bg-base-100 lg:border-b-0 lg:border-r" hx-swap-oob="outerHTML">
+  {% include 'chatbot/partials/sidebar.html' with conversations=conversations selected_conversation_id=selected_conversation_id %}
+</aside>

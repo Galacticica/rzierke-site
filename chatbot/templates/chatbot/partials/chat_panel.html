@@ -1,0 +1,81 @@
+<div class="flex h-full flex-col">
+  <div class="border-b border-base-300 px-4 py-3 md:px-6">
+    {% if conversation %}
+      <h1 class="text-lg font-semibold">{{ conversation.title|default:'New Chat' }}</h1>
+    {% else %}
+      <h1 class="text-lg font-semibold">New Chat</h1>
+    {% endif %}
+  </div>
+
+  <div id="chat-messages" class="flex-1 space-y-4 overflow-y-auto px-4 py-4 md:px-8 md:py-6">
+    {% if conversation and messages %}
+      {% for message in messages %}
+        {% if message.sender == 'ai' %}
+          <div class="flex justify-start">
+            <article class="max-w-[85%] rounded-2xl rounded-bl-md border border-base-300 bg-base-200 px-4 py-2 text-sm leading-relaxed text-base-content whitespace-pre-wrap">{{ message.content }}</article>
+          </div>
+        {% else %}
+          <div class="flex justify-end">
+            <article class="max-w-[80%] rounded-2xl rounded-br-md border border-primary/35 bg-primary/15 px-4 py-2 text-sm leading-relaxed text-base-content whitespace-pre-wrap">{{ message.content }}</article>
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="mx-auto mt-8 max-w-2xl rounded-2xl border border-dashed border-base-300 bg-base-200/50 p-6 text-center">
+        <p class="text-sm text-base-content/70">Start a conversation by sending your first message.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="border-t border-base-300 bg-base-100 px-4 py-3 md:px-6 md:py-4">
+    <form class="js-chat-form space-y-3" hx-post="{% url 'chatbot-send' %}" hx-target="#chat-main" hx-swap="innerHTML">
+      {% if conversation %}
+        <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
+      {% endif %}
+
+      {% if conversation and messages %}
+        <div class="flex items-center justify-between rounded-lg border border-base-300 bg-base-200 px-3 py-2 text-xs md:text-sm">
+          <span class="text-base-content/70">Model</span>
+          <span class="font-medium">{{ selected_model.name|default:'Default Model' }} (locked)</span>
+        </div>
+        {% if selected_model %}
+          <input type="hidden" name="model_id" value="{{ selected_model.id }}">
+        {% endif %}
+      {% else %}
+        <label class="form-control w-full">
+          <span class="label-text mb-1 text-xs uppercase tracking-wide text-base-content/65">Model</span>
+          <select class="select select-bordered" name="model_id" {% if models %}required{% endif %}>
+            {% if not models %}
+              <option value="">No models configured</option>
+            {% endif %}
+            {% for model in models %}
+              <option value="{{ model.id }}" {% if selected_model and selected_model.id == model.id %}selected{% endif %}>{{ model.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endif %}
+
+      <div class="flex items-end gap-2 pt-3">
+        <label class="form-control flex-1">
+          <textarea
+            name="content"
+            rows="2"
+            required
+            class="textarea textarea-bordered w-full resize-none"
+            placeholder="Message AI..."
+          ></textarea>
+        </label>
+        <button type="submit" class="btn btn-primary min-w-30" data-send-btn>
+          <span data-idle-content style="display: inline-flex;" class="items-center gap-1">
+            <span>Send</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+          <span data-thinking-content style="display: none;" class="items-center gap-2">
+            <span class="loading loading-spinner loading-xs"></span>
+            <span>Thinking</span>
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

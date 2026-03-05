@@ -5,9 +5,9 @@ from openai import OpenAI
 from django.conf import settings
 
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+client = OpenAI(api_key=settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else None
 
-from conversations.models import Conversation
+from chatbot.models import Conversation
 
 
 def get_base_context(conversation: Conversation | None) -> str:
@@ -66,10 +66,15 @@ def get_response_from_ai(conversation: Conversation, user_message: str) -> str:
             }
         )
 
-    resp = client.responses.create(
-        model=model_name,
-        instructions=base_context if base_context else None,
-        input=input_items,
-    )
+    if not client:
+        return "I cannot reach the AI service right now."
 
-    return resp.output_text or ""
+    try:
+        resp = client.responses.create(
+            model=model_name,
+            instructions=base_context if base_context else None,
+            input=input_items,
+        )
+        return resp.output_text or ""
+    except Exception:
+        return "I ran into a temporary issue while generating a response."

@@ -1,0 +1,27 @@
+<div class="flex h-full flex-col">
+  <div class="sticky top-0 z-10 border-b border-base-300 bg-base-100/95 p-3 backdrop-blur">
+    <button
+      class="btn btn-primary btn-sm w-full"
+      hx-get="{% url 'chatbot-new' %}"
+      hx-target="#chat-main"
+      hx-swap="innerHTML"
+    >
+      New Chat
+    </button>
+  </div>
+
+  <div class="space-y-1 p-2">
+    {% for conversation in conversations %}
+      <button
+        class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 px-3 py-3 text-left normal-case {% if selected_conversation_id == conversation.id %}btn-active{% endif %}"
+        hx-get="{% url 'chatbot-conversation' conversation.id %}"
+        hx-target="#chat-main"
+        hx-swap="innerHTML"
+      >
+        <span class="line-clamp-1 font-medium">{{ conversation.title|default:'New Chat' }}</span>
+      </button>
+    {% empty %}
+      <p class="px-3 py-6 text-sm text-base-content/60">No conversations yet.</p>
+    {% endfor %}
+  </div>
+</div>

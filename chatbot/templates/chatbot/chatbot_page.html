@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}
+<title>Chatbot</title>
+{% endblock %}
+
+{% block content %}
+<section class="h-[calc(100vh-11rem)] p-3 md:p-5">
+  <div class="grid h-full grid-cols-1 gap-3 overflow-hidden rounded-2xl border border-base-300 bg-base-200/70 shadow-xl lg:grid-cols-[320px_1fr]">
+    <aside id="chat-sidebar" class="h-full overflow-y-auto border-b border-base-300 bg-base-100 lg:border-b-0 lg:border-r" hx-get="{% url 'chatbot-sidebar' %}" hx-trigger="conversations-changed from:body">
+      {% include 'chatbot/partials/sidebar.html' with conversations=conversations selected_conversation_id=selected_conversation.id %}
+    </aside>
+
+    <section id="chat-main" class="h-full overflow-hidden bg-base-100">
+      {% include 'chatbot/partials/chat_panel.html' with conversation=selected_conversation messages=selected_messages models=models selected_model=selected_conversation.model %}
+    </section>
+  </div>
+</section>
+
+<script>
+(() => {
+  const toggleButtonState = (form, thinking) => {
+    const button = form.querySelector('[data-send-btn]');
+    if (!button) return;
+
+    const idle = button.querySelector('[data-idle-content]');
+    const thinkingContent = button.querySelector('[data-thinking-content]');
+    if (idle && thinkingContent) {
+      idle.style.display = thinking ? 'none' : 'inline-flex';
+      thinkingContent.style.display = thinking ? 'inline-flex' : 'none';
+    }
+
+    button.disabled = thinking;
+  };
+
+  const setupFormKeyListener = (form) => {
+    const textarea = form?.querySelector('textarea[name="content"]');
+    if (!textarea) return;
+    
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+  };
+
+  // Setup initial forms on page load
+  document.querySelectorAll('.js-chat-form').forEach(setupFormKeyListener);
+
+  document.body.addEventListener('htmx:beforeRequest', (event) => {
+    const form = event.detail.elt;
+    if (!(form instanceof HTMLFormElement) || !form.classList.contains('js-chat-form')) {
+      return;
+    }
+
+    const textarea = form.querySelector('textarea[name="content"]');
+    const text = (textarea?.value || '').trim();
+    if (!text) {
+      event.preventDefault();
+      return;
+    }
+
+    const list = document.getElementById('chat-messages');
+    if (list) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex justify-end';
+      wrapper.innerHTML = `\n        <article class="max-w-[80%] rounded-2xl rounded-br-md border border-primary/35 bg-primary/15 px-4 py-2 text-sm text-base-content">\n          ${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}\n        </article>\n      `;
+      list.appendChild(wrapper);
+      list.scrollTop = list.scrollHeight;
+    }
+
+    if (textarea) {
+      textarea.value = '';
+      textarea.disabled = true;
+    }
+
+    toggleButtonState(form, true);
+  });
+
+  document.body.addEventListener('htmx:load', (event) => {
+    const forms = event.target.querySelectorAll('.js-chat-form') || [];
+    forms.forEach(setupFormKeyListener);
+  });
+
+  document.body.addEventListener('htmx:afterSwap', (event) => {
+    if (event.detail.target.id === 'chat-main') {
+      const chatMessages = document.getElementById('chat-messages');
+      if (chatMessages) {
+        setTimeout(() => {
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 0);
+      }
+    }
+  });
+
+  document.body.addEventListener('htmx:responseError', (event) => {
+    const form = event.detail.elt;
+    if (!(form instanceof HTMLFormElement) || !form.classList.contains('js-chat-form')) {
+      return;
+    }
+
+    const textarea = form.querySelector('textarea[name="content"]');
+    if (textarea) {
+      textarea.disabled = false;
+      textarea.focus();
+    }
+
+    toggleButtonState(form, false);
+  });
+})();
+</script>
+{% endblock %}

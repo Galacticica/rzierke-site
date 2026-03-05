@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import AIModel, AIQuirk
+from .models import AIModel, AIQuirk, Conversation, Message
 
 
 class AIQuirkInline(admin.TabularInline):
@@ -16,3 +16,7 @@ class AIModelAdmin(admin.ModelAdmin):
 @admin.register(AIQuirk)
 class AIQuirkAdmin(admin.ModelAdmin):
     list_display = ('name', 'description')
+
+@admin.register(Conversation)
+class ConversationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'created_at')

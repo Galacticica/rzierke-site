@@ -26,6 +26,21 @@ class MyLoginView(LoginView):
     template_name = "accounts/login.html"
     redirect_authenticated_user = True
 
+    def get_context_data(self, **kwargs):
+        """Add 'next' parameter to template context."""
+        context = super().get_context_data(**kwargs)
+        # Check GET for next parameter, fallback to POST if form was submitted
+        next_url = self.request.GET.get('next') or self.request.POST.get('next', '')
+        context['next'] = next_url
+        return context
+
+    def get_success_url(self):
+        """Redirect to 'next' parameter if present, otherwise to home."""
+        next_url = self.request.GET.get('next') or self.request.POST.get('next')
+        if next_url:
+            return next_url
+        return "/"
+
 class MySignupView(FormView):
     """The signup view for new user registration."""
     form_class = SignupForm
@@ -46,7 +61,6 @@ class MySignupView(FormView):
     def form_valid(self, form):
         user = User.objects.create(
             email=form.cleaned_data["email"],
-            username=form.cleaned_data["email"],
             first_name=form.cleaned_data["first_name"],
             last_name=form.cleaned_data["last_name"],
             password=make_password(form.cleaned_data["password"]), 
