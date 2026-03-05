@@ -1,4 +1,11 @@
-"""Prompt helpers for conversation model interactions."""
+"""
+File: get_prompt.py
+Author: Reagan Zierke <reaganzierke@gmail.com>
+Date: 2026-03-05
+Description: Get the full prompt to send to the AI, including base context and recent conversation history.
+"""
+
+
 
 from __future__ import annotations
 from openai import OpenAI

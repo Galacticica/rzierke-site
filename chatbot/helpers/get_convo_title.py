@@ -1,4 +1,11 @@
-"""Conversation title helpers."""
+"""
+File: get_convo_title.py
+Author: Reagan Zierke <reaganzierke@gmail.com>
+Date: 2026-03-05
+Description: Helpers for generating conversation titles.
+"""
+
+
 
 from __future__ import annotations
 

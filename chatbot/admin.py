@@ -1,3 +1,11 @@
+"""
+File: admin.py
+Author: Reagan Zierke <reaganzierke@gmail.com>
+Date: 2026-03-05
+Description: Register chatbot models for the Django admin interface.
+"""
+
+
 from django.contrib import admin
 from .models import AIModel, AIQuirk, Conversation, Message
 
