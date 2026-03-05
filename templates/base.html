@@ -48,6 +48,7 @@ Description: Base template for the site. This is where it loads common assets an
                 <li><a href="{% url 'dev-home' %}">Development Portfolio</a></li>
                 <li><a href="{% url 'pieces-list' %}">RZPercussion</a></li>
                 <li><a href="{% url 'min-home' %}">Ministry Materials</a></li>
+                <li><a href="{% url 'chatbot-home' %}">Chatbot</a></li>
             </ul>
             </div>
         </div>
@@ -67,7 +68,7 @@ Description: Base template for the site. This is where it loads common assets an
     <main class="flex-grow">
         {% block content %}{% endblock %}
     </main>
-    <div class="py-8"></div>
+    <div class="py-2"></div>
     <footer class="footer sm:footer-horizontal bg-neutral text-base-content items-center p-4">
   <aside class="grid-flow-col items-center">
     <!-- <img src="{% static 'new_logo.png' %}" alt="RZWorld" class="h-12"> -->

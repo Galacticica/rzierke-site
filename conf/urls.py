@@ -14,6 +14,7 @@ urlpatterns = [
     path('__reload__/', include('django_browser_reload.urls')),
     path('admin/', admin.site.urls),
     path('', include('home.urls')),
+    path('chatbot/', include('chatbot.urls')),
     path('ministry/', include('ministry.urls')),
     path('rzpercussion/', include('rzpercussion.urls')),
     path('development-portfolio/', include('development_portfolio.urls')),
