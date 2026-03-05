@@ -17,11 +17,10 @@ load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get("SECRET_KEY", get_random_secret_key())
 DEBUG = os.environ.get("DEBUG", "").lower() in ("1", "true", "yes", "on")
-
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 ALLOWED_HOSTS = []
 
-# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -38,6 +37,7 @@ INSTALLED_APPS = [
     'ministry',
     'rzpercussion',
     'development_portfolio',
+    'chatbot',
 ]
 
 MIDDLEWARE = [
