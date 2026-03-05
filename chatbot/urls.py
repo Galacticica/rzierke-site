@@ -1,3 +1,11 @@
+"""
+File: urls.py
+Author: Reagan Zierke <reaganzierke@gmail.com>
+Date: 2026-03-05
+Description: Route URLs for chatbot app views.
+"""
+
+
 from django.urls import path
 
 from . import views

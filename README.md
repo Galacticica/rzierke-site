@@ -1,7 +1,7 @@
 # TODO
 
 ## Add unfold admin
-## Add OpenAI API section to dev portfolio (copy hackathon logic)
+## Add OpenAI API section to dev portfolio somewhere
 ## Add Strudel to dev portfolio
 
 ## Marvel Connections

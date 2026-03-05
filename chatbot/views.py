@@ -1,3 +1,11 @@
+"""
+File: views.py
+Author: Reagan Zierke <reaganzierke@gmail.com>
+Date: 2026-03-05
+Description: Creates views for chatbot interactions, including listing conversations, viewing a conversation, and sending messages. Uses HTMX for dynamic updates.
+"""
+
+
 from __future__ import annotations
 
 from django.contrib.auth.decorators import login_required
@@ -21,6 +29,7 @@ def _conversation_list_for_user(request: HttpRequest):
 @login_required
 @require_GET
 def chat_home(request: HttpRequest) -> HttpResponse:
+	'''The main chat page showing the sidebar and the most recent conversation.'''
 	conversations = _conversation_list_for_user(request)
 	selected = conversations.first()
 	selected_messages = selected.messages.order_by("timestamp") if selected else []
@@ -40,6 +49,7 @@ def chat_home(request: HttpRequest) -> HttpResponse:
 @login_required
 @require_GET
 def chat_sidebar(request: HttpRequest) -> HttpResponse:
+	'''The sidebar showing the list of conversations. This is loaded separately for HTMX updates.'''
 	conversations = _conversation_list_for_user(request)
 	selected_id = request.GET.get("selected")
 	return render(
@@ -55,6 +65,7 @@ def chat_sidebar(request: HttpRequest) -> HttpResponse:
 @login_required
 @require_GET
 def chat_new(request: HttpRequest) -> HttpResponse:
+	'''Create a new conversation.'''
 	models = AIModel.objects.order_by("name")
 	conversations = _conversation_list_for_user(request)
 	return render(
@@ -74,6 +85,7 @@ def chat_new(request: HttpRequest) -> HttpResponse:
 @login_required
 @require_GET
 def chat_conversation(request: HttpRequest, conversation_id: int) -> HttpResponse:
+	'''View an existing conversation.'''
 	conversation = get_object_or_404(
 		Conversation.objects.select_related("model"),
 		pk=conversation_id,
@@ -99,6 +111,7 @@ def chat_conversation(request: HttpRequest, conversation_id: int) -> HttpRespons
 @login_required
 @require_POST
 def chat_send_message(request: HttpRequest) -> HttpResponse:
+	'''Handle sending a message from the user, getting a response from the AI, and returning the updated conversation.'''
 	user_content = (request.POST.get("content") or "").strip()
 	if not user_content:
 		return HttpResponseBadRequest("Message cannot be empty.")
@@ -118,7 +131,6 @@ def chat_send_message(request: HttpRequest) -> HttpResponse:
 			model = AIModel.objects.filter(pk=selected_model_id).first()
 		conversation = Conversation.objects.create(user=request.user, model=model)
 
-	# Once the first user message is sent, lock the model for this conversation.
 	if not conversation.model and selected_model_id and selected_model_id.isdigit():
 		chosen_model = AIModel.objects.filter(pk=selected_model_id).first()
 		if chosen_model:
