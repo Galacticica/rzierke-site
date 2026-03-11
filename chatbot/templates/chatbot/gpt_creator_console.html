@@ -19,48 +19,52 @@
   <div class="grid gap-8 lg:grid-cols-2">
     <section class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm">
       <h2 class="text-xl font-semibold">Create AI Model</h2>
-      <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" class="mt-6 space-y-5">
+      <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" class="mt-6 space-y-7">
         {% csrf_token %}
         <input type="hidden" name="entity" value="model">
         <input type="hidden" name="action" value="create">
 
         <label class="form-control w-full">
-          <span class="label-text mb-1">Name</span>
+          <span class="label-text mb-2">Name</span>
           {{ model_form.name }}
         </label>
 
         <label class="form-control w-full">
-          <span class="label-text mb-1">Description</span>
+          <span class="label-text mb-2">Description</span>
           {{ model_form.description }}
         </label>
 
         <label class="form-control w-full">
-          <span class="label-text mb-1">Quirks</span>
+          <span class="label-text mb-2">Quirks</span>
           {{ model_form.quirk }}
         </label>
 
-        <button type="submit" class="btn btn-primary">Create Model</button>
+        <div class="pt-2">
+          <button type="submit" class="btn btn-primary">Create Model</button>
+        </div>
       </form>
     </section>
 
     <section class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm">
       <h2 class="text-xl font-semibold">Create AI Quirk</h2>
-      <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" class="mt-6 space-y-5">
+      <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" class="mt-6 space-y-7">
         {% csrf_token %}
         <input type="hidden" name="entity" value="quirk">
         <input type="hidden" name="action" value="create">
 
         <label class="form-control w-full">
-          <span class="label-text mb-1">Name</span>
+          <span class="label-text mb-2">Name</span>
           {{ quirk_form.name }}
         </label>
 
         <label class="form-control w-full">
-          <span class="label-text mb-1">Description</span>
+          <span class="label-text mb-2">Description</span>
           {{ quirk_form.description }}
         </label>
 
-        <button type="submit" class="btn btn-secondary">Create Quirk</button>
+        <div class="pt-2">
+          <button type="submit" class="btn btn-secondary">Create Quirk</button>
+        </div>
       </form>
     </section>
   </div>
@@ -87,24 +91,24 @@
             </div>
 
             {% if user.is_superuser or model.created_by_id == user.id %}
-              <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" class="space-y-4">
+              <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" class="space-y-6">
                 {% csrf_token %}
                 <input type="hidden" name="entity" value="model">
                 <input type="hidden" name="action" value="update">
                 <input type="hidden" name="id" value="{{ model.id }}">
 
                 <label class="form-control w-full">
-                  <span class="label-text mb-1 text-xs uppercase tracking-wide text-base-content/70">Name</span>
+                  <span class="label-text mb-2 text-xs uppercase tracking-wide text-base-content/70">Name</span>
                   <input type="text" name="name" value="{{ model.name }}" class="input input-bordered w-full" required>
                 </label>
 
                 <label class="form-control w-full">
-                  <span class="label-text mb-1 text-xs uppercase tracking-wide text-base-content/70">Description</span>
+                  <span class="label-text mb-2 text-xs uppercase tracking-wide text-base-content/70">Description</span>
                   <textarea name="description" rows="4" class="textarea textarea-bordered w-full" required>{{ model.description }}</textarea>
                 </label>
 
                 <label class="form-control w-full">
-                  <span class="label-text mb-1 text-xs uppercase tracking-wide text-base-content/70">Quirks</span>
+                  <span class="label-text mb-2 text-xs uppercase tracking-wide text-base-content/70">Quirks</span>
                   <select name="quirk" multiple class="select select-bordered w-full min-h-36">
                     {% for quirk in quirks %}
                       <option value="{{ quirk.id }}" {% if quirk in model.quirk.all %}selected{% endif %}>{{ quirk.name }}</option>
@@ -112,17 +116,24 @@
                   </select>
                 </label>
 
-                <div class="flex items-center gap-3 pt-2">
+                <div class="flex items-center gap-3 pt-3">
                   <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                  <button
+                    type="submit"
+                    form="delete-model-{{ model.id }}"
+                    class="btn btn-outline btn-error btn-xs"
+                    onclick="return confirm('Delete this model?')"
+                  >
+                    Delete
+                  </button>
                 </div>
               </form>
 
-              <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" class="mt-4">
+              <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" id="delete-model-{{ model.id }}" class="hidden">
                 {% csrf_token %}
                 <input type="hidden" name="entity" value="model">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="{{ model.id }}">
-                <button type="submit" class="btn btn-outline btn-error btn-xs" onclick="return confirm('Delete this model?')">Delete</button>
               </form>
             {% else %}
               <div class="space-y-4">
@@ -174,33 +185,40 @@
             </div>
 
             {% if user.is_superuser or quirk.created_by_id == user.id %}
-              <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" class="space-y-4">
+              <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" class="space-y-6">
                 {% csrf_token %}
                 <input type="hidden" name="entity" value="quirk">
                 <input type="hidden" name="action" value="update">
                 <input type="hidden" name="id" value="{{ quirk.id }}">
 
                 <label class="form-control w-full">
-                  <span class="label-text mb-1 text-xs uppercase tracking-wide text-base-content/70">Name</span>
+                  <span class="label-text mb-2 text-xs uppercase tracking-wide text-base-content/70">Name</span>
                   <input type="text" name="name" value="{{ quirk.name }}" class="input input-bordered w-full" required>
                 </label>
 
                 <label class="form-control w-full">
-                  <span class="label-text mb-1 text-xs uppercase tracking-wide text-base-content/70">Description</span>
+                  <span class="label-text mb-2 text-xs uppercase tracking-wide text-base-content/70">Description</span>
                   <textarea name="description" rows="4" class="textarea textarea-bordered w-full" required>{{ quirk.description }}</textarea>
                 </label>
 
-                <div class="flex items-center gap-3 pt-2">
+                <div class="flex items-center gap-3 pt-3">
                   <button type="submit" class="btn btn-secondary btn-sm">Save</button>
+                  <button
+                    type="submit"
+                    form="delete-quirk-{{ quirk.id }}"
+                    class="btn btn-outline btn-error btn-xs"
+                    onclick="return confirm('Delete this quirk?')"
+                  >
+                    Delete
+                  </button>
                 </div>
               </form>
 
-              <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" class="mt-4">
+              <form method="post" action="{% url 'chatbot-gpt-creator-action' %}" id="delete-quirk-{{ quirk.id }}" class="hidden">
                 {% csrf_token %}
                 <input type="hidden" name="entity" value="quirk">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="{{ quirk.id }}">
-                <button type="submit" class="btn btn-outline btn-error btn-xs" onclick="return confirm('Delete this quirk?')">Delete</button>
               </form>
             {% else %}
               <div class="space-y-4">
