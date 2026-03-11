@@ -40,6 +40,13 @@ class AIModel(models.Model):
     '''An AI model that can be used for conversations. Contains metadata and associated quirks.'''
     name = models.CharField(max_length=255)
     description = models.TextField()
+    created_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_ai_models',
+    )
     quirk = models.ManyToManyField('AIQuirk', related_name='quirks', blank=True)
     
     def __str__(self):
@@ -50,6 +57,13 @@ class AIQuirk(models.Model):
     '''A quirk that can be associated with an AI model.'''
     name = models.CharField(max_length=255)
     description = models.TextField()
+    created_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_ai_quirks',
+    )
     
     def __str__(self):
         return self.name

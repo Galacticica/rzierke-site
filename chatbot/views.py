@@ -10,12 +10,13 @@ from __future__ import annotations
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
+from .forms import AIModelForm, AIQuirkForm
 from .helpers.get_convo_title import get_conversation_title_from_first_message
 from .helpers.get_prompt import get_response_from_ai
-from .models import AIModel, Conversation, Message
+from .models import AIModel, AIQuirk, Conversation, Message
 
 
 def _conversation_list_for_user(request: HttpRequest):
@@ -24,6 +25,18 @@ def _conversation_list_for_user(request: HttpRequest):
 		.select_related("model")
 		.order_by("-created_at")
 	)
+
+
+def _user_can_access_gpt_creator(request: HttpRequest) -> bool:
+	if request.user.is_superuser:
+		return True
+	return bool(getattr(request.user, "gpt_creator", False))
+
+
+def _can_manage_owned_record(request: HttpRequest, owner_id: int | None) -> bool:
+	if request.user.is_superuser:
+		return True
+	return owner_id == request.user.id
 
 
 @login_required
@@ -163,3 +176,83 @@ def chat_send_message(request: HttpRequest) -> HttpResponse:
 	)
 	response["HX-Trigger"] = "conversations-changed"
 	return response
+
+
+@login_required
+@require_GET
+def gpt_creator_console(request: HttpRequest) -> HttpResponse:
+	"""Show GPT model and quirk management UI for GPT creators."""
+	if not _user_can_access_gpt_creator(request):
+		return redirect("chatbot-home")
+	model_form = AIModelForm()
+	quirk_form = AIQuirkForm()
+	models = AIModel.objects.select_related("created_by").prefetch_related("quirk").order_by("name")
+	quirks = AIQuirk.objects.select_related("created_by").order_by("name")
+	return render(
+		request,
+		"chatbot/gpt_creator_console.html",
+		{
+			"model_form": model_form,
+			"quirk_form": quirk_form,
+			"models": models,
+			"quirks": quirks,
+		},
+	)
+
+
+@login_required
+@require_POST
+def gpt_creator_console_action(request: HttpRequest) -> HttpResponse:
+	"""Handle create/update/delete actions for GPT models and quirks."""
+	if not _user_can_access_gpt_creator(request):
+		return redirect("chatbot-home")
+
+	entity = (request.POST.get("entity") or "").strip()
+	action = (request.POST.get("action") or "").strip()
+
+	if entity == "model":
+		if action == "create":
+			form = AIModelForm(request.POST)
+			if form.is_valid():
+				instance = form.save(commit=False)
+				instance.created_by = request.user
+				instance.save()
+				form.save_m2m()
+		elif action == "update":
+			model_id = request.POST.get("id")
+			if model_id and model_id.isdigit():
+				instance = AIModel.objects.filter(pk=model_id).first()
+				if instance and _can_manage_owned_record(request, instance.created_by_id):
+					form = AIModelForm(request.POST, instance=instance)
+					if form.is_valid():
+						form.save()
+		elif action == "delete":
+			model_id = request.POST.get("id")
+			if model_id and model_id.isdigit():
+				instance = AIModel.objects.filter(pk=model_id).first()
+				if instance and _can_manage_owned_record(request, instance.created_by_id):
+					instance.delete()
+
+	elif entity == "quirk":
+		if action == "create":
+			form = AIQuirkForm(request.POST)
+			if form.is_valid():
+				instance = form.save(commit=False)
+				instance.created_by = request.user
+				instance.save()
+		elif action == "update":
+			quirk_id = request.POST.get("id")
+			if quirk_id and quirk_id.isdigit():
+				instance = AIQuirk.objects.filter(pk=quirk_id).first()
+				if instance and _can_manage_owned_record(request, instance.created_by_id):
+					form = AIQuirkForm(request.POST, instance=instance)
+					if form.is_valid():
+						form.save()
+		elif action == "delete":
+			quirk_id = request.POST.get("id")
+			if quirk_id and quirk_id.isdigit():
+				instance = AIQuirk.objects.filter(pk=quirk_id).first()
+				if instance and _can_manage_owned_record(request, instance.created_by_id):
+					instance.delete()
+
+	return redirect("chatbot-gpt-creator")
