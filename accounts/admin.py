@@ -23,7 +23,7 @@ class CustomUserAdmin(BaseUserAdmin):
         (None, {"fields": ("email", "password")}),
         ("Personal info", {"fields": ("first_name", "last_name")}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
-        ("Access", {"fields": ("private_lyrics", "private_performances")}),
+        ("Access", {"fields": ("private_lyrics", "private_performances", "gpt_creator")}),
         ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
     

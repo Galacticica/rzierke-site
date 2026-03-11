@@ -42,6 +42,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     private_lyrics = models.BooleanField(default=False)
     private_performances = models.BooleanField(default=False)
+    gpt_creator = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

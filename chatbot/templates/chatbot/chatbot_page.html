@@ -7,7 +7,12 @@
 {% block content %}
 <section class="flex h-[calc(100vh-11rem)] flex-col p-3 md:p-5">
   <div class="mb-3 flex items-center justify-between">
-    <a href="{% url 'dev-home' %}" class="btn btn-ghost btn-sm">&larr; Back</a>
+    <div class="flex items-center gap-2">
+      <a href="{% url 'dev-home' %}" class="btn btn-ghost btn-sm">&larr; Back</a>
+      {% if user.gpt_creator or user.is_superuser %}
+        <a href="{% url 'chatbot-gpt-creator' %}" class="btn btn-outline btn-sm">GPT Creator Console</a>
+      {% endif %}
+    </div>
   </div>
 
   <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden rounded-2xl border border-base-300 bg-base-200/70 shadow-xl lg:grid-cols-[320px_1fr]">

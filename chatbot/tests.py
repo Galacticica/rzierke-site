@@ -12,7 +12,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import User
-from chatbot.models import AIModel, Conversation
+from chatbot.models import AIModel, AIQuirk, Conversation
 
 
 class ChatbotSendMessageTests(TestCase):
@@ -62,3 +62,147 @@ class ChatbotSendMessageTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		conversation.refresh_from_db()
 		self.assertEqual(conversation.model, self.model_a)
+
+
+class GPTCreatorConsoleTests(TestCase):
+	def setUp(self):
+		self.creator = User.objects.create_user(
+			email="creator@example.com",
+			password="password123",
+			gpt_creator=True,
+		)
+		self.non_creator = User.objects.create_user(
+			email="viewer@example.com",
+			password="password123",
+		)
+
+	def test_console_requires_gpt_creator_flag(self):
+		self.client.force_login(self.non_creator)
+		response = self.client.get(reverse("chatbot-gpt-creator"))
+		self.assertRedirects(response, reverse("chatbot-home"))
+
+	def test_action_requires_gpt_creator_flag(self):
+		self.client.force_login(self.non_creator)
+		response = self.client.post(
+			reverse("chatbot-gpt-creator-action"),
+			{
+				"entity": "quirk",
+				"action": "create",
+				"name": "No Access",
+				"description": "Should not be created",
+			},
+		)
+		self.assertRedirects(response, reverse("chatbot-home"))
+		self.assertFalse(AIQuirk.objects.filter(name="No Access").exists())
+
+	def test_console_allows_creator(self):
+		self.client.force_login(self.creator)
+		response = self.client.get(reverse("chatbot-gpt-creator"))
+		self.assertEqual(response.status_code, 200)
+
+	def test_creator_can_create_model_and_quirk(self):
+		self.client.force_login(self.creator)
+
+		quirk_response = self.client.post(
+			reverse("chatbot-gpt-creator-action"),
+			{
+				"entity": "quirk",
+				"action": "create",
+				"name": "Friendly",
+				"description": "Keeps a warm tone.",
+			},
+		)
+		self.assertEqual(quirk_response.status_code, 302)
+		quirk = AIQuirk.objects.get(name="Friendly")
+
+		model_response = self.client.post(
+			reverse("chatbot-gpt-creator-action"),
+			{
+				"entity": "model",
+				"action": "create",
+				"name": "Composer",
+				"description": "Creates lyric ideas.",
+				"quirk": [str(quirk.id)],
+			},
+		)
+		self.assertEqual(model_response.status_code, 302)
+
+		model = AIModel.objects.get(name="Composer")
+		self.assertEqual(model.description, "Creates lyric ideas.")
+		self.assertEqual(list(model.quirk.values_list("id", flat=True)), [quirk.id])
+		self.assertEqual(model.created_by, self.creator)
+		self.assertEqual(quirk.created_by, self.creator)
+
+	def test_creator_can_update_existing_model(self):
+		self.client.force_login(self.creator)
+		quirk_a = AIQuirk.objects.create(name="Funny", description="Adds humor.", created_by=self.creator)
+		quirk_b = AIQuirk.objects.create(name="Direct", description="Avoids extra fluff.", created_by=self.creator)
+		model = AIModel.objects.create(name="Model 1", description="First", created_by=self.creator)
+		model.quirk.add(quirk_a)
+
+		response = self.client.post(
+			reverse("chatbot-gpt-creator-action"),
+			{
+				"entity": "model",
+				"action": "update",
+				"id": str(model.id),
+				"name": "Model One",
+				"description": "Updated.",
+				"quirk": [str(quirk_b.id)],
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		model.refresh_from_db()
+		self.assertEqual(model.name, "Model One")
+		self.assertEqual(model.description, "Updated.")
+		self.assertEqual(list(model.quirk.values_list("id", flat=True)), [quirk_b.id])
+
+	def test_creator_cannot_update_another_users_model(self):
+		other_creator = User.objects.create_user(
+			email="other.creator@example.com",
+			password="password123",
+			gpt_creator=True,
+		)
+		other_quirk = AIQuirk.objects.create(name="Other Quirk", description="Owned by other", created_by=other_creator)
+		model = AIModel.objects.create(name="Locked Model", description="Do not edit", created_by=other_creator)
+		model.quirk.add(other_quirk)
+
+		self.client.force_login(self.creator)
+		response = self.client.post(
+			reverse("chatbot-gpt-creator-action"),
+			{
+				"entity": "model",
+				"action": "update",
+				"id": str(model.id),
+				"name": "Hacked Name",
+				"description": "Hacked Desc",
+				"quirk": [],
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		model.refresh_from_db()
+		self.assertEqual(model.name, "Locked Model")
+		self.assertEqual(model.description, "Do not edit")
+
+	def test_creator_cannot_delete_another_users_quirk(self):
+		other_creator = User.objects.create_user(
+			email="other.creator2@example.com",
+			password="password123",
+			gpt_creator=True,
+		)
+		quirk = AIQuirk.objects.create(name="Private Quirk", description="Keep", created_by=other_creator)
+
+		self.client.force_login(self.creator)
+		response = self.client.post(
+			reverse("chatbot-gpt-creator-action"),
+			{
+				"entity": "quirk",
+				"action": "delete",
+				"id": str(quirk.id),
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.assertTrue(AIQuirk.objects.filter(pk=quirk.id).exists())
