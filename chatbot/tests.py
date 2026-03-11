@@ -1,3 +1,11 @@
+"""
+File: tests.py
+Author: Reagan Zierke <reaganzierke@gmail.com>
+Date: 2026-03-11
+Description: Tests created by copilot for chatbot app, focusing on the message sending functionality and ensuring that the AI model is locked after the first message. Uses unittest.mock to patch AI response generation and title extraction for consistent testing.
+"""
+
+
 from unittest.mock import patch
 
 from django.test import TestCase
