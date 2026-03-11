@@ -19,6 +19,7 @@ from ministry.models import Song
 
 
 BLANK_LINE_SPLIT = re.compile(r"\n\s*\n+")
+LSB_IN_TITLE_RE = re.compile(r"(?i)(?:\(|\[)?\s*\bLSB\.?\s*#?\s*(?P<number>\d+[A-Za-z]?)\b\s*(?:\)|\])?")
 
 FONT_NAME = "Yu Gothic UI Semilight"
 TITLE_FONT_SIZE = 45
@@ -42,6 +43,32 @@ def _set_black_background(slide) -> None:
     fill = slide.background.fill
     fill.solid()
     fill.fore_color.rgb = RGBColor(0, 0, 0)
+
+
+def _build_title_text(song: Song) -> str:
+    raw_title = " ".join(str(song.title or "").split())
+
+    extracted_lsb = ""
+    title_line = raw_title
+
+    match = LSB_IN_TITLE_RE.search(raw_title)
+    if match:
+        extracted_lsb = match.group("number")
+        start, end = match.span()
+        title_line = f"{raw_title[:start]} {raw_title[end:]}"
+
+    title_line = re.sub(r"\s*[-\u2013\u2014:]\s*$", "", title_line.strip())
+    title_line = re.sub(r"\(\s*\)|\[\s*\]", "", title_line)
+    title_line = " ".join(title_line.split())
+
+    if not title_line:
+        title_line = raw_title
+
+    lsb_number = str(song.lsb_number).strip() if song.lsb_number else extracted_lsb
+    if lsb_number:
+        return f"{title_line}\nLSB {lsb_number}"
+
+    return title_line
 
 
 def _add_centered_textbox(
@@ -92,11 +119,13 @@ def build_song_pptx_bytes(song: Song) -> bytes:
 
     blank_layout = prs.slide_layouts[6]
 
+    title_text = _build_title_text(song)
+
     title_slide = prs.slides.add_slide(blank_layout)
     _set_black_background(title_slide)
     _add_centered_textbox(
         title_slide,
-        song.title,
+        title_text,
         font_name=FONT_NAME,
         font_size_pt=TITLE_FONT_SIZE,
     )
