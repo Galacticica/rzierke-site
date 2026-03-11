@@ -9,30 +9,31 @@ Description: The admin configurations for rzpercussion models.
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin
 
 from .models import Piece, Performer, Instrument, PieceType
 
 
 @admin.register(Performer)
-class PerformerAdmin(admin.ModelAdmin):
+class PerformerAdmin(ModelAdmin):
     """Register Performer model in admin with basic configurations."""
     search_fields = ("name",)
 
 
 @admin.register(Instrument)
-class InstrumentAdmin(admin.ModelAdmin):
+class InstrumentAdmin(ModelAdmin):
     """Register Instrument model in admin with basic configurations."""
     search_fields = ("name",)
 
 
 @admin.register(PieceType)
-class PieceTypeAdmin(admin.ModelAdmin):
+class PieceTypeAdmin(ModelAdmin):
     """Register PieceType model in admin with basic configurations."""
     search_fields = ("name",)
 
 
 @admin.register(Piece)
-class PieceAdmin(admin.ModelAdmin):
+class PieceAdmin(ModelAdmin):
     """
     Register Piece model in admin with enhanced configurations.
     This includes filter_horizontal for easy relationship management,

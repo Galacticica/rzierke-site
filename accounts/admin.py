@@ -8,11 +8,12 @@ Description: Registration of custom User model in admin.
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from unfold.admin import ModelAdmin
 from .models import User, AccessRequest
 
 
 @admin.register(User)
-class CustomUserAdmin(BaseUserAdmin):
+class CustomUserAdmin(BaseUserAdmin, ModelAdmin):
     """Custom User admin with email displayed."""
     list_display = ("email", "first_name", "last_name", "is_staff", "is_active", "private_lyrics", "private_performances")
     list_filter = ("is_staff", "is_active", "private_lyrics", "private_performances")
@@ -36,7 +37,7 @@ class CustomUserAdmin(BaseUserAdmin):
 
 
 @admin.register(AccessRequest)
-class AccessRequestAdmin(admin.ModelAdmin):
+class AccessRequestAdmin(ModelAdmin):
     """Admin interface for access requests."""
     list_display = ("email", "request_type", "created_at")
     list_filter = ("request_type", "created_at")

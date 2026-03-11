@@ -22,6 +22,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
+    "unfold.contrib.inlines",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -125,4 +129,10 @@ DJANGO_VITE = {
     "default": {
         "dev_mode": DEBUG,
     }
+}
+
+UNFOLD = {
+    "SITE_TITLE": "RZierke Admin",
+    "SITE_HEADER": "RZierke Site",
+    "SITE_SYMBOL": "dashboard",
 }
