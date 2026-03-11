@@ -11,27 +11,28 @@ from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin, StackedInline, TabularInline
 
 from .models import Song, Artist, Tag, SectionDefinition, ArrangementItem, Devotion
 
 @admin.register(Devotion)
-class DevotionAdmin(admin.ModelAdmin):
+class DevotionAdmin(ModelAdmin):
     """Register Devotion model in admin with basic configurations."""
     list_display = ("title", "date")
     date_hierarchy = "date"
     search_fields = ("title", "bible_passage")
 
 @admin.register(Artist)
-class ArtistAdmin(admin.ModelAdmin):
+class ArtistAdmin(ModelAdmin):
     search_fields = ("name",)
 
 
 @admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
+class TagAdmin(ModelAdmin):
     search_fields = ("name",)
 
 
-class SectionDefinitionInline(admin.StackedInline):
+class SectionDefinitionInline(StackedInline):
     """Register SectionDefinition as inline in Song admin."""
     model = SectionDefinition
     extra = 0
@@ -40,7 +41,7 @@ class SectionDefinitionInline(admin.StackedInline):
     show_change_link = True
 
 
-class ArrangementItemInline(admin.TabularInline):
+class ArrangementItemInline(TabularInline):
     """Register ArrangementItem as inline in Song admin."""
     model = ArrangementItem
     extra = 0
@@ -51,7 +52,7 @@ class ArrangementItemInline(admin.TabularInline):
 
 
 @admin.register(SectionDefinition)
-class SectionDefinitionAdmin(admin.ModelAdmin):
+class SectionDefinitionAdmin(ModelAdmin):
     """Register SectionDefinition model in admin with basic configurations."""
     list_display = ("song", "section_type", "name")
     list_filter = ("section_type",)
@@ -59,7 +60,7 @@ class SectionDefinitionAdmin(admin.ModelAdmin):
 
 
 @admin.register(Song)
-class SongAdmin(admin.ModelAdmin):
+class SongAdmin(ModelAdmin):
     """
     Register Song model in admin with enhanced configurations.
     This includes inlines for sections and arrangement items,

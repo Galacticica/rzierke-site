@@ -10,11 +10,12 @@ from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin, StackedInline
 
 from .models import Project, ProjectImage, Tool, Skill, Resource, Bot
 
 
-class ProjectImageInline(admin.StackedInline):
+class ProjectImageInline(StackedInline):
     """Register ProjectImage as inline in Project admin."""
     model = ProjectImage
     extra = 0
@@ -23,13 +24,13 @@ class ProjectImageInline(admin.StackedInline):
 
 
 @admin.register(Tool)
-class ToolAdmin(admin.ModelAdmin):
+class ToolAdmin(ModelAdmin):
     """Register Tool model in admin with basic configurations."""
     search_fields = ("name",)
 
 
 @admin.register(Skill)
-class SkillAdmin(admin.ModelAdmin):
+class SkillAdmin(ModelAdmin):
     """Register Skill model in admin with basic configurations."""
     list_display = ("name", "date_started")
     list_filter = ("date_started",)
@@ -38,7 +39,7 @@ class SkillAdmin(admin.ModelAdmin):
 
 
 @admin.register(Resource)
-class ResourceAdmin(admin.ModelAdmin):
+class ResourceAdmin(ModelAdmin):
     """Register Resource model in admin with basic configurations."""
     list_display = ("name", "url", "description")
     search_fields = ("name", "description")
@@ -46,7 +47,7 @@ class ResourceAdmin(admin.ModelAdmin):
 
 
 @admin.register(Project)
-class ProjectAdmin(admin.ModelAdmin):
+class ProjectAdmin(ModelAdmin):
     """
     Register Project model in admin with enhanced configurations.
     This includes inlines for project images, custom list displays,
@@ -70,7 +71,7 @@ class ProjectAdmin(admin.ModelAdmin):
         return qs.prefetch_related("tool_used", "images")
 
 @admin.register(Bot)
-class BotAdmin(admin.ModelAdmin):
+class BotAdmin(ModelAdmin):
     """Register Bot model in admin with basic configurations."""
     list_display = ("name", "description", "repository_url")
     search_fields = ("name", "description")
