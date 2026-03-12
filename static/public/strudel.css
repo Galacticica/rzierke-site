@@ -1,0 +1,32 @@
+.strudel-wrap {
+            position: relative;
+            border: 1px solid rgb(var(--b3, 40 40 40));
+            border-radius: 12px;
+            background: rgb(var(--b1, 18 18 18));
+            color: rgb(var(--bc, 240 240 240));
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+            overflow: hidden;
+            height: 360px;
+        }
+
+.strudel-wrap > strudel-editor {
+            display: none;
+        }
+
+.strudel-container {
+            display: block;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+
+.strudel-wrap canvas,
+.strudel-wrap #hydra-canvas,
+.strudel-wrap .hydra-canvas {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+        }

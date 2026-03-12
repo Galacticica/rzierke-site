@@ -91,3 +91,9 @@ class BotGraveyardView(View):
             "bots_with_styles": bots_with_styles,
         }
         return render(request, "development_portfolio/botyard.html", context)
+    
+class StrudelView(View):
+    """A view to display the Strudel project."""
+
+    def get(self, request):
+        return render(request, "development_portfolio/strudel.html")

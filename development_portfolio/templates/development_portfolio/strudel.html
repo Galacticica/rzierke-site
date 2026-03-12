@@ -1,0 +1,117 @@
+<!--
+file: strudel.html
+Author: Reagan Zierke
+Date: 2026-02-15
+Description: Template for Strudel development console page. 
+-->
+
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}
+<title>Strudel Development Console</title>
+{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'strudel.css' %}">
+<script src="https://unpkg.com/@strudel/repl@latest"></script>
+{% endblock %}
+
+{% block content %}
+<section class="p-6">
+        <h2 class="text-xl font-semibold mb-3">Strudel Editor</h2>
+        <div class="flex flex-wrap gap-3 mb-3">
+            <button id="strudel-play" class="btn btn-success">Play</button>
+            <button id="strudel-stop" class="btn btn-outline">Stop</button>
+        </div>
+        <div class="strudel-wrap">
+            <strudel-editor id="strudel-repl">
+                <!--
+setcps(1)
+sound("bd hh sd hh").note("c3 e3 g3 b3").gain(0.8)
+                -->
+            </strudel-editor>
+        </div>
+        <script>
+            (function () {
+                const playBtn = document.getElementById("strudel-play");
+                const stopBtn = document.getElementById("strudel-stop");
+                const repl = document.getElementById("strudel-repl");
+                const wrap = repl ? repl.parentElement : null;
+
+                if (!playBtn || !stopBtn || !repl) return;
+
+                // Move Strudel's generated container inside our wrapper and style it.
+                setTimeout(() => {
+                    const container = repl.nextElementSibling;
+                    if (wrap && container && !container.classList.contains("strudel-container")) {
+                        container.classList.add("strudel-container");
+                        wrap.appendChild(container);
+                    }
+                }, 0);
+
+                function getEditor() {
+                    return repl.editor || null;
+                }
+
+                function pinHydraCanvas() {
+                    const canvas =
+                        document.getElementById("hydra-canvas") ||
+                        document.querySelector("canvas.hydra-canvas") ||
+                        document.querySelector("canvas");
+                    if (!canvas || !wrap) return;
+                    if (canvas.parentElement !== wrap) {
+                        wrap.appendChild(canvas);
+                    }
+                    canvas.style.position = "absolute";
+                    canvas.style.inset = "0";
+                    canvas.style.width = "100%";
+                    canvas.style.height = "100%";
+                    canvas.style.maxWidth = "100%";
+                    canvas.style.maxHeight = "100%";
+                    canvas.style.pointerEvents = "none";
+                }
+
+                function getHydraCanvas() {
+                    return (
+                        document.getElementById("hydra-canvas") ||
+                        document.querySelector("canvas.hydra-canvas") ||
+                        document.querySelector("canvas")
+                    );
+                }
+
+                const observer = new MutationObserver(() => pinHydraCanvas());
+                observer.observe(document.body, { childList: true, subtree: true });
+                pinHydraCanvas();
+
+                playBtn.addEventListener("click", () => {
+                    const editor = getEditor();
+                    if (!editor) return;
+                    if (typeof editor.evaluate === "function") {
+                        editor.evaluate();
+                    }
+                    if (typeof editor.start === "function") {
+                        editor.start();
+                    }
+                    const canvas = getHydraCanvas();
+                    if (canvas) {
+                        canvas.style.display = "block";
+                        canvas.style.opacity = "1";
+                    }
+                });
+
+                stopBtn.addEventListener("click", () => {
+                    const editor = getEditor();
+                    if (editor && typeof editor.stop === "function") {
+                        editor.stop();
+                    }
+                    const canvas = getHydraCanvas();
+                    if (canvas) {
+                        canvas.style.opacity = "0";
+                    }
+                });
+            })();
+        </script>
+    </section>
+
+
+
+{% endblock %}
