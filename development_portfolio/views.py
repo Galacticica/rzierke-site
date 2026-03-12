@@ -5,11 +5,14 @@ Date: 2026-02-15
 Description: Views for the development portfolio section of the website.
 """
 
+import json
+
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.views import View
 from django.views.generic import DetailView
 
-from .models import Project, Resource, Skill, Bot
+from .models import Project, Resource, Skill, Bot, StrudelProject
 from .filters import ProjectFilter
 
 
@@ -96,4 +99,85 @@ class StrudelView(View):
     """A view to display the Strudel project."""
 
     def get(self, request):
-        return render(request, "development_portfolio/strudel.html")
+        projects = (
+            StrudelProject.objects.select_related("user")
+            .order_by("name", "id")
+        )
+        project_payload = [
+            {
+                "id": project.id,
+                "name": project.name,
+                "user_id": project.user_id,
+            }
+            for project in projects
+        ]
+        context = {
+            "strudel_projects": project_payload,
+        }
+        return render(request, "development_portfolio/strudel.html", context)
+
+
+class StrudelProjectDetailView(View):
+    """Return Strudel project details for loading into the editor."""
+
+    def get(self, request, project_id: int):
+        project = StrudelProject.objects.select_related("user").filter(id=project_id).first()
+        if not project:
+            return JsonResponse({"error": "Project not found."}, status=404)
+
+        can_edit = request.user.is_authenticated and project.user_id == request.user.id
+        return JsonResponse(
+            {
+                "id": project.id,
+                "name": project.name,
+                "text": project.text,
+                "user_id": project.user_id,
+                "can_edit": can_edit,
+            }
+        )
+
+
+class StrudelProjectSaveView(View):
+    """Create or update a Strudel project for the logged-in user."""
+
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Authentication required."}, status=401)
+
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON payload."}, status=400)
+
+        name = (payload.get("name") or "").strip()
+        text = payload.get("text") or ""
+        project_id = payload.get("id")
+
+        if not name:
+            return JsonResponse({"error": "Project name is required."}, status=400)
+
+        if project_id:
+            project = StrudelProject.objects.filter(id=project_id).first()
+            if not project:
+                return JsonResponse({"error": "Project not found."}, status=404)
+            if project.user_id != request.user.id:
+                return JsonResponse({"error": "You do not have permission to edit this project."}, status=403)
+            project.name = name
+            project.text = text
+            project.save(update_fields=["name", "text"])
+        else:
+            project = StrudelProject.objects.create(
+                name=name,
+                text=text,
+                user=request.user,
+            )
+
+        return JsonResponse(
+            {
+                "id": project.id,
+                "name": project.name,
+                "text": project.text,
+                "user_id": project.user_id,
+                "can_edit": True,
+            }
+        )
