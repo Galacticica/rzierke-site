@@ -49,7 +49,6 @@ INSTALLED_APPS = [
     'django_filters',
     'django_vite',
     "django_htmx",
-    "django_browser_reload",
     'accounts',
     'home',
     'ministry',
@@ -57,6 +56,9 @@ INSTALLED_APPS = [
     'development_portfolio',
     'chatbot',
 ]
+
+if DEBUG:
+    INSTALLED_APPS.append("django_browser_reload")
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
