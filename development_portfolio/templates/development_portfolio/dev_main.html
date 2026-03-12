@@ -109,6 +109,23 @@ Description: Template for the development portfolio homepage.
 
             <div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
                 <div class="flex items-start gap-4">
+                    <div class="rounded-xl bg-secondary/10 p-3 text-secondary flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6" aria-hidden="true">
+                            <path d="M14 4v10.5a2.5 2.5 0 1 1-2-2.45V6.2L20 4v8.5a2.5 2.5 0 1 1-2-2.45V4"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-semibold">Strudel Page</h2>
+                        <p class="mt-1 text-base-content/70">Explore browser-based music sketches and live coding experiments built with Strudel.</p>
+                        <div class="mt-6">
+                            <a class="btn btn-secondary" href="{% url 'dev-strudel' %}">Open Strudel</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+                <div class="flex items-start gap-4">
                     <div class="rounded-xl bg-accent/10 p-3 text-accent flex-shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6">
                             <path d="M7 22h10v-6a5 5 0 0 0-10 0v6Z"/>

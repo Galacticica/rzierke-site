@@ -18,6 +18,9 @@ Description: Template for Strudel development console page.
 
 {% block content %}
 <section class="p-6">
+        <div class="mb-4 flex items-center justify-between">
+            <a href="{% url 'dev-home' %}" class="btn btn-ghost btn-sm">← Back</a>
+        </div>
         <h2 class="text-xl font-semibold mb-3">Strudel Editor</h2>
         <div class="strudel-toolbar">
             <div class="strudel-field">

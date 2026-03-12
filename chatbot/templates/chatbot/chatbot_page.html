@@ -5,22 +5,30 @@
 {% endblock %}
 
 {% block content %}
-<section class="flex h-[calc(100vh-11rem)] flex-col p-3 md:p-5">
-  <div class="mb-3 flex items-center justify-between">
-    <div class="flex items-center gap-2">
+<section class="flex h-[calc(100dvh-11rem)] flex-col p-3 md:p-5">
+  <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <a href="{% url 'dev-home' %}" class="btn btn-ghost btn-sm">&larr; Back</a>
       {% if user.gpt_creator or user.is_superuser %}
         <a href="{% url 'chatbot-gpt-creator' %}" class="btn btn-outline btn-sm">GPT Creator Console</a>
       {% endif %}
     </div>
+    <button type="button" class="btn btn-outline btn-sm lg:hidden" data-sidebar-open aria-controls="chat-sidebar" aria-expanded="false">
+      Conversations
+    </button>
   </div>
 
-  <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden rounded-2xl border border-base-300 bg-base-200/70 shadow-xl lg:grid-cols-[320px_1fr]">
-    <aside id="chat-sidebar" class="h-full overflow-y-auto border-b border-base-300 bg-base-100 lg:border-b-0 lg:border-r" hx-get="{% url 'chatbot-sidebar' %}" hx-trigger="conversations-changed from:body">
+  <div class="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-base-300 bg-base-200/70 shadow-xl lg:grid lg:grid-cols-[320px_1fr]">
+    <button type="button" class="absolute right-3 top-3 z-30 hidden btn btn-circle btn-sm lg:hidden" data-sidebar-close aria-label="Close conversations">
+      ✕
+    </button>
+    <button type="button" class="absolute inset-0 z-20 hidden bg-base-content/40 lg:hidden" data-sidebar-backdrop aria-label="Close conversations"></button>
+
+    <aside id="chat-sidebar" class="absolute inset-y-0 left-0 z-30 h-full w-[88%] max-w-sm -translate-x-full overflow-y-auto border-r border-base-300 bg-base-100 transition-transform duration-200 ease-out lg:static lg:z-auto lg:w-auto lg:max-w-none lg:translate-x-0 lg:border-b-0 lg:border-r" hx-get="{% url 'chatbot-sidebar' %}" hx-trigger="conversations-changed from:body">
       {% include 'chatbot/partials/sidebar.html' with conversations=conversations selected_conversation_id=selected_conversation.id %}
     </aside>
 
-    <section id="chat-main" class="h-full overflow-hidden bg-base-100">
+    <section id="chat-main" class="h-full min-h-0 overflow-hidden bg-base-100 lg:col-start-2">
       {% include 'chatbot/partials/chat_panel.html' with conversation=selected_conversation messages=selected_messages models=models selected_model=selected_conversation.model %}
     </section>
   </div>
@@ -28,6 +36,38 @@
 
 <script>
 (() => {
+  const mobileQuery = window.matchMedia('(min-width: 1024px)');
+
+  const getSidebarElements = () => ({
+    sidebar: document.getElementById('chat-sidebar'),
+    backdrop: document.querySelector('[data-sidebar-backdrop]'),
+    openButton: document.querySelector('[data-sidebar-open]'),
+    closeButton: document.querySelector('[data-sidebar-close]'),
+  });
+
+  const setSidebarOpen = (isOpen) => {
+    const { sidebar, backdrop, openButton, closeButton } = getSidebarElements();
+    if (!sidebar || !backdrop || !openButton || !closeButton) {
+      return;
+    }
+
+    if (mobileQuery.matches) {
+      sidebar.classList.remove('-translate-x-full');
+      backdrop.classList.add('hidden');
+      closeButton.classList.add('hidden');
+      openButton.setAttribute('aria-expanded', 'false');
+      return;
+    }
+
+    sidebar.classList.toggle('-translate-x-full', !isOpen);
+    backdrop.classList.toggle('hidden', !isOpen);
+    closeButton.classList.toggle('hidden', !isOpen);
+    openButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  };
+
+  const closeSidebar = () => setSidebarOpen(false);
+  const openSidebar = () => setSidebarOpen(true);
+
   const toggleButtonState = (form, thinking) => {
     const button = form.querySelector('[data-send-btn]');
     if (!button) return;
@@ -56,6 +96,31 @@
 
   // Setup initial forms on page load
   document.querySelectorAll('.js-chat-form').forEach(setupFormKeyListener);
+  closeSidebar();
+
+  document.querySelector('[data-sidebar-open]')?.addEventListener('click', openSidebar);
+  document.querySelector('[data-sidebar-close]')?.addEventListener('click', closeSidebar);
+  document.querySelector('[data-sidebar-backdrop]')?.addEventListener('click', closeSidebar);
+
+  mobileQuery.addEventListener('change', () => {
+    closeSidebar();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeSidebar();
+    }
+  });
+
+  document.getElementById('chat-sidebar')?.addEventListener('click', (event) => {
+    if (mobileQuery.matches) {
+      return;
+    }
+
+    if (event.target.closest('[hx-target="#chat-main"]')) {
+      closeSidebar();
+    }
+  });
 
   document.body.addEventListener('htmx:beforeRequest', (event) => {
     const form = event.detail.elt;
@@ -94,6 +159,7 @@
 
   document.body.addEventListener('htmx:afterSwap', (event) => {
     if (event.detail.target.id === 'chat-main') {
+      closeSidebar();
       const chatMessages = document.getElementById('chat-messages');
       if (chatMessages) {
         setTimeout(() => {
