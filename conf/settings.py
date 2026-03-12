@@ -8,6 +8,7 @@ Description: The Django settings for the project.
 
 from pathlib import Path
 import os
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 from django.core.management.utils import get_random_secret_key
 
@@ -59,6 +60,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -88,25 +90,28 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'conf.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
-  'default': {
-      'ENGINE': 'django.db.backends.postgresql',
-      'NAME': os.getenv('DB_NAME'),
-      'USER': os.getenv('DB_USER'),
-      'PASSWORD': os.getenv('DB_PWD'),
-      'HOST': os.getenv('DB_HOST'),
-      'PORT': os.getenv('DB_PORT'),
-  }
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PWD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT"),
+    }
 }
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    result = urlparse(DATABASE_URL)
+    DATABASES["default"] = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": result.path.lstrip("/"),
+        "USER": result.username,
+        "PASSWORD": result.password,
+        "HOST": result.hostname,
+        "PORT": result.port,
+    }
 
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -125,6 +130,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [ BASE_DIR / "static" / "dist", BASE_DIR / "static" / "public" ]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / "static" / "public"
