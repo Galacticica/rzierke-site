@@ -19,7 +19,20 @@ SECRET_KEY = os.environ.get("SECRET_KEY", get_random_secret_key())
 DEBUG = os.environ.get("DEBUG", "").lower() in ("1", "true", "yes", "on")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-ALLOWED_HOSTS = []
+SECURE_SSL_REDIRECT = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+raw_allowed = os.environ.get("ALLOWED_HOSTS", "")
+if raw_allowed:
+    ALLOWED_HOSTS = [h.strip() for h in raw_allowed.split(",") if h.strip()]
+else:
+    ALLOWED_HOSTS = []
+
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{host}" for host in ALLOWED_HOSTS
+]
 
 INSTALLED_APPS = [
     "unfold",
