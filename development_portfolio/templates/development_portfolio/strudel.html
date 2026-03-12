@@ -18,9 +18,28 @@ Description: Template for Strudel development console page.
 {% block content %}
 <section class="p-6">
         <h2 class="text-xl font-semibold mb-3">Strudel Editor</h2>
+        <div class="strudel-toolbar">
+            <div class="strudel-field">
+                <label for="strudel-project-select">Project</label>
+                <select id="strudel-project-select" class="strudel-select">
+                    <option value="" selected>New project</option>
+                    {% for project in strudel_projects %}
+                        <option value="{{ project.id }}" data-user-id="{{ project.user_id }}">{{ project.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="strudel-field strudel-field-grow">
+                <label for="strudel-project-title">Title</label>
+                <input id="strudel-project-title" class="strudel-input" type="text" placeholder="Untitled Strudel project">
+            </div>
+            <div class="strudel-actions">
+                <button id="strudel-save" class="btn btn-primary">Save</button>
+                <div id="strudel-status" class="strudel-status" aria-live="polite"></div>
+            </div>
+        </div>
         <div class="flex flex-wrap gap-3 mb-3">
             <button id="strudel-play" class="btn btn-success">Play</button>
-            <button id="strudel-stop" class="btn btn-outline">Stop</button>
+            <button id="strudel-stop" class="btn btn-outline btn-error">Stop</button>
         </div>
         <div class="strudel-wrap">
             <strudel-editor id="strudel-repl">
@@ -30,14 +49,262 @@ sound("bd hh sd hh").note("c3 e3 g3 b3").gain(0.8)
                 -->
             </strudel-editor>
         </div>
+        <input type="hidden" id="strudel-csrf" value="{{ csrf_token }}">
+        <div id="strudel-endpoints" data-detail-url="{% url 'strudel-project-detail' project_id=0 %}" data-save-url="{% url 'strudel-project-save' %}" hidden></div>
         <script>
             (function () {
                 const playBtn = document.getElementById("strudel-play");
                 const stopBtn = document.getElementById("strudel-stop");
                 const repl = document.getElementById("strudel-repl");
                 const wrap = repl ? repl.parentElement : null;
+                const projectSelect = document.getElementById("strudel-project-select");
+                const projectTitle = document.getElementById("strudel-project-title");
+                const saveBtn = document.getElementById("strudel-save");
+                const statusEl = document.getElementById("strudel-status");
+                const endpointEl = document.getElementById("strudel-endpoints");
+                const detailUrlTemplate = endpointEl?.dataset.detailUrl || "";
+                const saveUrl = endpointEl?.dataset.saveUrl || "";
+                const isAuthenticated = {{ request.user.is_authenticated|yesno:"true,false" }};
+                const currentUserId = {{ request.user.id|default_if_none:"null" }};
 
                 if (!playBtn || !stopBtn || !repl) return;
+
+                let activeProjectId = null;
+                let activeProjectOwnerId = null;
+                let pendingProjectText = null;
+
+                function setStatus(message, tone = "neutral") {
+                    if (!statusEl) return;
+                    statusEl.textContent = message;
+                    statusEl.dataset.tone = tone;
+                }
+
+                function setEditable(isEditable) {
+                    if (saveBtn) saveBtn.disabled = !isEditable;
+                    if (isEditable) {
+                        setStatus("");
+                        return;
+                    }
+                    setStatus("Log in to save Strudel projects.", "muted");
+                }
+
+                function getCookie(name) {
+                    const value = `; ${document.cookie}`;
+                    const parts = value.split(`; ${name}=`);
+                    if (parts.length === 2) {
+                        return parts.pop().split(";").shift();
+                    }
+                    return "";
+                }
+
+                function getCsrfToken() {
+                    return (
+                        document.getElementById("strudel-csrf")?.value ||
+                        getCookie("csrftoken") ||
+                        ""
+                    );
+                }
+
+                function getEditor() {
+                    return repl.editor || null;
+                }
+
+                function getShadowEditorText() {
+                    if (!repl?.shadowRoot) return "";
+                    const textarea = repl.shadowRoot.querySelector("textarea");
+                    if (textarea && typeof textarea.value === "string") {
+                        return textarea.value;
+                    }
+                    const cmContent = repl.shadowRoot.querySelector(".cm-content");
+                    if (cmContent) {
+                        return cmContent.textContent || "";
+                    }
+                    return "";
+                }
+
+                function readFromEditor(editor) {
+                    if (!editor) return "";
+                    if (typeof editor.getCode === "function") return editor.getCode();
+                    if (typeof editor.getValue === "function") return editor.getValue();
+                    if (typeof editor.code === "string") return editor.code;
+                    if (editor.view && editor.view.state && editor.view.state.doc) {
+                        return editor.view.state.doc.toString();
+                    }
+                    if (editor.cm && editor.cm.state && editor.cm.state.doc) {
+                        return editor.cm.state.doc.toString();
+                    }
+                    if (editor.state && editor.state.doc) return editor.state.doc.toString();
+                    if (editor.doc && typeof editor.doc.toString === "function") {
+                        return editor.doc.toString();
+                    }
+                    if (typeof editor.value === "string") return editor.value;
+                    return "";
+                }
+
+                function getEditorText(editor) {
+                    const fromEditor = readFromEditor(editor);
+                    if (fromEditor) return fromEditor;
+                    if (repl && typeof repl.getCode === "function") return repl.getCode();
+                    if (repl && typeof repl.getValue === "function") return repl.getValue();
+                    if (repl && typeof repl.value === "string") return repl.value;
+                    if (repl && typeof repl.getAttribute === "function") {
+                        const attr = repl.getAttribute("code");
+                        if (attr) return attr;
+                    }
+                    return getShadowEditorText();
+                }
+
+                function setEditorText(editor, text) {
+                    if (!editor) {
+                        if (repl && typeof repl.setValue === "function") {
+                            repl.setValue(text);
+                        } else if (repl?.shadowRoot) {
+                            const textarea = repl.shadowRoot.querySelector("textarea");
+                            if (textarea) {
+                                textarea.value = text;
+                            }
+                        }
+                        return;
+                    }
+                    if (typeof editor.setCode === "function") {
+                        editor.setCode(text);
+                        return;
+                    }
+                    if (typeof editor.setValue === "function") {
+                        editor.setValue(text);
+                        return;
+                    }
+                    if ("code" in editor) {
+                        editor.code = text;
+                        return;
+                    }
+                    if (editor.state && typeof editor.dispatch === "function") {
+                        const length = editor.state.doc.length;
+                        editor.dispatch({ changes: { from: 0, to: length, insert: text } });
+                        return;
+                    }
+                    if ("value" in editor) {
+                        editor.value = text;
+                    }
+                }
+
+                function setCurrentProject({ id, name, text, userId }) {
+                    activeProjectId = id;
+                    activeProjectOwnerId = userId;
+                    if (projectTitle) projectTitle.value = name || "";
+                    const editor = getEditor();
+                    if (editor) {
+                        setEditorText(editor, text || "");
+                        pendingProjectText = null;
+                    } else {
+                        pendingProjectText = text || "";
+                    }
+                    setEditable(Boolean(isAuthenticated));
+                }
+
+                async function readJson(response) {
+                    const contentType = response.headers.get("content-type") || "";
+                    if (contentType.includes("application/json")) {
+                        return await response.json();
+                    }
+                    const text = await response.text();
+                    return { error: text || "Unexpected response format." };
+                }
+
+                async function loadProject(projectId) {
+                    if (!projectId) {
+                        setCurrentProject({
+                            id: null,
+                            name: "",
+                            text: "",
+                            userId: currentUserId,
+                        });
+                        return;
+                    }
+                    setStatus("Loading project...", "muted");
+                    try {
+                        const detailUrl = detailUrlTemplate.replace("0/", `${projectId}/`);
+                        const response = await fetch(detailUrl);
+                        const data = await readJson(response);
+                        if (!response.ok) {
+                            throw new Error(data.error || "Unable to load project.");
+                        }
+                        setCurrentProject({
+                            id: data.id,
+                            name: data.name,
+                            text: data.text,
+                            userId: data.user_id,
+                        });
+                        setStatus("");
+                    } catch (error) {
+                        setStatus(error.message || "Unable to load project.", "error");
+                    }
+                }
+
+                async function saveProject() {
+                    if (!isAuthenticated) {
+                        setStatus("Log in to save Strudel projects.", "muted");
+                        return;
+                    }
+                    const editor = getEditor();
+                    const name = projectTitle ? projectTitle.value.trim() : "";
+                    if (!name) {
+                        setStatus("Please enter a project title.", "warn");
+                        return;
+                    }
+                    const text = getEditorText(editor);
+                    if (!text || !text.trim()) {
+                        setStatus("Editor text is empty; nothing to save.", "warn");
+                        return;
+                    }
+                    if (activeProjectId && activeProjectOwnerId !== currentUserId) {
+                        setStatus("Only the project creator can save this project.", "warn");
+                        return;
+                    }
+                    setStatus("Saving...", "muted");
+                    try {
+                        const response = await fetch(saveUrl, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": getCsrfToken(),
+                            },
+                            body: JSON.stringify({
+                                id: activeProjectId,
+                                name,
+                                text,
+                            }),
+                        });
+                        const data = await readJson(response);
+                        if (!response.ok) {
+                            throw new Error(data.error || "Unable to save project.");
+                        }
+                        activeProjectId = data.id;
+                        activeProjectOwnerId = data.user_id;
+                        if (projectSelect) {
+                            let option = projectSelect.querySelector(`option[value="${data.id}"]`);
+                            if (!option) {
+                                option = document.createElement("option");
+                                option.value = data.id;
+                                projectSelect.appendChild(option);
+                            }
+                            option.textContent = data.name;
+                            option.dataset.userId = data.user_id;
+                            projectSelect.value = String(data.id);
+                        }
+                        setEditable(true);
+                        setStatus("Saved.", "success");
+                    } catch (error) {
+                        setStatus(error.message || "Unable to save project.", "error");
+                    }
+                }
+
+                function setActive(isActive) {
+                    playBtn.classList.add("btn-success");
+                    stopBtn.classList.add("btn-error");
+                    playBtn.classList.toggle("btn-outline", isActive);
+                    stopBtn.classList.toggle("btn-outline", !isActive);
+                }
 
                 // Move Strudel's generated container inside our wrapper and style it.
                 setTimeout(() => {
@@ -48,8 +315,25 @@ sound("bd hh sd hh").note("c3 e3 g3 b3").gain(0.8)
                     }
                 }, 0);
 
-                function getEditor() {
-                    return repl.editor || null;
+                function hookEditor(editor) {
+                    if (!editor || editor.__strudelHooks) return;
+                    editor.__strudelHooks = true;
+                    if (typeof editor.start === "function") {
+                        const originalStart = editor.start.bind(editor);
+                        editor.start = (...args) => {
+                            const result = originalStart(...args);
+                            setActive(true);
+                            return result;
+                        };
+                    }
+                    if (typeof editor.stop === "function") {
+                        const originalStop = editor.stop.bind(editor);
+                        editor.stop = (...args) => {
+                            const result = originalStop(...args);
+                            setActive(false);
+                            return result;
+                        };
+                    }
                 }
 
                 function pinHydraCanvas() {
@@ -82,9 +366,23 @@ sound("bd hh sd hh").note("c3 e3 g3 b3").gain(0.8)
                 observer.observe(document.body, { childList: true, subtree: true });
                 pinHydraCanvas();
 
-                playBtn.addEventListener("click", () => {
+                const editorHookInterval = setInterval(() => {
                     const editor = getEditor();
                     if (!editor) return;
+                    hookEditor(editor);
+                    if (pendingProjectText !== null) {
+                        setEditorText(editor, pendingProjectText);
+                        pendingProjectText = null;
+                    }
+                    clearInterval(editorHookInterval);
+                }, 250);
+
+                setActive(false);
+
+                function startPlayback() {
+                    const editor = getEditor();
+                    if (!editor) return;
+                    hookEditor(editor);
                     if (typeof editor.evaluate === "function") {
                         editor.evaluate();
                     }
@@ -96,22 +394,70 @@ sound("bd hh sd hh").note("c3 e3 g3 b3").gain(0.8)
                         canvas.style.display = "block";
                         canvas.style.opacity = "1";
                     }
+                    setActive(true);
+                }
+
+                playBtn.addEventListener("click", () => {
+                    startPlayback();
                 });
+
+                function handleShortcut(event) {
+                    const isActivate = (event.ctrlKey || event.metaKey) && event.key === "Enter";
+                    if (!isActivate) return;
+                    startPlayback();
+                }
+
+                function wireShortcutListener(target) {
+                    if (!target || target.__strudelShortcutBound) return;
+                    target.__strudelShortcutBound = true;
+                    target.addEventListener("keydown", handleShortcut, true);
+                }
+
+                wireShortcutListener(document);
+                wireShortcutListener(repl);
+                if (repl.shadowRoot) {
+                    wireShortcutListener(repl.shadowRoot);
+                }
+
+                const shadowObserver = new MutationObserver(() => {
+                    if (repl.shadowRoot) {
+                        wireShortcutListener(repl.shadowRoot);
+                    }
+                });
+                shadowObserver.observe(repl, { childList: true, subtree: true });
 
                 stopBtn.addEventListener("click", () => {
                     const editor = getEditor();
                     if (editor && typeof editor.stop === "function") {
+                        hookEditor(editor);
                         editor.stop();
                     }
                     const canvas = getHydraCanvas();
                     if (canvas) {
                         canvas.style.opacity = "0";
                     }
+                    setActive(false);
                 });
+
+                if (projectSelect) {
+                    projectSelect.addEventListener("change", (event) => {
+                        const value = event.target.value;
+                        if (!value) {
+                            loadProject(null);
+                        } else {
+                            loadProject(value);
+                        }
+                    });
+                }
+
+                if (saveBtn) {
+                    saveBtn.addEventListener("click", saveProject);
+                }
+
+                loadProject(null);
             })();
         </script>
     </section>
-
 
 
 {% endblock %}

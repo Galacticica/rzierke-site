@@ -145,3 +145,12 @@ class Bot(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class StrudelProject(models.Model):
+    name = models.CharField(max_length=200)
+    text = models.TextField(blank=True, help_text="Strudel code or description of the project.")
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, related_name='strudel_projects')
+
+    def __str__(self):
+        return self.name

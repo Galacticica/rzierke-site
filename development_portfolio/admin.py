@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin, StackedInline
 
-from .models import Project, ProjectImage, Tool, Skill, Resource, Bot
+from .models import Project, ProjectImage, StrudelProject, Tool, Skill, Resource, Bot
 
 
 class ProjectImageInline(StackedInline):
@@ -75,4 +75,11 @@ class BotAdmin(ModelAdmin):
     """Register Bot model in admin with basic configurations."""
     list_display = ("name", "description", "repository_url")
     search_fields = ("name", "description")
+    ordering = ("name",)
+
+@admin.register(StrudelProject)
+class StrudelProjectAdmin(ModelAdmin):
+    """Register StrudelProject model in admin with basic configurations."""
+    list_display = ("name", "user")
+    search_fields = ("name", "text", "user__username")
     ordering = ("name",)
