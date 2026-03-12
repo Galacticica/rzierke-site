@@ -1,7 +1,5 @@
 # TODO
 
-## Add Strudel to dev portfolio
-
 ## Marvel Connections
 A website that shows all the connections between Marvel Characters (and maybe other fandoms in the future) 
 Each character is connected to:
