@@ -25,6 +25,8 @@ Description: Base template for the site. This is where it loads common assets an
             display: none;
         }
       </style>
+      {% block extra_head %}
+      {% endblock %}
     {% vite_hmr_client %}
     {% vite_asset 'static/src/app.js' %}
     {% htmx_script %}

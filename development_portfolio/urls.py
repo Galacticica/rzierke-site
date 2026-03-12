@@ -14,4 +14,5 @@ urlpatterns = [
     path('projects/<slug:slug>/', views.DevProjectDetailView.as_view(), name='dev-project-detail'),
     path('resources/', views.ResourcesView.as_view(), name='dev-resources'),
     path('bot-graveyard/', views.BotGraveyardView.as_view(), name='dev-bot-graveyard'),
+    path('strudel-editor/', views.StrudelView.as_view(), name='dev-strudel'),
 ]
