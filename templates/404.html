@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}
+<title>404 | Page Not Found</title>
+{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-3xl px-6 py-20 text-center">
+	<p class="text-sm uppercase tracking-[0.25em] text-secondary">Error 404</p>
+	<h1 class="mt-4 text-4xl font-bold md:text-5xl">Page Not Found</h1>
+	<p class="mt-6 text-lg text-base-content/80">
+		The page you requested does not exist or the link may be outdated.
+	</p>
+	<div class="mt-10 flex flex-wrap justify-center gap-3">
+		<a href="{% url 'homepage' %}" class="btn btn-primary">Go Home</a>
+		<a href="{% url 'dev-home' %}" class="btn btn-outline">Development Portfolio</a>
+	</div>
+</section>
+{% endblock %}
