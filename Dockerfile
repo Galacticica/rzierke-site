@@ -33,6 +33,7 @@ RUN pip install --no-cache-dir \
     "python-dotenv>=1.2.1" \
     "python-pptx>=1.0.2" \
     "reportlab>=4.4.9" \
+    "whitenoise>=6.12.0" \
     "gunicorn>=20.1.0"
 
 COPY . .
