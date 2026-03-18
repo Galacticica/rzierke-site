@@ -26,14 +26,24 @@ CSRF_COOKIE_SECURE = not DEBUG
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 raw_allowed = os.environ.get("ALLOWED_HOSTS", "")
-if raw_allowed:
-    ALLOWED_HOSTS = [h.strip() for h in raw_allowed.split(",") if h.strip()]
-else:
-    ALLOWED_HOSTS = []
+allowed_hosts = {h.strip() for h in raw_allowed.split(",") if h.strip()}
 
-CSRF_TRUSTED_ORIGINS = [
-    f"https://{host}" for host in ALLOWED_HOSTS
-]
+# Keep local dev hosts available and auto-allow Fly app host in production.
+default_hosts = {"localhost", "127.0.0.1", "[::1]"}
+if not DEBUG:
+    fly_app_name = os.environ.get("FLY_APP_NAME", "").strip()
+    if fly_app_name:
+        default_hosts.add(f"{fly_app_name}.fly.dev")
+    default_hosts.add(".fly.dev")
+
+ALLOWED_HOSTS = sorted(allowed_hosts | default_hosts)
+
+CSRF_TRUSTED_ORIGINS = []
+for host in ALLOWED_HOSTS:
+    if host.startswith("."):
+        CSRF_TRUSTED_ORIGINS.append(f"https://*{host}")
+    elif host not in {"localhost", "127.0.0.1", "[::1]"}:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{host}")
 
 INSTALLED_APPS = [
     "unfold",
