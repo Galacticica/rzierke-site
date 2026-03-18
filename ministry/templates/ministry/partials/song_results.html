@@ -156,6 +156,8 @@ Description: Template for song results section. This partial is intended to be i
     </div>
 </div>
 
-{# Out-of-band swaps #}
+{# Out-of-band swaps (HTMX-only) #}
+{% if request.htmx %}
 <span id="matching-count" hx-swap-oob="innerHTML">{{ filtered_count|default:0 }}</span>
 {% include "ministry/partials/filter_counts.html" %}
+{% endif %}

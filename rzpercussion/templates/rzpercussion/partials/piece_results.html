@@ -132,6 +132,7 @@ Description: Template for piece results section. This partial is intended to be 
     </div>
 </div>
 
-{# Out-of-band swaps #}
-<span id="matching-count" hx-swap-oob="innerHTML">{{ filtered_count|default:0 }}</span>
+{# Out-of-band swaps (HTMX-only) #}
+{% if request.htmx %}
 {% include "rzpercussion/partials/filter_counts.html" %}
+{% endif %}
