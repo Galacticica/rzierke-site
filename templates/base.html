@@ -25,13 +25,14 @@ Description: Base template for the site. This is where it loads common assets an
             display: none;
         }
       </style>
+      <link rel="icon" type="image/x-icon" href="{% static 'logo.png' %}">
       {% block extra_head %}
       {% endblock %}
     {% vite_hmr_client %}
     {% vite_asset 'src/app.js' %}
     {% htmx_script %}
     {% block title %}
-    <title>Site Title</title>
+    <title>reaganzierke.com</title>
     {% endblock %}
 </head>
 <body class="min-h-screen flex flex-col" hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
@@ -54,7 +55,9 @@ Description: Base template for the site. This is where it loads common assets an
             </div>
         </div>
         <div class="navbar-center">
-            <a class="btn btn-ghost text-xl" href="{% url 'homepage' %}">RZWorld</a>
+          <a class="btn btn-ghost" href="{% url 'homepage' %}" aria-label="Reagan Zierke home">
+            <img src="{% static 'full_name.png' %}" alt="Reagan Zierke" class="h-10 w-auto">
+          </a>
         </div>
         <div class="navbar-end">
             {% if user.is_authenticated %}
@@ -72,7 +75,7 @@ Description: Base template for the site. This is where it loads common assets an
     <div class="py-2"></div>
     <footer class="footer sm:footer-horizontal bg-neutral text-base-content items-center p-4">
   <aside class="grid-flow-col items-center">
-    <!-- <img src="{% static 'new_logo.png' %}" alt="RZWorld" class="h-12"> -->
+    <img src="{% static 'logo.png' %}" alt="RZ" class="h-12">
     <p>Copyright © 2026 - All right reserved</p>
   </aside>
   <nav class="grid-flow-col gap-4 md:place-self-center md:justify-self-end">
