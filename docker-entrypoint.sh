@@ -27,9 +27,13 @@ if [ "$DEBUG" = "1" ]; then
 
 	wait ${NPM_PID}
 else
-	echo "Production mode: running migrations and collectstatic"
-	python manage.py migrate --noinput
-	python manage.py collectstatic --noinput || true
+	echo "Production mode: starting web process"
+
+	# Migrations are handled in fly.toml release_command so they run once per deploy.
+	if [ "${RUN_MIGRATIONS_ON_BOOT:-0}" = "1" ]; then
+		echo "RUN_MIGRATIONS_ON_BOOT=1 set; applying migrations before startup"
+		python manage.py migrate --noinput
+	fi
 
 	PORT=${PORT:-8000}
 	echo "Starting gunicorn on 0.0.0.0:${PORT}"
