@@ -34,14 +34,14 @@ Description: Template for pieces list view.
             id="piece-search-form"
             method="get"
             action="{% url 'pieces-list' %}"
-            class="flex w-full items-end gap-2 sm:w-auto piece-actions"
+            class="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-end piece-actions"
             hx-get="{% url 'pieces-list' %}"
             hx-trigger="submit, keyup changed delay:250ms from:input[name='q']"
             hx-target="#piece-results"
             hx-swap="outerHTML"
             hx-include="#piece-filter-form"
             hx-push-url="true">
-            <div class="form-control w-full sm:w-72">
+            <div class="form-control w-full min-w-0 sm:w-72">
                 <label class="label">
                     <span class="label-text">Search</span>
                 </label>
@@ -52,10 +52,11 @@ Description: Template for pieces list view.
                     class="input input-bordered"
                     placeholder="Title, composer" />
             </div>
-            <button type="submit" class="btn btn-secondary">Search</button>
+            <div class="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
+                <button type="submit" class="btn btn-secondary w-full sm:w-auto">Search</button>
             {% if q %}
                 <a
-                    class="btn btn-ghost"
+                    class="btn btn-ghost w-full sm:w-auto"
                     href="{% url 'pieces-list' %}"
                     hx-get="{% url 'pieces-list' %}"
                     hx-target="#piece-layout"
@@ -65,6 +66,7 @@ Description: Template for pieces list view.
                     Clear
                 </a>
             {% endif %}
+            </div>
         </form>
     </div>
 

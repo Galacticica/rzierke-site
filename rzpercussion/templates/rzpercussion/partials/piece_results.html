@@ -9,10 +9,10 @@ Description: Template for piece results section. This partial is intended to be 
 
 <div id="piece-results" class="card border border-base-300 bg-base-100 shadow-sm">
     <div class="card-body">
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center sm:gap-3">
             <h2 class="card-title">All pieces</h2>
 
-            <div class="text-sm opacity-70">
+            <div class="text-sm opacity-70 break-words">
                 {% if page_obj.object_list %}
                     {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ filtered_count|default:0 }}
                 {% else %}
@@ -27,15 +27,15 @@ Description: Template for piece results section. This partial is intended to be 
             {% for piece in page_obj.object_list %}
                 <div class="block rounded-2xl border border-base-300 bg-base-200/40 p-4 transition hover:bg-base-200/60 hover:border-base-300/80">
                     <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div class="min-w-0">
+                        <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2">
-                                <h3 class="text-lg font-semibold truncate">
+                                <h3 class="text-lg font-semibold break-words">
                                     <a class="link" href="{% url 'piece-detail' slug=piece.slug %}">{{ piece.title }}</a>
                                 </h3>
                             </div>
 
                             <!-- composer and artist -->
-                            <p class="mt-1 text-sm text-base-content/70">
+                            <p class="mt-1 text-sm text-base-content/70 break-words">
                                 by {{ piece.composer }} | {{piece.date_performed|date:"m/d/Y" }}
                             </p>
 
@@ -59,7 +59,7 @@ Description: Template for piece results section. This partial is intended to be 
                         </div>
 
                         <!-- open link -->
-                        <div class="flex flex-col items-end gap-2">
+                        <div class="flex w-full flex-col items-start gap-2 sm:w-auto sm:items-end">
                             <a class="text-xs opacity-70 link" href="{% url 'piece-detail' slug=piece.slug %}">Open →</a>
                         </div>
                     </div>
@@ -73,7 +73,7 @@ Description: Template for piece results section. This partial is intended to be 
 
         <!-- pagination -->
         {% if page_obj.has_other_pages %}
-            <div class="mt-6 flex justify-center">
+            <div class="mt-6 overflow-x-auto">
                 <div class="join">
                     <!-- Previous page -->
                     {% if page_obj.has_previous %}
