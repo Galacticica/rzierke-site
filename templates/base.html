@@ -73,10 +73,11 @@ Description: Base template for the site. This is where it loads common assets an
         {% block content %}{% endblock %}
     </main>
     <div class="py-2"></div>
-    <footer class="footer sm:footer-horizontal bg-neutral text-base-content items-center p-4">
+    <footer class="footer sm:footer-horizontal bg-neutral text-base-content items-center p-2">
   <aside class="grid-flow-col items-center">
     <img src="{% static 'logo.png' %}" alt="RZ" class="h-12">
-    <p>Copyright © 2026 - All right reserved</p>
+    <p class="text-sm opacity-70">Designed & built by Reagan Zierke</p>
+    <p class="text-sm opacity-60 pl-1">© 2026</p>
   </aside>
   <nav class="grid-flow-col gap-4 md:place-self-center md:justify-self-end">
     <a href="https://www.youtube.com/@Galacticica" target="_blank" rel="noopener" aria-label="YouTube">
