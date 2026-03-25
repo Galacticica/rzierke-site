@@ -8,6 +8,8 @@ Description: Get the full prompt to send to the AI, including base context and r
 
 
 from __future__ import annotations
+import logging
+
 from openai import OpenAI
 from django.conf import settings
 
@@ -15,6 +17,9 @@ from django.conf import settings
 client = OpenAI(api_key=settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else None
 
 from chatbot.models import Conversation
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_base_context(conversation: Conversation | None) -> str:
@@ -60,7 +65,7 @@ def get_response_from_ai(conversation: Conversation, user_message: str) -> str:
     if not user_message:
         return ""
 
-    model_name = "gpt-5.2"
+    model_name = getattr(settings, "OPENAI_CHAT_MODEL", "gpt-5.2")
     recent_messages = conversation.messages.order_by("-timestamp").values("sender", "content")[:40]
     input_items = []
 
@@ -83,5 +88,14 @@ def get_response_from_ai(conversation: Conversation, user_message: str) -> str:
             input=input_items,
         )
         return resp.output_text or ""
-    except Exception:
+    except Exception as exc:
+        logger.exception(
+            "Chat response generation failed (conversation_id=%s, model=%s, has_api_key=%s): %s",
+            getattr(conversation, "id", None),
+            model_name,
+            bool(settings.OPENAI_API_KEY),
+            exc,
+        )
+        if settings.DEBUG:
+            return f"Temporary AI error ({exc.__class__.__name__}): {exc}"
         return "I ran into a temporary issue while generating a response."

@@ -19,6 +19,8 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get("SECRET_KEY", get_random_secret_key())
 DEBUG = os.environ.get("DEBUG", "").lower() in ("1", "true", "yes", "on")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_CHAT_MODEL = "gpt-5.2"
+OPENAI_TITLE_MODEL = "gpt-5.2-mini"
 
 SECURE_SSL_REDIRECT = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
@@ -170,4 +172,25 @@ UNFOLD = {
     "SITE_TITLE": "RZierke Admin",
     "SITE_HEADER": "RZierke Site",
     "SITE_SYMBOL": "dashboard",
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "loggers": {
+        "chatbot": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
 }

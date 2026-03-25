@@ -8,12 +8,14 @@ Description: Helpers for generating conversation titles.
 
 
 from __future__ import annotations
+import logging
 
 from openai import OpenAI
 from django.conf import settings
 
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else None
+logger = logging.getLogger(__name__)
 
 
 def _fallback_title(user_message: str) -> str:
@@ -32,7 +34,7 @@ def get_conversation_title_from_first_message(user_message: str) -> str:
 
     try:
         resp = client.responses.create(
-            model="gpt-5.2-mini",
+            model=getattr(settings, "OPENAI_TITLE_MODEL", "gpt-5.2-mini"),
             input=(
                 "Create a short chat title based on the topic of this first user message. "
                 "Do not repeat the message verbatim. Max 40 characters. "
@@ -44,5 +46,10 @@ def get_conversation_title_from_first_message(user_message: str) -> str:
         if not title:
             return fallback
         return title[:40]
-    except Exception:
+    except Exception as exc:
+        logger.exception(
+            "Conversation title generation failed (has_api_key=%s): %s",
+            bool(settings.OPENAI_API_KEY),
+            exc,
+        )
         return fallback
