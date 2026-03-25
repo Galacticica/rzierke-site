@@ -5,14 +5,11 @@
 {% endblock %}
 
 {% block content %}
-<section class="mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
+<section class="container mx-auto max-w-6xl px-4 py-8">
     <div class="flex items-center justify-between">
-        <a
-            href="{% url 'min-home' %}"
-            class="btn btn-ghost btn-sm"
-        >← Back</a>
+		<a href="{% url 'min-home' %}" class="btn btn-ghost btn-sm">← Back</a>
     </div>
-	<div class="card border border-base-300 bg-base-100 shadow-sm">
+	<div class="mt-4 card border border-base-300 bg-base-100 shadow-sm">
 		<div class="card-body">
 			<h1 class="text-3xl font-bold tracking-tight md:text-4xl">Spotify Playlists</h1>
 			<p class="mt-2 text-base-content/80">Some theologically sound, curated playlists I've created. While the lyrics have had a rough review for theological soundness, I cannot guarantee their suitability for all contexts.</p>
