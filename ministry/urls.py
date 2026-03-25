@@ -9,6 +9,7 @@ from django.urls import path
 from .views import (
     DevotionsView,
     MinHomeView,
+    PlaylistsView,
     SongDetailView,
     SongListView,
     SongPPTXExportView,
@@ -18,6 +19,7 @@ from .views import (
 urlpatterns = [
     path("", MinHomeView.as_view(), name="min-home"),
     path("devotions/", DevotionsView.as_view(), name="devotions"),
+    path("playlists/", PlaylistsView.as_view(), name="playlists"),
     path("songs/", SongListView.as_view(), name="song-list"),
     path("songs/<slug:slug>/", SongDetailView.as_view(), name="song-detail"),
     path("songs/<slug:slug>/export/pptx/", SongPPTXExportView.as_view(), name="song-export-pptx"),

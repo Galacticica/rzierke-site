@@ -13,7 +13,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin, StackedInline, TabularInline
 
-from .models import Song, Artist, Tag, SectionDefinition, ArrangementItem, Devotion
+from .models import Playlist, Song, Artist, Tag, SectionDefinition, ArrangementItem, Devotion
 
 @admin.register(Devotion)
 class DevotionAdmin(ModelAdmin):
@@ -120,3 +120,9 @@ class SongAdmin(ModelAdmin):
             args=[obj.pk],
         )
         return HttpResponseRedirect(change_url)
+
+@admin.register(Playlist)
+class PlaylistAdmin(ModelAdmin):
+    """Register Playlist model in admin with basic configurations."""
+    list_display = ("name", "description", "spotify_playlist_id")
+    search_fields = ("name", "description", "spotify_playlist_id")

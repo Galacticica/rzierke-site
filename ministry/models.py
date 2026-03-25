@@ -175,3 +175,28 @@ class Devotion(models.Model):
     class Meta:
         ordering = ['-date']
 
+
+class PlaylistQuerySet(models.QuerySet):
+    """QuerySet helpers for Playlist model."""
+
+    def search(self, query: str | None):
+        """Filter playlists by name and description."""
+        q = (query or "").strip()
+        if not q:
+            return self
+
+        return self.filter(
+            Q(name__icontains=q) | Q(description__icontains=q)
+        )
+
+
+class Playlist(models.Model):
+    """The Playlist model holds a spotify playlist ID for embedding a playlist on the site."""
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(help_text="Description of the playlist, e.g., 'Songs for Lent 2026'.")
+    spotify_playlist_id = models.CharField(max_length=100, unique=True, help_text="Spotify playlist ID for embedding.")
+
+    objects = PlaylistQuerySet.as_manager()
+
+    def __str__(self):
+        return self.name

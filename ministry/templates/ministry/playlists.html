@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}
+<title>Spotify Playlists</title>
+{% endblock %}
+
+{% block content %}
+<section class="mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
+    <div class="flex items-center justify-between">
+        <a
+            href="{% url 'min-home' %}"
+            class="btn btn-ghost btn-sm"
+        >← Back</a>
+    </div>
+	<div class="card border border-base-300 bg-base-100 shadow-sm">
+		<div class="card-body">
+			<h1 class="text-3xl font-bold tracking-tight md:text-4xl">Spotify Playlists</h1>
+			<p class="mt-2 text-base-content/80">Some theologically sound, curated playlists I've created. While the lyrics have had a rough review for theological soundness, I cannot guarantee their suitability for all contexts.</p>
+		</div>
+	</div>
+
+	{% if playlists %}
+		<div class="mt-6 grid gap-6 md:grid-cols-2">
+			{% for playlist in playlists %}
+				<article class="card border border-base-300 bg-base-100 shadow-sm">
+					<div class="card-body">
+						<h2 class="card-title text-xl">{{ playlist.name }}</h2>
+						<p class="text-base-content/80">{{ playlist.description }}</p>
+						{% if "open.spotify.com" in playlist.spotify_playlist_id %}
+							<iframe
+								src="{{ playlist.spotify_playlist_id }}"
+								width="100%"
+								height="152"
+								frameborder="0"
+								allowfullscreen=""
+								allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+								loading="lazy"
+								class="mt-2 rounded-xl"
+								title="Spotify playlist: {{ playlist.name }}">
+							</iframe>
+						{% else %}
+							<iframe
+								src="https://open.spotify.com/embed/playlist/{{ playlist.spotify_playlist_id }}?utm_source=generator"
+								width="100%"
+								height="152"
+								frameborder="0"
+								allowfullscreen=""
+								allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+								loading="lazy"
+								class="mt-2 rounded-xl"
+								title="Spotify playlist: {{ playlist.name }}">
+							</iframe>
+						{% endif %}
+					</div>
+				</article>
+			{% endfor %}
+		</div>
+	{% else %}
+		<div class="alert mt-6">
+			<span>No playlists yet.</span>
+		</div>
+	{% endif %}
+</section>
+{% endblock %}
