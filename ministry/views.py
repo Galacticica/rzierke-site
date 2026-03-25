@@ -15,7 +15,7 @@ from django.http import HttpResponse
 from django.core.paginator import Paginator
 from .utils.build_slides import build_song_pptx_bytes
 from .utils.build_pdf import build_song_print_pdf_bytes
-from .models import Devotion, Song
+from .models import Devotion, Playlist, Song
 from .filters import SongFilter
 
 class SongDetailView(DetailView):
@@ -141,3 +141,12 @@ class DevotionsView(View):
             return render(request, "ministry/partials/devos_section.html", context)
 
         return render(request, "ministry/devos.html", context)
+
+
+class PlaylistsView(View):
+    """Display Spotify playlists in columns with two playlists per column."""
+
+    def get(self, request):
+        playlists = Playlist.objects.order_by("name")
+        context = {"playlists": playlists}
+        return render(request, "ministry/playlists.html", context)
