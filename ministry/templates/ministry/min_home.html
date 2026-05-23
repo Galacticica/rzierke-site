@@ -26,7 +26,7 @@ Description: Template for ministry home page.
 	</div>
 
 	<div class="mt-6 grid gap-6 md:grid-cols-3">
-		<div class="card bg-base-100 shadow-md border border-base-300 transition-all hover:-translate-y-1 hover:shadow-xl">
+		<div class="card bg-base-100 shadow-md border border-base-300 opacity-60">
 			<div class="h-1 w-full bg-primary"></div>
 			<div class="card-body">
 				<h2 class="card-title">Songs</h2>
@@ -34,7 +34,7 @@ Description: Template for ministry home page.
 					Search, filter, and export in a couple of clicks.
 				</p>
 				<div class="card-actions mt-2">
-					<a class="btn btn-primary btn-sm" href="{% url 'song-list' %}">Open Songs</a>
+					<button class="btn btn-primary btn-sm btn-disabled cursor-not-allowed" disabled aria-disabled="true">Temporarily disabled</button>
 				</div>
 			</div>
 		</div>
