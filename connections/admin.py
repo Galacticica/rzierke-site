@@ -12,9 +12,64 @@ Description: Admin registrations for the connections app.
 """
 
 from django.contrib import admin
+from django import forms
 from unfold.admin import ModelAdmin, TabularInline
 
 from .models import AlterEgo, Character, Movie, Relationship, Team, TeamMembership
+
+
+class OrderedChoiceAdminMixin:
+	"""Keep relation selectors in a predictable story order."""
+
+	character_ordering = ("movie_introduced__release_date", "phase_introduced", "name")
+	movie_ordering = ("release_date", "title")
+	no_first_appearance_label = "No first appearance"
+
+	def _grouped_character_choices(self, queryset):
+		grouped_choices = []
+		current_group_label = None
+		current_group_choices = []
+
+		for character in queryset.select_related("movie_introduced"):
+			movie = character.movie_introduced
+			group_label = movie.title if movie else self.no_first_appearance_label
+			if group_label != current_group_label:
+				if current_group_label is not None:
+					grouped_choices.append((current_group_label, current_group_choices))
+				current_group_label = group_label
+				current_group_choices = []
+			current_group_choices.append((character.pk, str(character)))
+
+		if current_group_label is not None:
+			grouped_choices.append((current_group_label, current_group_choices))
+
+		return grouped_choices
+
+	def formfield_for_foreignkey(self, db_field, request, **kwargs):
+		remote_model = getattr(db_field.remote_field, "model", None)
+		if remote_model is Character:
+			kwargs["queryset"] = Character.objects.order_by(*self.character_ordering)
+		elif remote_model is Movie:
+			kwargs["queryset"] = Movie.objects.order_by(*self.movie_ordering)
+		form_field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+		if remote_model is Character:
+			form_field.choices = self._grouped_character_choices(form_field.queryset)
+		return form_field
+
+	def formfield_for_manytomany(self, db_field, request, **kwargs):
+		remote_model = getattr(db_field.remote_field, "model", None)
+		if remote_model is Character:
+			kwargs["queryset"] = Character.objects.order_by(*self.character_ordering)
+		elif remote_model is Movie:
+			kwargs["queryset"] = Movie.objects.order_by(*self.movie_ordering)
+		form_field = super().formfield_for_manytomany(db_field, request, **kwargs)
+		if remote_model is Character:
+			form_field.choices = self._grouped_character_choices(form_field.queryset)
+		return form_field
+
+
+class GroupedCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
+	template_name = "connections/widgets/grouped_checkbox_select.html"
 
 
 class AlterEgoInline(TabularInline):
@@ -30,7 +85,7 @@ class TeamMembershipInline(TabularInline):
 
 
 @admin.register(Character)
-class CharacterAdmin(ModelAdmin):
+class CharacterAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 	"""Admin configuration for Character."""
 	list_display = ("name", "phase_introduced", "alignment", "status")
 	search_fields = ("name",)
@@ -61,15 +116,25 @@ class TeamMembershipAdmin(ModelAdmin):
 
 
 @admin.register(Movie)
-class MovieAdmin(ModelAdmin):
+class MovieAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 	"""Admin configuration for Movie."""
 	list_display = ("title", "release_date")
 	search_fields = ("title",)
-	filter_horizontal = ("characters",)
+
+	def formfield_for_manytomany(self, db_field, request, **kwargs):
+		form_field = super().formfield_for_manytomany(db_field, request, **kwargs)
+		if db_field.name == "characters":
+			form_field.widget = GroupedCheckboxSelectMultiple(
+				attrs={
+					"class": "movie-characters-grouped-select",
+				}
+			)
+			form_field.widget.choices = form_field.choices
+		return form_field
 
 
 @admin.register(Relationship)
-class RelationshipAdmin(ModelAdmin):
+class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 	"""Admin configuration for Relationship."""
 	list_display = ("character1", "character2", "relationship_type", "directional", "weight")
 	list_filter = ("relationship_type", "directional")
