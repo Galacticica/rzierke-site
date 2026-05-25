@@ -1,0 +1,53 @@
+Table character {
+    id integer [pk, increment]
+    name varchar(255) [not null]
+    photo_url varchar(255)
+    phase_introduced integer
+    allignment varchar(255)
+    status varchar(255)
+}
+
+Table alter_ego {
+    id integer [pk, increment]
+    name varchar(255) [not null]
+    character_id integer [ref: > character.id]
+}
+
+Table team {
+    id integer [pk, increment]
+    name varchar(255) [not null]
+}
+
+Table team_membership {
+    id integer [pk, increment]
+    character_id integer [ref: > character.id]
+    team_id integer [ref: > team.id]
+    is_current boolean [not null, default: true]
+}
+
+Table relationship {
+    id integer [pk, increment]
+    character1_id integer [ref: > character.id, not null]
+    character2_id integer [ref: > character.id, not null]
+    relationship_type varchar(255) [not null]
+    is_directed boolean [not null, default: false]
+    indexes {
+        (character1_id, character2_id, relationship_type) [unique]
+    }
+}
+
+Table movie {
+    id integer [pk, increment]
+    title varchar(255) [not null]
+    release_year integer
+    phase integer
+}
+
+Table movie_appearance {
+    id integer [pk, increment]
+    character_id integer [ref: > character.id]
+    movie_id integer [ref: > movie.id]
+    indexes {
+        (character_id, movie_id) [unique]
+    }
+}
