@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'rzpercussion',
     'development_portfolio',
     'chatbot',
+    'connections',
 ]
 
 if DEBUG:
