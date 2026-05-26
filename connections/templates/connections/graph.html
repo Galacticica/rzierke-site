@@ -177,6 +177,13 @@
     color: #f8fafc;
   }
 
+  .graph-path-field .select optgroup {
+    color: #7dd3fc;
+    font-weight: 800;
+    background-color: #12061f;
+    opacity: 1;
+  }
+
   .graph-path-field .select option[value=""] {
     color: rgba(248, 250, 252, 0.6);
   }
@@ -311,8 +318,12 @@
             <div class="label"><span class="label-text">From</span></div>
             <select id="path-from" class="select select-bordered w-full">
               <option value="">Select a character</option>
-              {% for character in character_options %}
-                <option value="{{ character.name }}">{{ character.name }}</option>
+              {% for group in grouped_character_options %}
+                <optgroup label="{{ group.label }}">
+                  {% for character in group.characters %}
+                    <option value="{{ character.id }}">{{ character.name }}</option>
+                  {% endfor %}
+                </optgroup>
               {% endfor %}
             </select>
           </label>
@@ -321,8 +332,12 @@
             <div class="label"><span class="label-text">To</span></div>
             <select id="path-to" class="select select-bordered w-full">
               <option value="">Select a character</option>
-              {% for character in character_options %}
-                <option value="{{ character.name }}">{{ character.name }}</option>
+              {% for group in grouped_character_options %}
+                <optgroup label="{{ group.label }}">
+                  {% for character in group.characters %}
+                    <option value="{{ character.id }}">{{ character.name }}</option>
+                  {% endfor %}
+                </optgroup>
               {% endfor %}
             </select>
           </label>

@@ -13,6 +13,33 @@ from .models import Character, Relationship, Team
 graph_service = MCUGraphService()
 
 
+def _group_character_options(characters):
+	grouped_options = []
+	current_group_label = None
+	current_group = []
+
+	for character in characters:
+		movie = character.movie_introduced
+		group_label = movie.title if movie else "No first appearance"
+		if group_label != current_group_label:
+			if current_group_label is not None:
+				grouped_options.append({"label": current_group_label, "characters": current_group})
+			current_group_label = group_label
+			current_group = []
+
+		current_group.append(
+			{
+				"id": character.id,
+				"name": character.name,
+			}
+		)
+
+	if current_group_label is not None:
+		grouped_options.append({"label": current_group_label, "characters": current_group})
+
+	return grouped_options
+
+
 def _bad_request(message):
 	return JsonResponse({"error": message}, status=400)
 
@@ -23,15 +50,25 @@ def _serialize_graph_response(graph, characters=None):
 
 @require_GET
 def graph_page_view(request):
-	characters = Character.objects.order_by("name")
+	characters = Character.objects.select_related("movie_introduced").order_by(
+		"movie_introduced__release_date",
+		"phase_introduced",
+		"name",
+	)
 
 	context = {
 		"alignment_choices": Character.ALIGNMENT_CHOICES,
 		"status_choices": Character.STATUS_CHOICES,
 		"relationship_choices": Relationship.RELATIONSHIP_CHOICES,
 		"team_choices": Team.objects.order_by("name"),
+		"grouped_character_options": _group_character_options(characters),
 		"character_options": [
-			{"id": character.id, "name": character.name}
+			{
+				"id": character.id,
+				"name": character.name,
+				"movie_title": character.movie_introduced.title if character.movie_introduced else None,
+				"movie_release_date": character.movie_introduced.release_date.isoformat() if character.movie_introduced else None,
+			}
 			for character in characters
 		],
 	}

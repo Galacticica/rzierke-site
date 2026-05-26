@@ -466,11 +466,13 @@ if (graphRoot) {
   // ─── Path search ───────────────────────────────────────────────────────────
   const getCharacterId = (input) => {
     if (!input) return '';
+    const trimmed = input.trim();
+    if (/^\d+$/.test(trimmed)) return trimmed;
     const direct = characterOptions.find(
-      c => c.name.toLowerCase() === input.trim().toLowerCase()
+      c => c.name.toLowerCase() === trimmed.toLowerCase()
     );
     if (direct) return String(direct.id);
-    return nameToId.get(input.trim().toLowerCase()) || '';
+    return nameToId.get(trimmed.toLowerCase()) || '';
   };
 
   const runPathSearch = async () => {
