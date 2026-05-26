@@ -19,7 +19,7 @@ urlpatterns = [
     path('account/', include('accounts.urls')),
     path('admin/', admin.site.urls),
     path('api/', include('connections.urls')),
-    path('connections/graph/', connections_views.graph_page_view, name='connections-graph'),
+    path('mcu-relationships/', connections_views.graph_page_view, name='connections-graph'),
     path('', include('home.urls')),
     path('ministry/', include('ministry.urls')),
     path('rzpercussion/', include('rzpercussion.urls')),
