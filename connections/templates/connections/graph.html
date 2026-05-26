@@ -266,6 +266,13 @@
     /* important */
     box-sizing: border-box;
   }
+
+  /* When there's not enough room below, flip the panel above the summary */
+  .graph-filter-dropdown.flip-up .graph-filter-dropdown-panel {
+    top: auto;
+    bottom: calc(100% + 0.5rem);
+    max-height: 60vh;
+  }
 </style>
 {% endblock %}
 
@@ -425,7 +432,7 @@
 
           <label class="graph-path-item graph-path-field form-control w-full">
             <div class="label"><span class="label-text">From</span></div>
-            <details class="graph-filter-dropdown" id="path-from-dropdown">
+            <details class="graph-filter-dropdown" id="path-from-dropdown" data-flip-default="up">
               <summary>
                 <span class="placeholder" id="path-from-label">Select a character</span>
                 <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20"
@@ -456,7 +463,7 @@
 
           <label class="graph-path-item graph-path-field form-control w-full">
             <div class="label"><span class="label-text">To</span></div>
-            <details class="graph-filter-dropdown" id="path-to-dropdown">
+            <details class="graph-filter-dropdown" id="path-to-dropdown" data-flip-default="up">
               <summary>
                 <span class="placeholder" id="path-to-label">Select a character</span>
                 <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20"
@@ -598,4 +605,99 @@
     </div>
   </div>
 </section>
+</section>
+
+  <script>
+  (function () {
+    const FOOTER_MARGIN = 80; // pixels of space to keep above footer
+
+    function updateDropdown(details) {
+      const panel = details.querySelector('.graph-filter-dropdown-panel');
+      const summary = details.querySelector('summary');
+      if (!panel || !summary) return;
+
+      // reset and remove flipped state to measure natural placement
+      panel.style.maxHeight = '';
+      // respect explicit default that wants flip-up
+      const wantsDefaultUp = details.dataset.flipDefault === 'up';
+      if (!wantsDefaultUp) details.classList.remove('flip-up');
+
+      requestAnimationFrame(() => {
+        const rect = panel.getBoundingClientRect();
+        const summaryRect = summary.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - summaryRect.bottom - FOOTER_MARGIN - 8; // pad
+        const spaceAbove = summaryRect.top - FOOTER_MARGIN - 8;
+
+        if (rect.bottom > window.innerHeight - FOOTER_MARGIN && spaceAbove > 120) {
+          // flip above if there's more room above
+          details.classList.add('flip-up');
+        } else {
+          if (!wantsDefaultUp) details.classList.remove('flip-up');
+        }
+
+        // set a conservative max-height so panel never touches footer / top
+        const available = details.classList.contains('flip-up') ? spaceAbove : spaceBelow;
+        if (available > 120) {
+          panel.style.maxHeight = Math.max(120, Math.min(available, window.innerHeight * 0.75)) + 'px';
+        } else {
+          panel.style.maxHeight = '120px';
+        }
+      });
+    }
+
+    // Precompute flip before the details opens so it doesn't require scrolling
+    function preflip(details, summary) {
+      // If this dropdown explicitly defaults to up, ensure it is flipped and skip calculations
+      if (details.dataset.flipDefault === 'up') {
+        details.classList.add('flip-up');
+        return;
+      }
+      const summaryRect = summary.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - summaryRect.bottom - FOOTER_MARGIN - 8;
+      const spaceAbove = summaryRect.top - FOOTER_MARGIN - 8;
+
+      // If there's little room below and more room above, set flip-up before open
+      if (spaceBelow < 140 && spaceAbove > Math.max(140, spaceBelow)) {
+        details.classList.add('flip-up');
+      } else {
+        details.classList.remove('flip-up');
+      }
+    }
+
+    // Update when a details element is opened/closed
+    document.querySelectorAll('.graph-filter-dropdown').forEach((details) => {
+      const summary = details.querySelector('summary');
+      if (summary) {
+        // pointerdown happens before the details toggles open
+        summary.addEventListener('pointerdown', (e) => preflip(details, summary));
+        // keyboard activation (Enter/Space) - keydown happens before toggle
+        summary.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') preflip(details, summary);
+        });
+      }
+
+      details.addEventListener('toggle', () => {
+        if (details.open) {
+          // Close any other open graph-filter-dropdowns so only one is open at a time
+          document.querySelectorAll('.graph-filter-dropdown[open]').forEach((other) => {
+            if (other !== details) other.open = false;
+          });
+
+          updateDropdown(details);
+        } else {
+          details.classList.remove('flip-up');
+        }
+      });
+    });
+
+    // Recompute on resize/scroll and when clicking (handles dynamic content)
+    const recomputeOpen = () => document.querySelectorAll('.graph-filter-dropdown[open]').forEach(updateDropdown);
+    window.addEventListener('resize', recomputeOpen);
+    window.addEventListener('scroll', recomputeOpen, true);
+
+    // Also recompute after clicks to handle cases where layout changed
+    document.addEventListener('click', () => setTimeout(recomputeOpen, 10));
+  })();
+  </script>
+
 {% endblock %}
