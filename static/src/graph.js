@@ -15,6 +15,8 @@ if (graphRoot) {
   const nameToId = new Map(
     characterOptions.map((c) => [c.name.toLowerCase(), String(c.id)])
   );
+  let activePayload = { nodes: [], edges: [] };
+  let fullGraphPayload = null;
 
   const alignmentColors = {
     hero:     '#38BDF8',
@@ -319,6 +321,7 @@ if (graphRoot) {
   const PHI = (1 + Math.sqrt(5)) / 2;
 
   const applyElements = (payload, label) => {
+    activePayload = payload;
     Object.keys(vel).forEach(id => delete vel[id]);
 
     cy.json({ elements: payload });
@@ -343,10 +346,68 @@ if (graphRoot) {
 
   const fetchGraph = async (url, label) => {
     setLoadState('Loading...');
+    const payload = await fetchGraphPayload(url);
+    applyElements(payload, label);
+    clearStatus();
+  };
+
+  const fetchGraphPayload = async (url) => {
     const response = await fetch(url, { headers: { Accept: 'application/json' } });
     if (!response.ok) throw new Error(`Graph request failed with status ${response.status}`);
-    applyElements(await response.json(), label);
-    clearStatus();
+    return response.json();
+  };
+
+  const getFullGraphPayload = async () => {
+    if (fullGraphPayload) return fullGraphPayload;
+    fullGraphPayload = await fetchGraphPayload('/api/graph/');
+    return fullGraphPayload;
+  };
+
+  const cloneNode = (node) => ({
+    data: { ...node.data },
+    classes: node.classes || '',
+  });
+
+  const cloneEdge = (edge) => ({
+    data: {
+      ...edge.data,
+      relationship_types: [...(edge.data.relationship_types || [])],
+      relationship_ids: [...(edge.data.relationship_ids || [])],
+    },
+    classes: edge.classes || '',
+  });
+
+  const relationshipKey = (ids = []) => ids.map(String).sort().join('|');
+
+  const buildPathOnlyPayload = (sourcePayload, pathData) => {
+    const nodeMap = new Map(sourcePayload.nodes.map(node => [String(node.data.id), node]));
+    const edgeMap = new Map(
+      sourcePayload.edges.map(edge => {
+        const edgeKey = `${edge.data.source}->${edge.data.target}|${relationshipKey(edge.data.relationship_ids)}`;
+        return [edgeKey, edge];
+      })
+    );
+
+    const nodes = pathData.character_ids
+      .map(id => nodeMap.get(String(id)))
+      .filter(Boolean)
+      .map(cloneNode);
+
+    const edges = pathData.highlighted_edges
+      .map(edge => {
+        const preciseKey = `${String(edge.source)}->${String(edge.target)}|${relationshipKey(edge.relationship_ids)}`;
+        const fallbackKey = `${String(edge.source)}->${String(edge.target)}|`;
+        const edgeCandidate = edgeMap.get(preciseKey)
+          || sourcePayload.edges.find(candidate =>
+            candidate.data.source === String(edge.source)
+            && candidate.data.target === String(edge.target)
+          )
+          || edgeMap.get(fallbackKey);
+        return edgeCandidate ? cloneEdge(edgeCandidate) : null;
+      })
+      .filter(Boolean);
+
+    return { nodes, edges };
   };
 
   // ─── Path search ───────────────────────────────────────────────────────────
@@ -357,21 +418,6 @@ if (graphRoot) {
     );
     if (direct) return String(direct.id);
     return nameToId.get(input.trim().toLowerCase()) || '';
-  };
-
-  const clearHighlights = () => cy.elements().removeClass('highlighted');
-
-  const highlightPath = (characterIds, edgeList) => {
-    clearHighlights();
-    characterIds.forEach(id => cy.getElementById(String(id)).addClass('highlighted'));
-    edgeList.forEach(edge => {
-      cy.edges().filter(c =>
-        c.data('source') === String(edge.source) &&
-        c.data('target') === String(edge.target)
-      ).addClass('highlighted');
-    });
-    const hl = cy.elements('.highlighted');
-    if (hl.length) cy.fit(hl, 60);
   };
 
   const runPathSearch = async () => {
@@ -389,10 +435,25 @@ if (graphRoot) {
     const payload = await response.json();
     if (!response.ok) {
       setStatus(payload.error || 'No path could be found.', 'warning');
-      clearHighlights();
       return;
     }
-    highlightPath(payload.character_ids, payload.highlighted_edges);
+
+    const needsFullGraph = payload.character_ids.some(id =>
+      !activePayload.nodes.some(node => String(node.data.id) === String(id))
+    );
+
+    const sourcePayload = needsFullGraph ? await getFullGraphPayload() : activePayload;
+    const pathOnlyPayload = buildPathOnlyPayload(sourcePayload, payload);
+
+    if (!pathOnlyPayload.nodes.length) {
+      setStatus('Path was found, but path nodes could not be rendered.', 'warning');
+      return;
+    }
+
+    applyElements(
+      pathOnlyPayload,
+      `Showing path view with ${pathOnlyPayload.nodes.length} nodes and ${pathOnlyPayload.edges.length} edges.`
+    );
     setStatus(`Path found with total traversal cost ${payload.total_cost}.`, 'success');
   };
 
@@ -420,7 +481,6 @@ if (graphRoot) {
       : 'Showing the full graph.';
     const query = params.toString();
     await fetchGraph(query ? `/api/graph/filter/?${query}` : '/api/graph/filter/', label);
-    clearHighlights();
   };
 
   filterInputs.forEach(input => {
@@ -442,8 +502,11 @@ if (graphRoot) {
   clearButton.addEventListener('click', () => {
     fromInput.value = '';
     toInput.value   = '';
-    clearHighlights();
     clearStatus();
+    loadFilteredGraph().catch(err => {
+      console.error(err);
+      setStatus('Failed to restore the graph.', 'error');
+    });
   });
 
   // ─── Initial load ──────────────────────────────────────────────────────────
