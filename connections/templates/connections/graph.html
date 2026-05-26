@@ -18,8 +18,180 @@
     min-height: 72vh;
   }
 
+  #graph-viewer:fullscreen {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    padding: 1rem;
+  }
+
+  #graph-viewer:fullscreen .graph-canvas {
+    flex: 1;
+    min-height: 0;
+  }
+
+  #graph-viewer:fullscreen .graph-toolbar {
+    flex-shrink: 0;
+  }
+
   .graph-panel {
     backdrop-filter: blur(14px);
+  }
+
+  .graph-filter-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .graph-filter-item {
+    margin: 0;
+  }
+
+  .graph-filter-dropdown {
+    position: relative;
+  }
+
+  .graph-filter-dropdown summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.75rem;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: rgba(248, 250, 252, 0.96);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    cursor: pointer;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  }
+
+  .graph-filter-dropdown summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .graph-filter-dropdown summary:focus,
+  .graph-filter-dropdown summary:focus-visible {
+    border-color: rgba(34, 211, 238, 0.75);
+    background-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.24), 0 0 0 4px rgba(34, 211, 238, 0.1);
+    outline: none;
+  }
+
+  .graph-filter-dropdown summary .placeholder {
+    color: rgba(248, 250, 252, 0.55);
+  }
+
+  .graph-filter-dropdown summary .chevron {
+    transition: transform 160ms ease;
+  }
+
+  .graph-filter-dropdown[open] summary .chevron {
+    transform: rotate(180deg);
+  }
+
+  .graph-filter-dropdown[open] .graph-filter-dropdown-panel {
+    display: block;
+  }
+
+  .graph-filter-dropdown-panel {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    right: 0;
+    max-height: 16rem;
+    overflow: auto;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.9rem;
+    background: rgba(18, 6, 31, 0.98);
+    padding: 0.5rem;
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.32);
+  }
+
+  .graph-filter-option {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: 0.65rem;
+    color: rgba(248, 250, 252, 0.92);
+    cursor: pointer;
+  }
+
+  .graph-filter-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .graph-filter-option input {
+    accent-color: #22d3ee;
+  }
+
+  .graph-filter-help {
+    margin-top: 0.25rem;
+  }
+
+  .graph-path-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .graph-path-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .graph-path-item {
+    margin: 0;
+  }
+
+  .graph-path-field .label {
+    margin-bottom: 0.35rem;
+    padding-left: 0.15rem;
+  }
+
+  .graph-path-field .input {
+    border-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.03);
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  }
+
+  .graph-path-field .select {
+    border-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.03);
+    color: rgba(248, 250, 252, 0.96);
+    font-weight: 500;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  }
+
+  .graph-path-field .select option {
+    background-color: #12061f;
+    color: #f8fafc;
+  }
+
+  .graph-path-field .select option[value=""] {
+    color: rgba(248, 250, 252, 0.6);
+  }
+
+  .graph-path-field .select:focus,
+  .graph-path-field .select:focus-visible {
+    border-color: rgba(34, 211, 238, 0.75);
+    background-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.24), 0 0 0 4px rgba(34, 211, 238, 0.1);
+    outline: none;
+  }
+
+  .graph-path-actions {
+    display: flex;
+    gap: 0.75rem;
   }
 </style>
 {% endblock %}
@@ -27,150 +199,218 @@
 {% block content %}
 {{ character_options|json_script:"character-options" }}
 <section class="graph-shell min-h-[calc(100vh-8rem)] px-4 py-6 lg:px-8">
-  <div class="mx-auto max-w-7xl space-y-6">
+  <div class="mx-auto max-w-[96rem] space-y-6">
     <div class="rounded-box border border-white/10 bg-base-200/80 p-6 shadow-2xl">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div class="space-y-2 max-w-3xl">
-          <p class="text-sm uppercase tracking-[0.35em] text-secondary/80">MCU relationship map</p>
-          <h1 class="text-3xl font-bold text-base-content sm:text-4xl">Character Graph Visualization</h1>
+          <h1 class="text-3xl font-bold text-base-content sm:text-4xl">MCU Character Relationships</h1>
           <p class="text-base text-base-content/70">
-            Explore the MCU through weighted character relationships, filter the network, and trace shortest paths between any two characters.
+            Explore the MCU through character relationships, filter the network, and trace shortest paths between any two characters.
           </p>
-        </div>
-        <div class="flex flex-wrap gap-3">
-          <span class="badge badge-outline badge-secondary">NetworkX Dijkstra</span>
-          <span class="badge badge-outline">Cytoscape.js</span>
-          <span class="badge badge-outline badge-accent">Django JSON API</span>
         </div>
       </div>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+    <div class="grid items-start gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
       <aside class="graph-panel space-y-4 rounded-box border border-white/10 bg-base-200/70 p-4 shadow-xl">
-        <div class="space-y-3">
+        <div class="graph-filter-stack">
           <div>
             <h2 class="text-lg font-semibold">Filters</h2>
-            <p class="text-sm text-base-content/60">Narrow the visible network before tracing a path.</p>
           </div>
 
-          <label class="form-control w-full">
-            <div class="label"><span class="label-text">Phase</span></div>
-            <select class="select select-bordered w-full" data-graph-filter="phase">
-              <option value="">All phases</option>
-              {% for phase in phase_choices %}
-                <option value="{{ phase }}">Phase {{ phase }}</option>
-              {% endfor %}
-            </select>
-          </label>
-
-          <label class="form-control w-full">
+          <label class="graph-filter-item form-control w-full">
             <div class="label"><span class="label-text">Alignment</span></div>
-            <select class="select select-bordered w-full" data-graph-filter="alignment">
-              <option value="">All alignments</option>
-              {% for value, label in alignment_choices %}
-                <option value="{{ value }}">{{ label }}</option>
-              {% endfor %}
-            </select>
+            <details class="graph-filter-dropdown">
+              <summary>
+                <span class="placeholder">Choose alignments</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                </svg>
+              </summary>
+              <div class="graph-filter-dropdown-panel">
+                {% for value, label in alignment_choices %}
+                  <label class="graph-filter-option">
+                    <input type="checkbox" data-graph-filter="alignment" value="{{ value }}">
+                    <span>{{ label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </details>
           </label>
 
-          <label class="form-control w-full">
+          <label class="graph-filter-item form-control w-full">
             <div class="label"><span class="label-text">Status</span></div>
-            <select class="select select-bordered w-full" data-graph-filter="status">
-              <option value="">All statuses</option>
-              {% for value, label in status_choices %}
-                <option value="{{ value }}">{{ label }}</option>
-              {% endfor %}
-            </select>
+            <details class="graph-filter-dropdown">
+              <summary>
+                <span class="placeholder">Choose statuses</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                </svg>
+              </summary>
+              <div class="graph-filter-dropdown-panel">
+                {% for value, label in status_choices %}
+                  <label class="graph-filter-option">
+                    <input type="checkbox" data-graph-filter="status" value="{{ value }}">
+                    <span>{{ label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </details>
           </label>
 
-          <label class="form-control w-full">
+          <label class="graph-filter-item form-control w-full">
             <div class="label"><span class="label-text">Team</span></div>
-            <select class="select select-bordered w-full" data-graph-filter="team">
-              <option value="">All teams</option>
-              {% for team in team_choices %}
-                <option value="{{ team.name }}">{{ team.name }}</option>
-              {% endfor %}
-            </select>
+            <details class="graph-filter-dropdown">
+              <summary>
+                <span class="placeholder">Choose teams</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                </svg>
+              </summary>
+              <div class="graph-filter-dropdown-panel">
+                {% for team in team_choices %}
+                  <label class="graph-filter-option">
+                    <input type="checkbox" data-graph-filter="team" value="{{ team.name }}">
+                    <span>{{ team.name }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </details>
+          </label>
+
+          <label class="graph-filter-item form-control w-full">
+            <div class="label"><span class="label-text">Relationships</span></div>
+            <details class="graph-filter-dropdown">
+              <summary>
+                <span class="placeholder">Choose relationship types</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                </svg>
+              </summary>
+              <div class="graph-filter-dropdown-panel">
+                {% for value, label in relationship_choices %}
+                  <label class="graph-filter-option">
+                    <input type="checkbox" data-graph-filter="relationship_types" value="{{ value }}">
+                    <span>{{ label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </details>
           </label>
         </div>
 
         <div class="divider my-2"></div>
 
-        <div class="space-y-3">
-          <div>
-            <h2 class="text-lg font-semibold">Path search</h2>
-            <p class="text-sm text-base-content/60">Choose any two characters to highlight the cheapest traversal path.</p>
+        <div class="graph-path-stack pt-1">
+          <div class="graph-path-header">
+            <h2 class="text-lg font-semibold">Path Search</h2>
+            <p class="text-sm text-base-content/60">Choose any two characters to show the shortest path between them.</p>
           </div>
 
-          <label class="form-control w-full">
+          <label class="graph-path-item graph-path-field form-control w-full">
             <div class="label"><span class="label-text">From</span></div>
-            <input id="path-from" class="input input-bordered w-full" list="character-names" placeholder="Tony Stark">
+            <select id="path-from" class="select select-bordered w-full">
+              <option value="">Select a character</option>
+              {% for character in character_options %}
+                <option value="{{ character.name }}">{{ character.name }}</option>
+              {% endfor %}
+            </select>
           </label>
 
-          <label class="form-control w-full">
+          <label class="graph-path-item graph-path-field form-control w-full">
             <div class="label"><span class="label-text">To</span></div>
-            <input id="path-to" class="input input-bordered w-full" list="character-names" placeholder="Steve Rogers">
+            <select id="path-to" class="select select-bordered w-full">
+              <option value="">Select a character</option>
+              {% for character in character_options %}
+                <option value="{{ character.name }}">{{ character.name }}</option>
+              {% endfor %}
+            </select>
           </label>
 
-          <datalist id="character-names">
-            {% for character in character_options %}
-              <option value="{{ character.name }}"></option>
-            {% endfor %}
-          </datalist>
-
-          <div class="flex gap-2">
+          <div class="graph-path-actions">
             <button id="path-search-btn" type="button" class="btn btn-secondary flex-1">Find path</button>
             <button id="path-clear-btn" type="button" class="btn btn-ghost">Clear</button>
-          </div>
-
-          <div id="path-status" class="alert hidden text-sm"></div>
-          <div class="rounded-box bg-base-300/70 p-3 text-sm text-base-content/70">
-            The graph uses weighted traversal costs, so lower-cost relationships will be favored even when they connect distant parts of the network.
           </div>
         </div>
       </aside>
 
       <section class="space-y-4">
-        <div class="graph-panel rounded-box border border-white/10 bg-base-200/70 p-3 shadow-xl">
-          <div class="flex items-center justify-between gap-3 px-2 pb-3 relative">
-            <div>
-              <h2 class="text-lg font-semibold">Interactive graph</h2>
-              <p class="text-sm text-base-content/60">Drag nodes, pan around, and zoom to inspect the network.</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <div id="graph-load-state" class="text-sm text-base-content/60">Loading graph...</div>
-              <div class="btn-group">
-                <button id="zoom-in-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom in">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM11 8v6M8 11h6" />
-                  </svg>
-                </button>
-                <button id="zoom-fit-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom to fit">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6M4 4v6M20 20h-6M20 20v-6M20 4h-6M20 4v6M4 20h6M4 20v-6" />
-                  </svg>
-                </button>
-                <button id="zoom-out-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom out">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM8 11h6" />
-                  </svg>
-                </button>
+        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div id="graph-viewer" class="graph-panel rounded-box border border-white/10 bg-base-200/70 p-3 shadow-xl">
+            <div class="graph-toolbar flex items-center justify-between gap-3 px-2 pb-3 relative">
+              <div>
+                <h2 class="text-lg font-semibold">MCU Relationship Map</h2>
+              </div>
+              <div class="flex items-center gap-2">
+                <div id="graph-load-state" class="text-sm text-base-content/60">Loading graph...</div>
+                <div class="btn-group">
+                  <button id="fullscreen-btn" class="btn btn-sm btn-circle btn-ghost" title="Enter fullscreen">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+                    </svg>
+                  </button>
+                  <button id="zoom-in-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom in">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM11 8v6M8 11h6" />
+                    </svg>
+                  </button>
+                  <button id="zoom-fit-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom to fit">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5M9 9h6v6H9z" />
+                    </svg>
+                  </button>
+                  <button id="zoom-out-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom out">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM8 11h6" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
+            <div id="mcu-graph" class="graph-canvas rounded-box border border-white/10 bg-base-100/40"></div>
           </div>
-          <div id="mcu-graph" class="graph-canvas rounded-box border border-white/10 bg-base-100/40"></div>
-        </div>
 
-        <div class="grid gap-4 lg:grid-cols-2">
-          <div class="graph-panel rounded-box border border-white/10 bg-base-200/70 p-4 shadow-xl">
-            <h3 class="font-semibold">How to read it</h3>
-            <p class="mt-2 text-sm text-base-content/70">
-              Node borders follow alignment, node photos come from the stored static image path, and directed relationships keep their arrowheads.
-            </p>
-          </div>
-          <div class="graph-panel rounded-box border border-white/10 bg-base-200/70 p-4 shadow-xl">
-            <h3 class="font-semibold">Current mode</h3>
-            <p class="mt-2 text-sm text-base-content/70" id="graph-summary">Showing the full graph.</p>
+          <div class="graph-panel self-start rounded-box border border-white/10 bg-base-200/70 p-4 shadow-xl">
+            <div class="flex flex-col gap-4">
+              <div class="flex items-center justify-between gap-3">
+                <h3 class="font-semibold">Key</h3>
+              </div>
+
+              <div class="space-y-4">
+                <div>
+                  <p class="text-sm font-medium text-base-content">Alignment</p>
+                  <div class="mt-2 flex flex-wrap gap-2 text-sm text-base-content/70">
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full bg-[#38BDF8]"></span>Hero</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full bg-[#FB7185]"></span>Villain</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full bg-[#E5E7EB]"></span>Neutral</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full bg-[#34D399]"></span>Reformed</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full bg-[#FBBF24]"></span>Fallen</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="text-sm font-medium text-base-content">Status</p>
+                  <div class="mt-2 flex flex-wrap gap-2 text-sm text-base-content/70">
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full border-2 border-white/50 bg-transparent"></span>Alive</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full border-2 border-dashed border-white/50 bg-transparent"></span>Deceased</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="text-sm font-medium text-base-content">Relationship Types</p>
+                  <div class="mt-2 grid gap-2 sm:grid-cols-2 text-sm text-base-content/70">
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#FACC15]"></span>Variant</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#7DD3FC]"></span>Ally</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#FB7185]"></span>Enemy</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#F472B6]"></span>Romantic</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#FB923C]"></span>Mentor</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#16A34A]"></span>Family</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#E5E7EB]"></span>Acquaintance</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#A78BFA]"></span>Creation</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

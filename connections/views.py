@@ -7,7 +7,7 @@ from django.views.decorators.http import require_GET
 from networkx.exception import NetworkXNoPath, NodeNotFound
 
 from .graph_service import MCUGraphService
-from .models import Character, Team
+from .models import Character, Relationship, Team
 
 
 graph_service = MCUGraphService()
@@ -24,17 +24,11 @@ def _serialize_graph_response(graph, characters=None):
 @require_GET
 def graph_page_view(request):
 	characters = Character.objects.order_by("name")
-	phase_choices = (
-		Character.objects.exclude(phase_introduced__isnull=True)
-		.order_by("phase_introduced")
-		.values_list("phase_introduced", flat=True)
-		.distinct()
-	)
 
 	context = {
 		"alignment_choices": Character.ALIGNMENT_CHOICES,
 		"status_choices": Character.STATUS_CHOICES,
-		"phase_choices": list(phase_choices),
+		"relationship_choices": Relationship.RELATIONSHIP_CHOICES,
 		"team_choices": Team.objects.order_by("name"),
 		"character_options": [
 			{"id": character.id, "name": character.name}
@@ -52,16 +46,18 @@ def graph_view(request):
 
 @require_GET
 def graph_filter_view(request):
-	alignment = request.GET.get("alignment")
+	alignment = request.GET.getlist("alignment")
 	phase = request.GET.get("phase")
-	status = request.GET.get("status")
-	team = request.GET.get("team")
+	status = request.GET.getlist("status")
+	team = request.GET.getlist("team")
+	relationship_types = request.GET.getlist("relationship_types")
 
 	graph, characters = graph_service.filtered_subgraph(
 		alignment=alignment,
 		phase=phase,
 		status=status,
 		team=team,
+		relationship_types=relationship_types,
 	)
 	payload = graph_service.to_cytoscape_format(graph, characters)
 	payload["filters"] = {
@@ -69,6 +65,7 @@ def graph_filter_view(request):
 		"phase": phase,
 		"status": status,
 		"team": team,
+		"relationship_types": relationship_types,
 	}
 	return JsonResponse(payload)
 

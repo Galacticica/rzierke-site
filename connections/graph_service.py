@@ -230,21 +230,39 @@ class MCUGraphService:
 		cache.set(cache_key, result, self.CACHE_TIMEOUT)
 		return result
 
-	def filtered_subgraph(self, alignment=None, phase=None, status=None, team=None):
-		normalized_alignment = alignment.strip() if isinstance(alignment, str) else alignment
-		normalized_status = status.strip() if isinstance(status, str) else status
-		normalized_team = team.strip() if isinstance(team, str) else team
+	def filtered_subgraph(self, alignment=None, phase=None, status=None, team=None, relationship_types=None):
+		normalized_alignment = [
+			value.strip()
+			for value in (alignment or [])
+			if isinstance(value, str) and value.strip()
+		]
+		normalized_status = [
+			value.strip()
+			for value in (status or [])
+			if isinstance(value, str) and value.strip()
+		]
+		normalized_team = [
+			value.strip()
+			for value in (team or [])
+			if isinstance(value, str) and value.strip()
+		]
 		phase_value = int(phase) if phase not in (None, "") else None
+		normalized_relationship_types = [
+			relationship_type.strip()
+			for relationship_type in (relationship_types or [])
+			if isinstance(relationship_type, str) and relationship_type.strip()
+		]
 
 		cache_key = self._cache_key(
 			"filtered",
 			version=self._get_cache_version(),
 		)
 		cache_key = (
-			f"{cache_key}:alignment={normalized_alignment or 'all'}"
+			f"{cache_key}:alignment={','.join(sorted(normalized_alignment)) or 'all'}"
 			f":phase={phase_value or 'all'}"
-			f":status={normalized_status or 'all'}"
-			f":team={normalized_team or 'all'}"
+			f":status={','.join(sorted(normalized_status)) or 'all'}"
+			f":team={','.join(sorted(normalized_team)) or 'all'}"
+			f":relationships={','.join(sorted(normalized_relationship_types)) or 'all'}"
 		)
 		cached_graph = cache.get(cache_key)
 		if cached_graph is not None:
@@ -270,6 +288,8 @@ class MCUGraphService:
 				character1_id__in=character_ids,
 				character2_id__in=character_ids,
 			)
+			if normalized_relationship_types:
+				relationships = relationships.filter(relationship_type__in=normalized_relationship_types)
 			graph = self._build_graph_from_relationships(relationships)
 
 		for character in characters:
@@ -282,16 +302,16 @@ class MCUGraphService:
 		queryset = Character.objects.all().select_related("movie_introduced", "latest_appearance")
 
 		if alignment:
-			queryset = queryset.filter(alignment__iexact=alignment)
+			queryset = queryset.filter(alignment__in=alignment)
 
 		if phase is not None:
 			queryset = queryset.filter(phase_introduced=phase)
 
 		if status:
-			queryset = queryset.filter(status__iexact=status)
+			queryset = queryset.filter(status__in=status)
 
 		if team:
-			queryset = queryset.filter(team_memberships__team__name__iexact=team)
+			queryset = queryset.filter(team_memberships__team__name__in=team)
 
 		return queryset.distinct().order_by("name")
 

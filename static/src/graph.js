@@ -4,12 +4,14 @@ const graphRoot = document.getElementById('mcu-graph');
 
 if (graphRoot) {
   const loadState    = document.getElementById('graph-load-state');
+  const graphViewer  = document.getElementById('graph-viewer');
   const summary      = document.getElementById('graph-summary');
   const statusBanner = document.getElementById('path-status');
   const fromInput    = document.getElementById('path-from');
   const toInput      = document.getElementById('path-to');
   const searchButton = document.getElementById('path-search-btn');
   const clearButton  = document.getElementById('path-clear-btn');
+  const fullscreenButton = document.getElementById('fullscreen-btn');
   const filterInputs = Array.from(document.querySelectorAll('[data-graph-filter]'));
   const characterOptions = JSON.parse(document.getElementById('character-options').textContent);
   const nameToId = new Map(
@@ -21,9 +23,20 @@ if (graphRoot) {
   const alignmentColors = {
     hero:     '#38BDF8',
     villain:  '#FB7185',
-    neutral:  '#A78BFA',
+    neutral:  '#E5E7EB',
     reformed: '#34D399',
     fallen:   '#FBBF24',
+  };
+
+  const relationshipColors = {
+    Variant:      '#FACC15',
+    Ally:         '#7DD3FC',
+    Enemy:        '#FB7185',
+    Romantic:     '#F472B6',
+    Mentor:       '#FB923C',
+    Family:       '#16A34A',
+    Acquaintance: '#E5E7EB',
+    Creation:     '#A78BFA',
   };
 
   graphRoot.style.cursor = 'grab';
@@ -109,13 +122,14 @@ if (graphRoot) {
           color: '#D8D5DD',
         },
       },
-      { selector: 'edge[relationship_type = "Variant"]',  style: { 'line-color': '#FACC15', 'target-arrow-color': '#FACC15' } },
-      { selector: 'edge[relationship_type = "Ally"]',     style: { 'line-color': '#7DD3FC', 'target-arrow-color': '#7DD3FC' } },
-      { selector: 'edge[relationship_type = "Enemy"]',    style: { 'line-color': '#FB7185', 'target-arrow-color': '#FB7185' } },
-      { selector: 'edge[relationship_type = "Romantic"]', style: { 'line-color': '#F472B6', 'target-arrow-color': '#F472B6' } },
-      { selector: 'edge[relationship_type = "Mentor"]',   style: { 'line-color': '#FB923C', 'target-arrow-color': '#FB923C' } },
-      { selector: 'edge[relationship_type = "Family"]',   style: { 'line-color': '#16A34A', 'target-arrow-color': '#16A34A' } },
-      { selector: 'edge[relationship_type = "Creation"]', style: { 'line-color': '#A78BFA', 'target-arrow-color': '#A78BFA' } },
+      { selector: 'edge[relationship_type = "Variant"]',  style: { 'line-color': relationshipColors.Variant, 'target-arrow-color': relationshipColors.Variant } },
+      { selector: 'edge[relationship_type = "Ally"]',     style: { 'line-color': relationshipColors.Ally, 'target-arrow-color': relationshipColors.Ally } },
+      { selector: 'edge[relationship_type = "Enemy"]',    style: { 'line-color': relationshipColors.Enemy, 'target-arrow-color': relationshipColors.Enemy } },
+      { selector: 'edge[relationship_type = "Romantic"]', style: { 'line-color': relationshipColors.Romantic, 'target-arrow-color': relationshipColors.Romantic } },
+      { selector: 'edge[relationship_type = "Mentor"]',   style: { 'line-color': relationshipColors.Mentor, 'target-arrow-color': relationshipColors.Mentor } },
+      { selector: 'edge[relationship_type = "Family"]',   style: { 'line-color': relationshipColors.Family, 'target-arrow-color': relationshipColors.Family } },
+      { selector: 'edge[relationship_type = "Acquaintance"]', style: { 'line-color': relationshipColors.Acquaintance, 'target-arrow-color': relationshipColors.Acquaintance } },
+      { selector: 'edge[relationship_type = "Creation"]', style: { 'line-color': relationshipColors.Creation, 'target-arrow-color': relationshipColors.Creation } },
       { selector: 'edge.undirected', style: { 'target-arrow-shape': 'none' } },
       {
         selector: '.highlighted',
@@ -129,6 +143,38 @@ if (graphRoot) {
         },
       },
     ],
+  });
+
+  const syncGraphSize = () => {
+    cy.resize();
+  };
+
+  const updateFullscreenButton = () => {
+    if (!fullscreenButton || !graphViewer) return;
+    const isFullscreen = document.fullscreenElement === graphViewer;
+    fullscreenButton.title = isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
+  };
+
+  const toggleFullscreen = async () => {
+    if (!graphViewer) return;
+    if (document.fullscreenElement === graphViewer) {
+      await document.exitFullscreen();
+      return;
+    }
+    await graphViewer.requestFullscreen();
+  };
+
+  if (typeof ResizeObserver !== 'undefined') {
+    const resizeObserver = new ResizeObserver(() => {
+      syncGraphSize();
+    });
+    resizeObserver.observe(graphRoot);
+  }
+
+  window.addEventListener('resize', syncGraphSize);
+  document.addEventListener('fullscreenchange', () => {
+    updateFullscreenButton();
+    requestAnimationFrame(syncGraphSize);
   });
 
   // ─── Force simulation ──────────────────────────────────────────────────────
@@ -300,11 +346,13 @@ if (graphRoot) {
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
   const setStatus = (message, kind = 'info') => {
+    if (!statusBanner) return;
     statusBanner.className = `alert alert-${kind} text-sm`;
     statusBanner.textContent = message;
     statusBanner.classList.remove('hidden');
   };
   const clearStatus = () => {
+    if (!statusBanner) return;
     statusBanner.className = 'alert hidden text-sm';
     statusBanner.textContent = '';
   };
@@ -312,6 +360,11 @@ if (graphRoot) {
   const buildParams = () => {
     const params = new URLSearchParams();
     filterInputs.forEach(input => {
+      if (input.type === 'checkbox') {
+        if (input.checked && input.value) params.append(input.dataset.graphFilter, input.value);
+        return;
+      }
+
       if (input.value) params.set(input.dataset.graphFilter, input.value);
     });
     return params;
@@ -468,6 +521,13 @@ if (graphRoot) {
     const c = { x: cy.width() / 2, y: cy.height() / 2 };
     cy.zoom({ level: Math.max(cy.minZoom(), cy.zoom() / ZOOM_FACTOR), renderedPosition: c });
   });
+  fullscreenButton?.addEventListener('click', () => {
+    toggleFullscreen().catch(err => {
+      console.error(err);
+      setStatus('Fullscreen is not available in this browser.', 'warning');
+    });
+  });
+  updateFullscreenButton();
 
   // ─── Filter controls ───────────────────────────────────────────────────────
   const loadFilteredGraph = async () => {
