@@ -230,7 +230,7 @@ class MCUGraphService:
 		cache.set(cache_key, result, self.CACHE_TIMEOUT)
 		return result
 
-	def filtered_subgraph(self, alignment=None, phase=None, status=None, team=None, relationship_types=None):
+	def filtered_subgraph(self, alignment=None, phase=None, status=None, team=None, movie=None, relationship_types=None):
 		normalized_alignment = [
 			value.strip()
 			for value in (alignment or [])
@@ -244,6 +244,11 @@ class MCUGraphService:
 		normalized_team = [
 			value.strip()
 			for value in (team or [])
+			if isinstance(value, str) and value.strip()
+		]
+		normalized_movie = [
+			value.strip()
+			for value in (movie or [])
 			if isinstance(value, str) and value.strip()
 		]
 		phase_value = int(phase) if phase not in (None, "") else None
@@ -262,6 +267,7 @@ class MCUGraphService:
 			f":phase={phase_value or 'all'}"
 			f":status={','.join(sorted(normalized_status)) or 'all'}"
 			f":team={','.join(sorted(normalized_team)) or 'all'}"
+			f":movie={','.join(sorted(normalized_movie)) or 'all'}"
 			f":relationships={','.join(sorted(normalized_relationship_types)) or 'all'}"
 		)
 		cached_graph = cache.get(cache_key)
@@ -271,6 +277,7 @@ class MCUGraphService:
 				phase_value,
 				normalized_status,
 				normalized_team,
+				normalized_movie,
 			)
 			return cached_graph.copy(), characters
 
@@ -279,6 +286,7 @@ class MCUGraphService:
 			phase_value,
 			normalized_status,
 			normalized_team,
+			normalized_movie,
 		)
 		character_ids = list(characters.values_list("id", flat=True))
 
@@ -298,7 +306,7 @@ class MCUGraphService:
 		cache.set(cache_key, graph.copy(), self.CACHE_TIMEOUT)
 		return graph, characters
 
-	def _filtered_character_queryset(self, alignment=None, phase=None, status=None, team=None):
+	def _filtered_character_queryset(self, alignment=None, phase=None, status=None, team=None, movie=None):
 		queryset = Character.objects.all().select_related("movie_introduced", "latest_appearance")
 
 		if alignment:
@@ -312,6 +320,9 @@ class MCUGraphService:
 
 		if team:
 			queryset = queryset.filter(team_memberships__team__name__in=team)
+
+		if movie:
+			queryset = queryset.filter(movie_introduced_id__in=movie)
 
 		return queryset.distinct().order_by("name")
 

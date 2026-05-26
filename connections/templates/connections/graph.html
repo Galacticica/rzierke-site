@@ -38,6 +38,7 @@
 
   .graph-panel {
     backdrop-filter: blur(14px);
+    overflow: visible;
   }
 
   .graph-filter-stack {
@@ -200,6 +201,71 @@
     display: flex;
     gap: 0.75rem;
   }
+
+  .graph-filter-search {
+    width: 100%;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: rgba(248, 250, 252, 0.96);
+    font-size: 0.875rem;
+    margin-bottom: 0.35rem;
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  .graph-filter-search::placeholder {
+    color: rgba(248, 250, 252, 0.4);
+  }
+
+  .graph-filter-search:focus {
+    border-color: rgba(34, 211, 238, 0.75);
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.24);
+  }
+
+  .graph-character-group-label {
+    padding: 0.3rem 0.65rem 0.15rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #7dd3fc;
+  }
+
+  .graph-character-group:empty {
+    display: none;
+  }
+
+  .graph-path-item,
+  .graph-filter-item {
+    position: relative;
+    overflow: visible;
+  }
+
+  .graph-filter-dropdown {
+    position: relative;
+  }
+
+  .graph-filter-dropdown-panel {
+    position: absolute;
+    z-index: 9999;
+
+    top: calc(100% + 0.5rem);
+    left: 0;
+    right: 0;
+
+    max-height: 16rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    overscroll-behavior: contain;
+
+    scrollbar-gutter: stable;
+
+    /* important */
+    box-sizing: border-box;
+  }
 </style>
 {% endblock %}
 
@@ -212,7 +278,8 @@
         <div class="space-y-2 max-w-3xl">
           <h1 class="text-3xl font-bold text-base-content sm:text-4xl">MCU Character Relationships</h1>
           <p class="text-base text-base-content/70">
-            Explore the MCU through character relationships, filter the network, and trace shortest paths between any two characters.
+            Explore the MCU through character relationships, filter the network, and trace shortest paths between any
+            two characters.
           </p>
         </div>
       </div>
@@ -230,16 +297,19 @@
             <details class="graph-filter-dropdown">
               <summary>
                 <span class="placeholder">Choose alignments</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20"
+                  fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                    clip-rule="evenodd" />
                 </svg>
               </summary>
               <div class="graph-filter-dropdown-panel">
                 {% for value, label in alignment_choices %}
-                  <label class="graph-filter-option">
-                    <input type="checkbox" data-graph-filter="alignment" value="{{ value }}">
-                    <span>{{ label }}</span>
-                  </label>
+                <label class="graph-filter-option">
+                  <input type="checkbox" data-graph-filter="alignment" value="{{ value }}">
+                  <span>{{ label }}</span>
+                </label>
                 {% endfor %}
               </div>
             </details>
@@ -250,16 +320,19 @@
             <details class="graph-filter-dropdown">
               <summary>
                 <span class="placeholder">Choose statuses</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20"
+                  fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                    clip-rule="evenodd" />
                 </svg>
               </summary>
               <div class="graph-filter-dropdown-panel">
                 {% for value, label in status_choices %}
-                  <label class="graph-filter-option">
-                    <input type="checkbox" data-graph-filter="status" value="{{ value }}">
-                    <span>{{ label }}</span>
-                  </label>
+                <label class="graph-filter-option">
+                  <input type="checkbox" data-graph-filter="status" value="{{ value }}">
+                  <span>{{ label }}</span>
+                </label>
                 {% endfor %}
               </div>
             </details>
@@ -270,16 +343,45 @@
             <details class="graph-filter-dropdown">
               <summary>
                 <span class="placeholder">Choose teams</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20"
+                  fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                    clip-rule="evenodd" />
                 </svg>
               </summary>
               <div class="graph-filter-dropdown-panel">
                 {% for team in team_choices %}
-                  <label class="graph-filter-option">
-                    <input type="checkbox" data-graph-filter="team" value="{{ team.name }}">
-                    <span>{{ team.name }}</span>
-                  </label>
+                <label class="graph-filter-option">
+                  <input type="checkbox" data-graph-filter="team" value="{{ team.name }}">
+                  <span>{{ team.name }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </details>
+          </label>
+
+          <label class="graph-filter-item form-control w-full">
+            <div class="label"><span class="label-text">Movie</span></div>
+            <details class="graph-filter-dropdown">
+              <summary>
+                <span class="placeholder">Choose movies</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20"
+                  fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                    clip-rule="evenodd" />
+                </svg>
+              </summary>
+              <div class="graph-filter-dropdown-panel">
+                <input type="text" class="graph-filter-search" data-graph-filter-search="movie"
+                  placeholder="Search movies…">
+                {% for movie in movie_choices %}
+                <label class="graph-filter-option">
+                  <input type="checkbox" data-graph-filter="movie" data-graph-filter-label="{{ movie.title }}"
+                    value="{{ movie.id }}">
+                  <span>{{ movie.title }}</span>
+                </label>
                 {% endfor %}
               </div>
             </details>
@@ -290,16 +392,19 @@
             <details class="graph-filter-dropdown">
               <summary>
                 <span class="placeholder">Choose relationship types</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20"
+                  fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                    clip-rule="evenodd" />
                 </svg>
               </summary>
               <div class="graph-filter-dropdown-panel">
                 {% for value, label in relationship_choices %}
-                  <label class="graph-filter-option">
-                    <input type="checkbox" data-graph-filter="relationship_types" value="{{ value }}">
-                    <span>{{ label }}</span>
-                  </label>
+                <label class="graph-filter-option">
+                  <input type="checkbox" data-graph-filter="relationship_types" value="{{ value }}">
+                  <span>{{ label }}</span>
+                </label>
                 {% endfor %}
               </div>
             </details>
@@ -311,35 +416,70 @@
         <div class="graph-path-stack pt-1">
           <div class="graph-path-header">
             <h2 class="text-lg font-semibold">Path Search</h2>
-            <p class="text-sm text-base-content/60">Choose any two characters to show the shortest path between them.</p>
+            <p class="text-sm text-base-content/60">Choose any two characters to show the shortest path between them.
+            </p>
           </div>
 
           <label class="graph-path-item graph-path-field form-control w-full">
             <div class="label"><span class="label-text">From</span></div>
-            <select id="path-from" class="select select-bordered w-full">
-              <option value="">Select a character</option>
-              {% for group in grouped_character_options %}
-                <optgroup label="{{ group.label }}">
+            <details class="graph-filter-dropdown" id="path-from-dropdown">
+              <summary>
+                <span class="placeholder" id="path-from-label">Select a character</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20"
+                  fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                    clip-rule="evenodd" />
+                </svg>
+              </summary>
+              <div class="graph-filter-dropdown-panel">
+                <input type="text" class="graph-filter-search" data-character-search="from"
+                  placeholder="Search characters…">
+                {% for group in grouped_character_options %}
+                <div class="graph-character-group" data-character-optgroup="from">
+                  <div class="graph-character-group-label">{{ group.label }}</div>
                   {% for character in group.characters %}
-                    <option value="{{ character.id }}">{{ character.name }}</option>
+                  <div class="graph-filter-option graph-character-option" data-character-select="from"
+                    data-character-id="{{ character.id }}" data-character-name="{{ character.name }}">
+                    {{ character.name }}
+                  </div>
                   {% endfor %}
-                </optgroup>
-              {% endfor %}
-            </select>
+                </div>
+                {% endfor %}
+              </div>
+            </details>
+            <input type="hidden" id="path-from" value="">
           </label>
 
           <label class="graph-path-item graph-path-field form-control w-full">
             <div class="label"><span class="label-text">To</span></div>
-            <select id="path-to" class="select select-bordered w-full">
-              <option value="">Select a character</option>
-              {% for group in grouped_character_options %}
-                <optgroup label="{{ group.label }}">
+            <details class="graph-filter-dropdown" id="path-to-dropdown">
+              <summary>
+                <span class="placeholder" id="path-to-label">Select a character</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="chevron h-4 w-4 opacity-70" viewBox="0 0 20 20"
+                  fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                    clip-rule="evenodd" />
+                </svg>
+              </summary>
+              <div class="graph-filter-dropdown-panel">
+                <input type="text" class="graph-filter-search" data-character-search="to"
+                  placeholder="Search characters…">
+                {% for group in grouped_character_options %}
+                <div class="graph-character-group" data-character-optgroup="to">
+                  <div class="graph-character-group-label">{{ group.label }}</div>
                   {% for character in group.characters %}
-                    <option value="{{ character.id }}">{{ character.name }}</option>
+                  <div class="graph-filter-option graph-character-option" data-character-select="to"
+                    data-character-id="{{ character.id }}" data-character-name="{{ character.name }}">
+                    {{ character.name }}
+                  </div>
                   {% endfor %}
-                </optgroup>
-              {% endfor %}
-            </select>
+                </div>
+                {% endfor %}
+              </div>
+            </details>
+            <input type="hidden" id="path-to" value="">
           </label>
 
           <div class="graph-path-actions">
@@ -360,23 +500,31 @@
                 <div id="graph-load-state" class="text-sm text-base-content/60">Loading graph...</div>
                 <div class="btn-group">
                   <button id="fullscreen-btn" class="btn btn-sm btn-circle btn-ghost" title="Enter fullscreen">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
                     </svg>
                   </button>
                   <button id="zoom-in-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom in">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM11 8v6M8 11h6" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM11 8v6M8 11h6" />
                     </svg>
                   </button>
                   <button id="zoom-fit-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom to fit">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5M9 9h6v6H9z" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                      stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5M9 9h6v6H9z" />
                     </svg>
                   </button>
                   <button id="zoom-out-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom out">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM8 11h6" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM8 11h6" />
                     </svg>
                   </button>
                 </div>
@@ -395,33 +543,48 @@
                 <div>
                   <p class="text-sm font-medium text-base-content">Alignment</p>
                   <div class="mt-2 flex flex-wrap gap-2 text-sm text-base-content/70">
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full bg-[#38BDF8]"></span>Hero</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full bg-[#FB7185]"></span>Villain</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full bg-[#E5E7EB]"></span>Neutral</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full bg-[#34D399]"></span>Reformed</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full bg-[#FBBF24]"></span>Fallen</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-3 w-3 rounded-full bg-[#38BDF8]"></span>Hero</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-3 w-3 rounded-full bg-[#FB7185]"></span>Villain</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-3 w-3 rounded-full bg-[#E5E7EB]"></span>Neutral</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-3 w-3 rounded-full bg-[#34D399]"></span>Reformed</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-3 w-3 rounded-full bg-[#FBBF24]"></span>Fallen</span>
                   </div>
                 </div>
 
                 <div>
                   <p class="text-sm font-medium text-base-content">Status</p>
                   <div class="mt-2 flex flex-wrap gap-2 text-sm text-base-content/70">
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full border-2 border-white/50 bg-transparent"></span>Alive</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-3 w-3 rounded-full border-2 border-dashed border-white/50 bg-transparent"></span>Deceased</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-3 w-3 rounded-full border-2 border-white/50 bg-transparent"></span>Alive</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-3 w-3 rounded-full border-2 border-dashed border-white/50 bg-transparent"></span>Deceased</span>
                   </div>
                 </div>
 
                 <div>
                   <p class="text-sm font-medium text-base-content">Relationship Types</p>
                   <div class="mt-2 grid gap-2 sm:grid-cols-2 text-sm text-base-content/70">
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#FACC15]"></span>Variant</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#7DD3FC]"></span>Ally</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#FB7185]"></span>Enemy</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#F472B6]"></span>Romantic</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#FB923C]"></span>Mentor</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#16A34A]"></span>Family</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#E5E7EB]"></span>Acquaintance</span>
-                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span class="h-0.5 w-5 bg-[#A78BFA]"></span>Creation</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-0.5 w-5 bg-[#FACC15]"></span>Variant</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-0.5 w-5 bg-[#7DD3FC]"></span>Ally</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-0.5 w-5 bg-[#FB7185]"></span>Enemy</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-0.5 w-5 bg-[#F472B6]"></span>Romantic</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-0.5 w-5 bg-[#FB923C]"></span>Mentor</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-0.5 w-5 bg-[#16A34A]"></span>Family</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-0.5 w-5 bg-[#E5E7EB]"></span>Acquaintance</span>
+                    <span class="flex items-center gap-2 rounded-full bg-base-300/70 px-3 py-2"><span
+                        class="h-0.5 w-5 bg-[#A78BFA]"></span>Creation</span>
                   </div>
                 </div>
               </div>

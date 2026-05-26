@@ -531,12 +531,79 @@ if (graphRoot) {
   });
   updateFullscreenButton();
 
+  // ─── Movie filter search ───────────────────────────────────────────────────
+document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
+  const filterName = searchInput.dataset.graphFilterSearch;
+  const panel = searchInput.closest('.graph-filter-dropdown-panel');
+  searchInput.addEventListener('input', () => {
+    const query = searchInput.value.toLowerCase();
+    panel.querySelectorAll('.graph-filter-option').forEach(option => {
+      const text = option.textContent.trim().toLowerCase();
+      option.style.display = text.includes(query) ? '' : 'none';
+    });
+  });
+  // Prevent the dropdown from closing when clicking the search input
+  searchInput.addEventListener('click', e => e.stopPropagation());
+});
+
+// ─── Character path searchable dropdowns ──────────────────────────────────
+['from', 'to'].forEach(side => {
+  const dropdown  = document.getElementById(`path-${side}-dropdown`);
+  const hidden    = document.getElementById(`path-${side}`);
+  const labelEl   = document.getElementById(`path-${side}-label`);
+  const searchEl  = dropdown.querySelector(`[data-character-search="${side}"]`);
+
+  searchEl.addEventListener('click', e => e.stopPropagation());
+
+  searchEl.addEventListener('input', () => {
+    const query = searchEl.value.toLowerCase();
+    dropdown.querySelectorAll(`[data-character-optgroup="${side}"]`).forEach(group => {
+      let anyVisible = false;
+      group.querySelectorAll(`[data-character-select="${side}"]`).forEach(opt => {
+        const match = opt.dataset.characterName.toLowerCase().includes(query);
+        opt.style.display = match ? '' : 'none';
+        if (match) anyVisible = true;
+      });
+      group.style.display = anyVisible ? '' : 'none';
+    });
+  });
+
+  dropdown.querySelectorAll(`[data-character-select="${side}"]`).forEach(opt => {
+    opt.addEventListener('click', () => {
+      hidden.value = opt.dataset.characterId;
+      labelEl.textContent = opt.dataset.characterName;
+      labelEl.classList.remove('placeholder');
+      searchEl.value = '';
+      // Reset visibility
+      dropdown.querySelectorAll(`[data-character-select="${side}"]`).forEach(o => o.style.display = '');
+      dropdown.querySelectorAll(`[data-character-optgroup="${side}"]`).forEach(g => g.style.display = '');
+      dropdown.removeAttribute('open');
+    });
+  });
+});
+
+// Update clearButton to also reset the custom dropdowns
+const originalClearHandler = clearButton.onclick;
+clearButton.addEventListener('click', () => {
+  ['from', 'to'].forEach(side => {
+    document.getElementById(`path-${side}`).value = '';
+    document.getElementById(`path-${side}-label`).textContent = 'Select a character';
+    document.getElementById(`path-${side}-label`).classList.add('placeholder');
+    const dd = document.getElementById(`path-${side}-dropdown`);
+    dd.querySelector(`[data-character-search="${side}"]`).value = '';
+    dd.querySelectorAll(`[data-character-select="${side}"]`).forEach(o => o.style.display = '');
+    dd.querySelectorAll(`[data-character-optgroup="${side}"]`).forEach(g => g.style.display = '');
+  });
+});
+
   // ─── Filter controls ───────────────────────────────────────────────────────
   const loadFilteredGraph = async () => {
     const params = buildParams();
     const labelParts = [];
     filterInputs.forEach(input => {
-      if (input.value) labelParts.push(`${input.dataset.graphFilter}: ${input.value}`);
+      if (!input.value) return;
+      const labelValue = input.dataset.graphFilterLabel || input.value;
+      labelParts.push(`${input.dataset.graphFilter}: ${labelValue}`);
     });
     const label = labelParts.length
       ? `Filtered by ${labelParts.join(', ')}.`

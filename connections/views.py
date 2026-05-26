@@ -7,7 +7,7 @@ from django.views.decorators.http import require_GET
 from networkx.exception import NetworkXNoPath, NodeNotFound
 
 from .graph_service import MCUGraphService
-from .models import Character, Relationship, Team
+from .models import Character, Movie, Relationship, Team
 
 
 graph_service = MCUGraphService()
@@ -60,6 +60,7 @@ def graph_page_view(request):
 		"alignment_choices": Character.ALIGNMENT_CHOICES,
 		"status_choices": Character.STATUS_CHOICES,
 		"relationship_choices": Relationship.RELATIONSHIP_CHOICES,
+		"movie_choices": Movie.objects.order_by("release_date", "title"),
 		"team_choices": Team.objects.order_by("name"),
 		"grouped_character_options": _group_character_options(characters),
 		"character_options": [
@@ -87,6 +88,7 @@ def graph_filter_view(request):
 	phase = request.GET.get("phase")
 	status = request.GET.getlist("status")
 	team = request.GET.getlist("team")
+	movie = request.GET.getlist("movie")
 	relationship_types = request.GET.getlist("relationship_types")
 
 	graph, characters = graph_service.filtered_subgraph(
@@ -94,6 +96,7 @@ def graph_filter_view(request):
 		phase=phase,
 		status=status,
 		team=team,
+		movie=movie,
 		relationship_types=relationship_types,
 	)
 	payload = graph_service.to_cytoscape_format(graph, characters)
@@ -102,6 +105,7 @@ def graph_filter_view(request):
 		"phase": phase,
 		"status": status,
 		"team": team,
+		"movie": movie,
 		"relationship_types": relationship_types,
 	}
 	return JsonResponse(payload)
