@@ -322,7 +322,7 @@ class MCUGraphService:
 			queryset = queryset.filter(team_memberships__team__name__in=team)
 
 		if movie:
-			queryset = queryset.filter(movie_introduced_id__in=movie)
+			queryset = queryset.filter(movies__id__in=movie)
 
 		return queryset.distinct().order_by("name")
 
