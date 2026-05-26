@@ -34,7 +34,8 @@ RUN pip install --no-cache-dir \
     "python-pptx>=1.0.2" \
     "reportlab>=4.4.9" \
     "whitenoise>=6.12.0" \
-    "gunicorn>=20.1.0"
+    "gunicorn>=20.1.0" \
+    "networkx>=3.6.1"
 
 COPY . .
 
