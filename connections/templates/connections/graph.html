@@ -378,9 +378,12 @@
                   placeholder="Search movies…">
                 {% for movie in movie_choices %}
                 <label class="graph-filter-option">
-                  <input type="checkbox" data-graph-filter="movie" data-graph-filter-label="{{ movie.title }}"
+                  <input type="checkbox" data-graph-filter="movie"
+                    data-graph-filter-label="{{ movie.title }} ({{ movie.release_date|date:'Y' }})"
                     value="{{ movie.id }}">
-                  <span>{{ movie.title }}</span>
+                  <span>
+                    {{ movie.title }} ({{ movie.release_date|date:"Y" }})
+                  </span>
                 </label>
                 {% endfor %}
               </div>
