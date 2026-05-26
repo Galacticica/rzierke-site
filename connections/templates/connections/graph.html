@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load static django_vite %}
+
+{% block title %}
+<title>MCU Character Graph</title>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .graph-shell {
+    background:
+      radial-gradient(circle at top left, rgba(34, 211, 238, 0.22), transparent 32%),
+      radial-gradient(circle at top right, rgba(139, 92, 246, 0.18), transparent 28%),
+      linear-gradient(180deg, rgba(18, 6, 31, 0.96), rgba(11, 6, 16, 1));
+  }
+
+  .graph-canvas {
+    min-height: 72vh;
+  }
+
+  .graph-panel {
+    backdrop-filter: blur(14px);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ character_options|json_script:"character-options" }}
+<section class="graph-shell min-h-[calc(100vh-8rem)] px-4 py-6 lg:px-8">
+  <div class="mx-auto max-w-7xl space-y-6">
+    <div class="rounded-box border border-white/10 bg-base-200/80 p-6 shadow-2xl">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div class="space-y-2 max-w-3xl">
+          <p class="text-sm uppercase tracking-[0.35em] text-secondary/80">MCU relationship map</p>
+          <h1 class="text-3xl font-bold text-base-content sm:text-4xl">Character Graph Visualization</h1>
+          <p class="text-base text-base-content/70">
+            Explore the MCU through weighted character relationships, filter the network, and trace shortest paths between any two characters.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <span class="badge badge-outline badge-secondary">NetworkX Dijkstra</span>
+          <span class="badge badge-outline">Cytoscape.js</span>
+          <span class="badge badge-outline badge-accent">Django JSON API</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <aside class="graph-panel space-y-4 rounded-box border border-white/10 bg-base-200/70 p-4 shadow-xl">
+        <div class="space-y-3">
+          <div>
+            <h2 class="text-lg font-semibold">Filters</h2>
+            <p class="text-sm text-base-content/60">Narrow the visible network before tracing a path.</p>
+          </div>
+
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Phase</span></div>
+            <select class="select select-bordered w-full" data-graph-filter="phase">
+              <option value="">All phases</option>
+              {% for phase in phase_choices %}
+                <option value="{{ phase }}">Phase {{ phase }}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Alignment</span></div>
+            <select class="select select-bordered w-full" data-graph-filter="alignment">
+              <option value="">All alignments</option>
+              {% for value, label in alignment_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Status</span></div>
+            <select class="select select-bordered w-full" data-graph-filter="status">
+              <option value="">All statuses</option>
+              {% for value, label in status_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">Team</span></div>
+            <select class="select select-bordered w-full" data-graph-filter="team">
+              <option value="">All teams</option>
+              {% for team in team_choices %}
+                <option value="{{ team.name }}">{{ team.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+
+        <div class="divider my-2"></div>
+
+        <div class="space-y-3">
+          <div>
+            <h2 class="text-lg font-semibold">Path search</h2>
+            <p class="text-sm text-base-content/60">Choose any two characters to highlight the cheapest traversal path.</p>
+          </div>
+
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">From</span></div>
+            <input id="path-from" class="input input-bordered w-full" list="character-names" placeholder="Tony Stark">
+          </label>
+
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text">To</span></div>
+            <input id="path-to" class="input input-bordered w-full" list="character-names" placeholder="Steve Rogers">
+          </label>
+
+          <datalist id="character-names">
+            {% for character in character_options %}
+              <option value="{{ character.name }}"></option>
+            {% endfor %}
+          </datalist>
+
+          <div class="flex gap-2">
+            <button id="path-search-btn" type="button" class="btn btn-secondary flex-1">Find path</button>
+            <button id="path-clear-btn" type="button" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div id="path-status" class="alert hidden text-sm"></div>
+          <div class="rounded-box bg-base-300/70 p-3 text-sm text-base-content/70">
+            The graph uses weighted traversal costs, so lower-cost relationships will be favored even when they connect distant parts of the network.
+          </div>
+        </div>
+      </aside>
+
+      <section class="space-y-4">
+        <div class="graph-panel rounded-box border border-white/10 bg-base-200/70 p-3 shadow-xl">
+          <div class="flex items-center justify-between gap-3 px-2 pb-3 relative">
+            <div>
+              <h2 class="text-lg font-semibold">Interactive graph</h2>
+              <p class="text-sm text-base-content/60">Drag nodes, pan around, and zoom to inspect the network.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <div id="graph-load-state" class="text-sm text-base-content/60">Loading graph...</div>
+              <div class="btn-group">
+                <button id="zoom-in-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom in">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM11 8v6M8 11h6" />
+                  </svg>
+                </button>
+                <button id="zoom-fit-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom to fit">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6M4 4v6M20 20h-6M20 20v-6M20 4h-6M20 4v6M4 20h6M4 20v-6" />
+                  </svg>
+                </button>
+                <button id="zoom-out-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom out">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM8 11h6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="mcu-graph" class="graph-canvas rounded-box border border-white/10 bg-base-100/40"></div>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-2">
+          <div class="graph-panel rounded-box border border-white/10 bg-base-200/70 p-4 shadow-xl">
+            <h3 class="font-semibold">How to read it</h3>
+            <p class="mt-2 text-sm text-base-content/70">
+              Node borders follow alignment, node photos come from the stored static image path, and directed relationships keep their arrowheads.
+            </p>
+          </div>
+          <div class="graph-panel rounded-box border border-white/10 bg-base-200/70 p-4 shadow-xl">
+            <h3 class="font-semibold">Current mode</h3>
+            <p class="mt-2 text-sm text-base-content/70" id="graph-summary">Showing the full graph.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+{% endblock %}

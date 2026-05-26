@@ -1,0 +1,374 @@
+'''
+File: graph_service.py
+Project: rzierke-site
+Created Date: 2026-05-25
+Author: Reagan Zierke
+Email: reaganzierke@gmail.com
+-----
+Last Modified: 2026-05-25 18:14:10
+Modified By: Reagan Zierke
+-----
+Description: 
+'''
+
+from itertools import pairwise
+
+import networkx as nx
+from django.core.cache import cache
+from django.templatetags.static import static
+
+from .models import Character, Relationship
+
+
+class MCUGraphService:
+	"""Build and serialize the MCU relationship graph."""
+
+	CACHE_PREFIX = "connections:graph"
+	CACHE_TIMEOUT = 900
+	VERSION_KEY = f"{CACHE_PREFIX}:version"
+
+	def _cache_key(self, suffix, version=None):
+		if version is None:
+			version = self._get_cache_version()
+		return f"{self.CACHE_PREFIX}:{suffix}:v{version}"
+
+	def _get_cache_version(self):
+		version = cache.get(self.VERSION_KEY)
+		if version is None:
+			version = 1
+			cache.set(self.VERSION_KEY, version)
+		return int(version)
+
+	@classmethod
+	def invalidate_cache(cls):
+		version = cache.get(cls.VERSION_KEY)
+		if version is None:
+			cache.set(cls.VERSION_KEY, 2)
+			return 2
+
+		try:
+			new_version = cache.incr(cls.VERSION_KEY)
+		except (ValueError, NotImplementedError):
+			new_version = int(version) + 1
+			cache.set(cls.VERSION_KEY, new_version)
+
+		return new_version
+
+	def _photo_url(self, photo_path):
+		if not photo_path:
+			return ""
+		if photo_path.startswith(("http://", "https://", "/")):
+			return photo_path
+		return static(photo_path)
+
+	def _character_node_data(self, character):
+		return {
+			"id": character.id,
+			"label": character.name,
+			"name": character.name,
+			"alignment": character.alignment,
+			"status": character.status,
+			"phase_introduced": character.phase_introduced,
+			"movie_introduced_id": character.movie_introduced_id,
+			"latest_appearance_id": character.latest_appearance_id,
+			"photo_url": self._photo_url(character.photo_path),
+		}
+
+	def _edge_payload(self, edge_data):
+		relationship_types = sorted(set(edge_data.get("relationship_types", [])))
+		relationship_ids = sorted(set(edge_data.get("relationship_ids", [])))
+		label = " / ".join(relationship_types)
+		edge_id_suffix = "-".join(str(identifier) for identifier in relationship_ids)
+		return {
+			"relationship_type": edge_data.get("relationship_type"),
+			"relationship_types": relationship_types,
+			"relationship_ids": relationship_ids,
+			"weight": edge_data.get("weight", 1),
+			"directional": edge_data.get("directional", False),
+			"label": label,
+			"edge_id": f"edge-{edge_data['source']}-{edge_data['target']}"
+			if not edge_id_suffix
+			else f"edge-{edge_data['source']}-{edge_data['target']}-{edge_id_suffix}",
+		}
+
+	def _add_edge(self, graph, source_id, target_id, relationship, edge_directional):
+		graph.add_node(source_id)
+		graph.add_node(target_id)
+
+		payload = {
+			"source": source_id,
+			"target": target_id,
+			"relationship_type": relationship.relationship_type,
+			"relationship_types": [relationship.relationship_type],
+			"relationship_ids": [relationship.id],
+			"weight": relationship.weight,
+			"directional": edge_directional,
+		}
+
+		if graph.has_edge(source_id, target_id):
+			existing = graph[source_id][target_id]
+			existing_types = list(existing.get("relationship_types", []))
+			if relationship.relationship_type not in existing_types:
+				existing_types.append(relationship.relationship_type)
+
+			existing_ids = list(existing.get("relationship_ids", []))
+			if relationship.id not in existing_ids:
+				existing_ids.append(relationship.id)
+
+			existing["relationship_types"] = existing_types
+			existing["relationship_ids"] = existing_ids
+			existing["relationship_type"] = existing.get("relationship_type") or relationship.relationship_type
+			existing["weight"] = min(existing.get("weight", relationship.weight), relationship.weight)
+			existing["directional"] = existing.get("directional", False) or edge_directional
+			existing["source"] = source_id
+			existing["target"] = target_id
+			return
+
+		graph.add_edge(source_id, target_id, **payload)
+
+	def _build_graph_from_relationships(self, relationships):
+		graph = nx.DiGraph()
+
+		for relationship in relationships.select_related("character1", "character2"):
+			graph.add_node(relationship.character1_id, **self._character_node_data(relationship.character1))
+			graph.add_node(relationship.character2_id, **self._character_node_data(relationship.character2))
+
+			# For directional relationships, mark directional True.
+			# For non-directional relationships we create a single undirected edge
+			# (directional=False) between the two nodes so Cytoscape shows one
+			# edge with no arrowhead.
+			self._add_edge(
+				graph,
+				relationship.character1_id,
+				relationship.character2_id,
+				relationship,
+				relationship.directional,
+			)
+
+		return graph
+
+	def build_graph(self, queryset=None):
+		if queryset is None:
+			cache_key = self._cache_key("full")
+			cached_graph = cache.get(cache_key)
+			if cached_graph is not None:
+				return cached_graph.copy()
+
+			relationships = Relationship.objects.all()
+			graph = self._build_graph_from_relationships(relationships)
+			cache.set(cache_key, graph.copy(), self.CACHE_TIMEOUT)
+			return graph
+
+		return self._build_graph_from_relationships(queryset)
+
+	def _build_traversal_graph(self, graph):
+		"""Create a traversal graph where non-directional edges are traversable both ways."""
+		traversal_graph = graph.copy()
+
+		for source_id, target_id, edge_data in graph.edges(data=True):
+			if edge_data.get("directional", False):
+				continue
+
+			if traversal_graph.has_edge(target_id, source_id):
+				existing = traversal_graph[target_id][source_id]
+				existing["weight"] = min(existing.get("weight", edge_data.get("weight", 1)), edge_data.get("weight", 1))
+				continue
+
+			reverse_edge = dict(edge_data)
+			reverse_edge["source"] = target_id
+			reverse_edge["target"] = source_id
+			traversal_graph.add_edge(target_id, source_id, **reverse_edge)
+
+		return traversal_graph
+
+	def _path_edge_data(self, graph, source_node, target_node):
+		if graph.has_edge(source_node, target_node):
+			edge_data = graph[source_node][target_node]
+			return source_node, target_node, edge_data
+
+		if graph.has_edge(target_node, source_node):
+			reverse_edge = graph[target_node][source_node]
+			if not reverse_edge.get("directional", False):
+				return target_node, source_node, reverse_edge
+
+		raise nx.NetworkXNoPath(f"No traversable edge between {source_node} and {target_node}.")
+
+	def shortest_path(self, from_id, to_id):
+		source_id = int(from_id)
+		target_id = int(to_id)
+		cache_key = self._cache_key(f"path:{source_id}:{target_id}")
+		cached_path = cache.get(cache_key)
+		if cached_path is not None:
+			return cached_path
+
+		graph = self.build_graph()
+		traversal_graph = self._build_traversal_graph(graph)
+		path = nx.shortest_path(traversal_graph, source=source_id, target=target_id, weight="weight")
+
+		edges = []
+		total_cost = 0
+		for source_node, target_node in pairwise(path):
+			edge_source, edge_target, edge_data = self._path_edge_data(graph, source_node, target_node)
+			total_cost += edge_data.get("weight", 1)
+			edges.append(
+				{
+					"source": edge_source,
+					"target": edge_target,
+					"relationship_type": edge_data.get("relationship_type"),
+					"relationship_types": list(edge_data.get("relationship_types", [])),
+					"relationship_ids": list(edge_data.get("relationship_ids", [])),
+					"weight": edge_data.get("weight", 1),
+					"directional": edge_data.get("directional", False),
+				}
+			)
+
+		result = {
+			"character_ids": [int(character_id) for character_id in path],
+			"edges": edges,
+			"total_cost": total_cost,
+		}
+		cache.set(cache_key, result, self.CACHE_TIMEOUT)
+		return result
+
+	def filtered_subgraph(self, alignment=None, phase=None, status=None, team=None):
+		normalized_alignment = alignment.strip() if isinstance(alignment, str) else alignment
+		normalized_status = status.strip() if isinstance(status, str) else status
+		normalized_team = team.strip() if isinstance(team, str) else team
+		phase_value = int(phase) if phase not in (None, "") else None
+
+		cache_key = self._cache_key(
+			"filtered",
+			version=self._get_cache_version(),
+		)
+		cache_key = (
+			f"{cache_key}:alignment={normalized_alignment or 'all'}"
+			f":phase={phase_value or 'all'}"
+			f":status={normalized_status or 'all'}"
+			f":team={normalized_team or 'all'}"
+		)
+		cached_graph = cache.get(cache_key)
+		if cached_graph is not None:
+			characters = self._filtered_character_queryset(
+				normalized_alignment,
+				phase_value,
+				normalized_status,
+				normalized_team,
+			)
+			return cached_graph.copy(), characters
+
+		characters = self._filtered_character_queryset(
+			normalized_alignment,
+			phase_value,
+			normalized_status,
+			normalized_team,
+		)
+		character_ids = list(characters.values_list("id", flat=True))
+
+		graph = nx.DiGraph()
+		if character_ids:
+			relationships = Relationship.objects.filter(
+				character1_id__in=character_ids,
+				character2_id__in=character_ids,
+			)
+			graph = self._build_graph_from_relationships(relationships)
+
+		for character in characters:
+			graph.add_node(character.id, **self._character_node_data(character))
+
+		cache.set(cache_key, graph.copy(), self.CACHE_TIMEOUT)
+		return graph, characters
+
+	def _filtered_character_queryset(self, alignment=None, phase=None, status=None, team=None):
+		queryset = Character.objects.all().select_related("movie_introduced", "latest_appearance")
+
+		if alignment:
+			queryset = queryset.filter(alignment__iexact=alignment)
+
+		if phase is not None:
+			queryset = queryset.filter(phase_introduced=phase)
+
+		if status:
+			queryset = queryset.filter(status__iexact=status)
+
+		if team:
+			queryset = queryset.filter(team_memberships__team__name__iexact=team)
+
+		return queryset.distinct().order_by("name")
+
+	def to_cytoscape_format(self, graph, characters=None):
+		character_lookup = {}
+		if characters is not None:
+			for character in characters:
+				character_lookup[character.id] = character
+
+		missing_ids = [node_id for node_id in graph.nodes if node_id not in character_lookup]
+		if missing_ids:
+			for character in Character.objects.filter(pk__in=missing_ids):
+				character_lookup[character.id] = character
+
+		nodes = []
+		for node_id in sorted(graph.nodes):
+			node_data = dict(graph.nodes[node_id])
+			character = character_lookup.get(node_id)
+
+			label = node_data.get("label")
+			if character is not None:
+				label = character.name
+
+			alignment = node_data.get("alignment")
+			status = node_data.get("status")
+			photo_url = node_data.get("photo_url")
+
+			if character is not None:
+				alignment = character.alignment
+				status = character.status
+				photo_url = self._photo_url(character.photo_path)
+
+			node_payload = {
+				"id": str(node_id),
+				"label": label or str(node_id),
+				"name": label or str(node_id),
+				"alignment": alignment,
+				"status": status,
+				"phase_introduced": node_data.get("phase_introduced"),
+				"movie_introduced_id": node_data.get("movie_introduced_id"),
+				"latest_appearance_id": node_data.get("latest_appearance_id"),
+				"photo_url": photo_url or "",
+			}
+
+			classes = []
+			if alignment:
+				classes.append(str(alignment).lower())
+			if status:
+				classes.append(str(status).lower())
+
+			nodes.append({"data": node_payload, "classes": " ".join(classes)})
+
+		edges = []
+		for source_id, target_id, edge_data in sorted(graph.edges(data=True)):
+			payload = self._edge_payload(
+				{
+					"source": source_id,
+					"target": target_id,
+					**edge_data,
+				}
+			)
+			edges.append(
+				{
+					"data": {
+						"id": payload["edge_id"],
+						"source": str(source_id),
+						"target": str(target_id),
+						"label": payload["label"],
+						"weight": payload["weight"],
+						"relationship_type": payload["relationship_type"],
+						"relationship_types": payload["relationship_types"],
+						"relationship_ids": payload["relationship_ids"],
+						"directional": payload["directional"],
+					},
+					"classes": "directional" if payload["directional"] else "undirected",
+				}
+			)
+
+		return {"nodes": nodes, "edges": edges}
+
