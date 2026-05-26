@@ -7,6 +7,14 @@ if (graphRoot) {
   const graphViewer  = document.getElementById('graph-viewer');
   const summary      = document.getElementById('graph-summary');
   const statusBanner = document.getElementById('path-status');
+  const nodePopup    = document.getElementById('character-node-popup');
+  const popupName    = nodePopup?.querySelector('[data-node-popup-name]');
+  const popupStatus  = nodePopup?.querySelector('[data-node-popup-status]');
+  const popupAliases = nodePopup?.querySelector('[data-node-popup-aliases]');
+  const popupTeams   = nodePopup?.querySelector('[data-node-popup-teams]');
+  const popupMovies  = nodePopup?.querySelector('[data-node-popup-movies]');
+  const popupHandle  = nodePopup?.querySelector('[data-node-popup-handle]');
+  const popupClose   = nodePopup?.querySelector('[data-node-popup-close]');
   const fromInput    = document.getElementById('path-from');
   const toInput      = document.getElementById('path-to');
   const searchButton = document.getElementById('path-search-btn');
@@ -19,6 +27,12 @@ if (graphRoot) {
   );
   let activePayload = { nodes: [], edges: [] };
   let fullGraphPayload = null;
+  let popupDragState = null;
+  let popupPosition = { left: 0, top: 0 };
+
+  if (nodePopup && nodePopup.parentElement !== document.body) {
+    document.body.appendChild(nodePopup);
+  }
 
   const alignmentColors = {
     hero:     '#38BDF8',
@@ -143,6 +157,163 @@ if (graphRoot) {
         },
       },
     ],
+  });
+
+  const hideNodePopup = () => {
+    if (!nodePopup) return;
+    nodePopup.hidden = true;
+    nodePopup.dataset.characterId = '';
+    popupDragState = null;
+  };
+
+  const setNodePopupPosition = (left, top) => {
+    if (!nodePopup || nodePopup.hidden) return;
+
+    const margin = 12;
+    const rect = nodePopup.getBoundingClientRect();
+    const width = rect.width || nodePopup.offsetWidth || 0;
+    const height = rect.height || nodePopup.offsetHeight || 0;
+    const maxLeft = Math.max(margin, window.innerWidth - width - margin);
+    const maxTop = Math.max(margin, window.innerHeight - height - margin);
+    const clampedLeft = Math.max(margin, Math.min(left, maxLeft));
+    const clampedTop = Math.max(margin, Math.min(top, maxTop));
+
+    popupPosition = { left: clampedLeft, top: clampedTop };
+    nodePopup.style.left = `${clampedLeft}px`;
+    nodePopup.style.top = `${clampedTop}px`;
+    nodePopup.dataset.left = String(clampedLeft);
+    nodePopup.dataset.top = String(clampedTop);
+  };
+
+  const renderPopupSection = (container, items, renderItem, emptyLabel) => {
+    if (!container) return;
+    container.replaceChildren();
+
+    if (!items.length) {
+      const empty = document.createElement('p');
+      empty.className = 'graph-node-popup__empty';
+      empty.textContent = emptyLabel;
+      container.appendChild(empty);
+      return;
+    }
+
+    const list = document.createElement('ul');
+    list.className = 'graph-node-popup__list';
+
+    items.forEach((item) => {
+      const listItem = document.createElement('li');
+      listItem.className = 'graph-node-popup__list-item';
+      renderItem(listItem, item);
+      list.appendChild(listItem);
+    });
+
+    container.appendChild(list);
+  };
+
+  const showNodePopup = (node) => {
+    if (!nodePopup) return;
+
+    const data = node.data() || {};
+    const details = data.details || {};
+    const statusLabel = details.status_label || details.status || data.status || 'Unknown';
+
+    if (popupName) popupName.textContent = data.label || data.name || 'Character';
+    if (popupStatus) popupStatus.textContent = `Status: ${statusLabel}`;
+
+    renderPopupSection(
+      popupAliases,
+      details.aliases || [],
+      (listItem, alias) => {
+        listItem.textContent = alias;
+      },
+      'No aliases listed.'
+    );
+
+    renderPopupSection(
+      popupTeams,
+      details.teams || [],
+      (listItem, team) => {
+        const title = document.createElement('div');
+        title.className = 'graph-node-popup__list-title';
+        title.textContent = team.name;
+
+        const meta = document.createElement('div');
+        meta.className = 'graph-node-popup__list-meta';
+        meta.textContent = team.status;
+
+        listItem.append(title, meta);
+      },
+      'No team memberships listed.'
+    );
+
+    renderPopupSection(
+      popupMovies,
+      details.movies || [],
+      (listItem, movie) => {
+        const title = document.createElement('div');
+        title.className = 'graph-node-popup__list-title';
+        title.textContent = movie.title;
+
+        const meta = document.createElement('div');
+        meta.className = 'graph-node-popup__list-meta';
+        meta.textContent = movie.year ? `Released ${movie.year}` : 'Release year unavailable';
+
+        listItem.append(title, meta);
+      },
+      'No movies listed.'
+    );
+
+    nodePopup.hidden = false;
+    nodePopup.dataset.characterId = String(data.id || '');
+
+    const renderedPosition = node.renderedPosition();
+    const viewerRect = graphRoot.getBoundingClientRect();
+    requestAnimationFrame(() => {
+      setNodePopupPosition(viewerRect.left + renderedPosition.x + 24, viewerRect.top + renderedPosition.y + 24);
+    });
+  };
+
+  nodePopup?.addEventListener('click', (event) => {
+    const closeButton = event.target.closest('[data-node-popup-close]');
+    if (closeButton) {
+      hideNodePopup();
+    }
+  });
+
+  popupHandle?.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0 || !nodePopup || nodePopup.hidden) return;
+    if (event.target.closest('button, a, input, textarea, select, option, [data-no-popup-drag]')) return;
+
+    const rect = nodePopup.getBoundingClientRect();
+    popupDragState = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    };
+    popupHandle.setPointerCapture(event.pointerId);
+    event.stopPropagation();
+    event.preventDefault();
+  });
+
+  const stopPopupDrag = (event) => {
+    if (!popupDragState || event.pointerId !== popupDragState.pointerId) return;
+    popupDragState = null;
+    try {
+      popupHandle?.releasePointerCapture(event.pointerId);
+    } catch {
+      // Ignore pointer-capture errors when the drag ends abruptly.
+    }
+  };
+
+  window.addEventListener('pointermove', (event) => {
+    if (!popupDragState || event.pointerId !== popupDragState.pointerId) return;
+    setNodePopupPosition(event.clientX - popupDragState.offsetX, event.clientY - popupDragState.offsetY);
+  });
+  window.addEventListener('pointerup', stopPopupDrag);
+  window.addEventListener('pointercancel', stopPopupDrag);
+
+  cy.on('tap', 'node', (event) => {
+    showNodePopup(event.target);
   });
 
   const syncGraphSize = () => {
@@ -376,6 +547,7 @@ if (graphRoot) {
   const applyElements = (payload, label) => {
     activePayload = payload;
     Object.keys(vel).forEach(id => delete vel[id]);
+    hideNodePopup();
 
     cy.json({ elements: payload });
 

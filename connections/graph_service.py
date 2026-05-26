@@ -15,9 +15,10 @@ from itertools import pairwise
 
 import networkx as nx
 from django.core.cache import cache
+from django.db.models import Prefetch
 from django.templatetags.static import static
 
-from .models import Character, Relationship
+from .models import AlterEgo, Character, Movie, Relationship, TeamMembership
 
 
 class MCUGraphService:
@@ -61,6 +62,41 @@ class MCUGraphService:
 			return photo_path
 		return static(photo_path)
 
+	def _character_detail_queryset(self, queryset):
+		return queryset.select_related("movie_introduced", "latest_appearance").prefetch_related(
+			Prefetch("alter_egos", queryset=AlterEgo.objects.order_by("name")),
+			Prefetch(
+				"team_memberships",
+				queryset=TeamMembership.objects.select_related("team").order_by("team__name"),
+			),
+			Prefetch("movies", queryset=Movie.objects.order_by("release_date", "title")),
+		)
+
+	def _character_detail_payload(self, character):
+		status = character.status or "Unknown"
+		status_label = character.get_status_display() if character.status else "Unknown"
+
+		return {
+			"status": status,
+			"status_label": status_label,
+			"aliases": [alter_ego.name for alter_ego in character.alter_egos.all()],
+			"teams": [
+				{
+					"name": membership.team.name,
+					"status": "Current" if membership.is_current_member else "Former",
+				}
+				for membership in character.team_memberships.all()
+			],
+			"movies": [
+				{
+					"id": movie.id,
+					"title": movie.title,
+					"year": movie.release_date.year,
+				}
+				for movie in character.movies.all()
+			],
+		}
+
 	def _character_node_data(self, character):
 		return {
 			"id": character.id,
@@ -72,6 +108,7 @@ class MCUGraphService:
 			"movie_introduced_id": character.movie_introduced_id,
 			"latest_appearance_id": character.latest_appearance_id,
 			"photo_url": self._photo_url(character.photo_path),
+			"details": self._character_detail_payload(character),
 		}
 
 	def _edge_payload(self, edge_data):
@@ -129,7 +166,34 @@ class MCUGraphService:
 	def _build_graph_from_relationships(self, relationships):
 		graph = nx.DiGraph()
 
-		for relationship in relationships.select_related("character1", "character2"):
+		relationships = relationships.select_related("character1", "character2").prefetch_related(
+			Prefetch(
+				"character1__alter_egos",
+				queryset=AlterEgo.objects.order_by("name"),
+			),
+			Prefetch(
+				"character1__team_memberships",
+				queryset=TeamMembership.objects.select_related("team").order_by("team__name"),
+			),
+			Prefetch(
+				"character1__movies",
+				queryset=Movie.objects.order_by("release_date", "title"),
+			),
+			Prefetch(
+				"character2__alter_egos",
+				queryset=AlterEgo.objects.order_by("name"),
+			),
+			Prefetch(
+				"character2__team_memberships",
+				queryset=TeamMembership.objects.select_related("team").order_by("team__name"),
+			),
+			Prefetch(
+				"character2__movies",
+				queryset=Movie.objects.order_by("release_date", "title"),
+			),
+		)
+
+		for relationship in relationships:
 			graph.add_node(relationship.character1_id, **self._character_node_data(relationship.character1))
 			graph.add_node(relationship.character2_id, **self._character_node_data(relationship.character2))
 
@@ -307,7 +371,7 @@ class MCUGraphService:
 		return graph, characters
 
 	def _filtered_character_queryset(self, alignment=None, phase=None, status=None, team=None, movie=None):
-		queryset = Character.objects.all().select_related("movie_introduced", "latest_appearance")
+		queryset = self._character_detail_queryset(Character.objects.all())
 
 		if alignment:
 			queryset = queryset.filter(alignment__in=alignment)
@@ -334,7 +398,7 @@ class MCUGraphService:
 
 		missing_ids = [node_id for node_id in graph.nodes if node_id not in character_lookup]
 		if missing_ids:
-			for character in Character.objects.filter(pk__in=missing_ids):
+			for character in self._character_detail_queryset(Character.objects.filter(pk__in=missing_ids)):
 				character_lookup[character.id] = character
 
 		nodes = []
@@ -354,6 +418,15 @@ class MCUGraphService:
 				alignment = character.alignment
 				status = character.status
 				photo_url = self._photo_url(character.photo_path)
+				details = self._character_detail_payload(character)
+			else:
+				details = node_data.get("details") or {
+					"status": status or "Unknown",
+					"status_label": status or "Unknown",
+					"aliases": [],
+					"teams": [],
+					"movies": [],
+				}
 
 			node_payload = {
 				"id": str(node_id),
@@ -365,6 +438,7 @@ class MCUGraphService:
 				"movie_introduced_id": node_data.get("movie_introduced_id"),
 				"latest_appearance_id": node_data.get("latest_appearance_id"),
 				"photo_url": photo_url or "",
+				"details": details,
 			}
 
 			classes = []

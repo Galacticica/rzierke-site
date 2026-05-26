@@ -1,9 +1,10 @@
 from django.test import TestCase
 
+import networkx as nx
 from networkx.exception import NetworkXNoPath
 
 from .graph_service import MCUGraphService
-from .models import Character, Movie, Relationship
+from .models import AlterEgo, Character, Movie, Relationship, Team, TeamMembership
 
 
 class MCUGraphServiceTests(TestCase):
@@ -80,3 +81,35 @@ class MCUGraphServiceTests(TestCase):
 
 		_, characters = self.graph_service.filtered_subgraph(movie=[str(later_movie.id)])
 		self.assertEqual(list(characters.values_list("name", flat=True)), ["Appears Later"])
+
+	def test_to_cytoscape_format_includes_character_details(self):
+		introducing_movie = self._movie("Introducing Movie", "2024-05-01")
+		later_movie = self._movie("Later Movie", "2025-06-01")
+		character = self._character("Mockingbird")
+		character.status = "Alive"
+		character.movie_introduced = introducing_movie
+		character.save(update_fields=["status", "movie_introduced"])
+		introducing_movie.characters.add(character)
+		later_movie.characters.add(character)
+
+		AlterEgo.objects.create(character=character, name="Bobbi Morse")
+
+		team = Team.objects.create(name="Avengers")
+		TeamMembership.objects.create(character=character, team=team, is_current_member=False)
+
+		graph = nx.DiGraph()
+		graph.add_node(character.id)
+
+		payload = self.graph_service.to_cytoscape_format(graph)
+		node = payload["nodes"][0]["data"]
+
+		self.assertEqual(node["details"]["status_label"], "Alive")
+		self.assertEqual(node["details"]["aliases"], ["Bobbi Morse"])
+		self.assertEqual(node["details"]["teams"], [{"name": "Avengers", "status": "Former"}])
+		self.assertEqual(
+			node["details"]["movies"],
+			[
+				{"id": introducing_movie.id, "title": "Introducing Movie", "year": 2024},
+				{"id": later_movie.id, "title": "Later Movie", "year": 2025},
+			],
+		)

@@ -41,6 +41,113 @@
     overflow: visible;
   }
 
+  .graph-node-popup {
+    position: fixed;
+    z-index: 2147483647;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    width: min(28rem, calc(100vw - 1.5rem));
+    max-height: min(38rem, calc(100vh - 1.5rem));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1rem;
+    background: rgba(18, 6, 31, 0.98);
+    color: rgba(248, 250, 252, 0.96);
+    box-shadow: 0 24px 56px rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(18px);
+    overflow: hidden;
+  }
+
+  .graph-node-popup__chrome {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.95rem 1rem 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .graph-node-popup__chrome:active {
+    cursor: grabbing;
+  }
+
+  .graph-node-popup__eyebrow {
+    margin: 0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7dd3fc;
+  }
+
+  .graph-node-popup__title {
+    margin: 0.15rem 0 0;
+    font-size: 1.125rem;
+    font-weight: 800;
+    line-height: 1.3;
+  }
+
+  .graph-node-popup__body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 1rem;
+  }
+
+  .graph-node-popup__section + .graph-node-popup__section {
+    margin-top: 1rem;
+  }
+
+  .graph-node-popup__section-title {
+    margin: 0 0 0.55rem;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(125, 211, 252, 0.92);
+  }
+
+  .graph-node-popup__status {
+    margin: 0 0 0.75rem;
+    color: rgba(248, 250, 252, 0.78);
+  }
+
+  .graph-node-popup__empty {
+    margin: 0;
+    color: rgba(248, 250, 252, 0.55);
+  }
+
+  .graph-node-popup__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .graph-node-popup__list-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .graph-node-popup__list-title {
+    font-weight: 700;
+  }
+
+  .graph-node-popup__list-meta {
+    font-size: 0.82rem;
+    color: rgba(248, 250, 252, 0.68);
+  }
+
   .graph-filter-stack {
     display: flex;
     flex-direction: column;
@@ -541,6 +648,33 @@
               </div>
             </div>
             <div id="mcu-graph" class="graph-canvas rounded-box border border-white/10 bg-base-100/40"></div>
+            <div id="character-node-popup" class="graph-node-popup" hidden aria-live="polite">
+              <div class="graph-node-popup__chrome" data-node-popup-handle>
+                <div>
+                  <p class="graph-node-popup__eyebrow">Character details</p>
+                  <h3 class="graph-node-popup__title" data-node-popup-name>Character</h3>
+                </div>
+                <button type="button" class="btn btn-xs btn-ghost" data-node-popup-close>Close</button>
+              </div>
+              <div class="graph-node-popup__body">
+                <p class="graph-node-popup__status" data-node-popup-status></p>
+
+                <section class="graph-node-popup__section">
+                  <h4 class="graph-node-popup__section-title">Aliases</h4>
+                  <div data-node-popup-aliases></div>
+                </section>
+
+                <section class="graph-node-popup__section">
+                  <h4 class="graph-node-popup__section-title">Teams</h4>
+                  <div data-node-popup-teams></div>
+                </section>
+
+                <section class="graph-node-popup__section">
+                  <h4 class="graph-node-popup__section-title">Movies</h4>
+                  <div data-node-popup-movies></div>
+                </section>
+              </div>
+            </div>
           </div>
 
           <div class="graph-panel self-start rounded-box border border-white/10 bg-base-200/70 p-4 shadow-xl">
