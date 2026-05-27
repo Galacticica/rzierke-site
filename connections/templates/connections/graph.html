@@ -65,13 +65,13 @@
     gap: 1rem;
     padding: 0.95rem 1rem 0.8rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    cursor: grab;
+    cursor: move;
     user-select: none;
     touch-action: none;
   }
 
   .graph-node-popup__chrome:active {
-    cursor: grabbing;
+    cursor: move;
   }
 
   .graph-node-popup__eyebrow {
@@ -88,6 +88,24 @@
     font-size: 1.125rem;
     font-weight: 800;
     line-height: 1.3;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .graph-node-popup__title-name {
+    font-weight: 800;
+  }
+
+  .graph-node-popup__title-separator {
+    color: rgba(248, 250, 252, 0.4);
+    font-weight: 400;
+  }
+
+  .graph-node-popup__earth {
+    color: rgba(248, 250, 252, 0.72);
+    font-weight: 400;
   }
 
   .graph-node-popup__body {
@@ -660,7 +678,11 @@
               <div class="graph-node-popup__chrome" data-node-popup-handle>
                 <div>
                   <p class="graph-node-popup__eyebrow">Character details</p>
-                  <h3 class="graph-node-popup__title" data-node-popup-name>Character</h3>
+                  <h3 class="graph-node-popup__title">
+                    <span class="graph-node-popup__title-name" data-node-popup-name>Character</span>
+                    <span class="graph-node-popup__title-separator" aria-hidden="true">·</span>
+                    <span class="graph-node-popup__earth" data-node-popup-earth>Earth-616</span>
+                  </h3>
                 </div>
                 <button type="button" class="btn btn-xs btn-ghost" data-node-popup-close>Close</button>
               </div>
