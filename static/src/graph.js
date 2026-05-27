@@ -1,4 +1,5 @@
 import cytoscape from 'cytoscape';
+import * as d3 from 'd3';
 
 const graphRoot = document.getElementById('mcu-graph');
 
@@ -348,171 +349,82 @@ if (graphRoot) {
     requestAnimationFrame(syncGraphSize);
   });
 
-  // ─── Force simulation ──────────────────────────────────────────────────────
-  //
-  // Velocity-Verlet integration with a single pinned-node concept for dragging.
-  //
-  // DRAG BEHAVIOUR (Neo4j-like):
-  //   - The sim keeps running the whole time a node is dragged.
-  //   - The dragged node is "pinned": the sim reads its position from Cytoscape
-  //     (which Cytoscape keeps at the cursor) but never writes back to it.
-  //   - Because the dragged node moves, the spring forces to its neighbors
-  //     increase, and the sim naturally pulls them along — no manual nudging.
-  //   - On release, we reheat so the graph settles from its new configuration.
+  // ─── D3 force simulation ────────────────────────────────────────────────────
 
-  const NODE_RADIUS   = 46;
-  const MIN_DIST      = NODE_RADIUS * 2 + 20; // hard floor: ~112 px
+  const GRAPH_NODE_R = 46;
+  const ALPHA_START  = 1.0;
+  const ALPHA_REHEAT = 0.55;
 
-  const REPULSION     = 90000;
-  const LINK_DIST     = 220;
-  const LINK_STRENGTH = 0.018;   // weak springs — repulsion dominates at close range
-  const GRAVITY       = 0.005;
-  const FRICTION      = 0.78;   // lower = more damping, slower settle
-  const MAX_VEL       = 14;
+  let d3Sim   = null;
+  let d3Nodes = null;
+  let d3IdMap = {};
+  let pinnedId = null;
 
-  const ALPHA_START   = 1.0;
-  const ALPHA_REHEAT  = 0.55;
-  const ALPHA_DECAY   = 0.007;  // slow decay → long, smooth settle
-  const MIN_ALPHA     = 0.001;
+  function getD3Node(id) { return d3IdMap[id] || null; }
 
-  const vel    = {};  // { [nodeId]: { vx, vy } }
-  let alpha    = 0;
-  let simRaf   = null;
-  let pinnedId = null; // id of node currently under the cursor — excluded from writes
+  function initD3Sim(alpha = 1.0) {
+    if (d3Sim) { d3Sim.stop(); d3Sim = null; }
 
-  function getVel(id) {
-    if (!vel[id]) vel[id] = { vx: 0, vy: 0 };
-    return vel[id];
-  }
+    d3Nodes = cy.nodes().map(n => ({ id: n.id(), x: n.position('x'), y: n.position('y') }));
+    d3IdMap = {};
+    d3Nodes.forEach(d => { d3IdMap[d.id] = d; });
 
-  function simTick() {
-    if (alpha < MIN_ALPHA) { simRaf = null; return; }
+    const edgeData = cy.edges().map(e => ({ source: e.data('source'), target: e.data('target') }));
 
-    const nodes = cy.nodes();
-    const edges = cy.edges();
+    const n = d3Nodes.length;
+    const isHuge  = n > 300;
+    const isLarge = n > 100;
+    const BASE_CHARGE    = -2500;
+    const BASE_LINK_DIST = 350;
+    const chargeStrength = isHuge ? BASE_CHARGE * 0.15 : isLarge ? BASE_CHARGE * 0.5 : BASE_CHARGE;
+    const linkDist       = isHuge ? BASE_LINK_DIST * 0.3 : isLarge ? BASE_LINK_DIST * 0.7 : BASE_LINK_DIST;
+    const alphaDecay     = isHuge ? 0.06 : isLarge ? 0.04 : 0.02;
 
-    // Read current positions (including pinned node at cursor position)
-    const pos = {};
-    nodes.forEach(n => {
-      pos[n.id()] = { x: n.position('x'), y: n.position('y') };
-      getVel(n.id());
-    });
-
-    const ids = Object.keys(pos);
-    const len = ids.length;
-
-    // 1. Pairwise repulsion + hard-floor separation
-    for (let i = 0; i < len; i++) {
-      const a  = ids[i];
-      const pa = pos[a];
-      for (let j = i + 1; j < len; j++) {
-        const b  = ids[j];
-        const pb = pos[b];
-
-        let dx   = pb.x - pa.x;
-        let dy   = pb.y - pa.y;
-        let dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < 0.5) {
-          dx = (Math.random() - 0.5) * 2;
-          dy = (Math.random() - 0.5) * 2;
-          dist = Math.sqrt(dx * dx + dy * dy) || 0.5;
-        }
-
-        // Hard separation: push positions apart instantly, no spring needed
-        if (dist < MIN_DIST) {
-          const push = (MIN_DIST - dist) * 0.5;
-          const nx = dx / dist;
-          const ny = dy / dist;
-          // Only push non-pinned nodes
-          if (a !== pinnedId) { pa.x -= nx * push; pa.y -= ny * push; }
-          if (b !== pinnedId) { pb.x += nx * push; pb.y += ny * push; }
-          dist = MIN_DIST;
-        }
-
-        const force = REPULSION / (dist * dist);
-        const nx = dx / dist;
-        const ny = dy / dist;
-        if (a !== pinnedId) { vel[a].vx -= nx * force * alpha; vel[a].vy -= ny * force * alpha; }
-        if (b !== pinnedId) { vel[b].vx += nx * force * alpha; vel[b].vy += ny * force * alpha; }
-      }
-    }
-
-    // 2. Spring attraction along edges
-    edges.forEach(e => {
-      const s  = String(e.data('source'));
-      const t  = String(e.data('target'));
-      const ps = pos[s];
-      const pt = pos[t];
-      if (!ps || !pt) return;
-
-      const dx   = pt.x - ps.x;
-      const dy   = pt.y - ps.y;
-      const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
-      const delta = (dist - LINK_DIST) * LINK_STRENGTH;
-      const fx = (dx / dist) * delta;
-      const fy = (dy / dist) * delta;
-
-      if (s !== pinnedId) { vel[s].vx += fx * alpha; vel[s].vy += fy * alpha; }
-      if (t !== pinnedId) { vel[t].vx -= fx * alpha; vel[t].vy -= fy * alpha; }
-    });
-
-    // 3. Weak gravity toward origin
-    ids.forEach(id => {
-      if (id === pinnedId) return;
-      vel[id].vx -= pos[id].x * GRAVITY * alpha;
-      vel[id].vy -= pos[id].y * GRAVITY * alpha;
-    });
-
-    // 4. Integrate velocity → position, write back (skip pinned/locked)
-    nodes.forEach(n => {
-      const id = n.id();
-
-      if (id === pinnedId) return;
-
-      const v = vel[id];
-      v.vx *= FRICTION;
-      v.vy *= FRICTION;
-
-      const speed = Math.sqrt(v.vx * v.vx + v.vy * v.vy);
-      if (speed > MAX_VEL) { v.vx = v.vx / speed * MAX_VEL; v.vy = v.vy / speed * MAX_VEL; }
-
-      const p = pos[id];
-      n.position({ x: p.x + v.vx, y: p.y + v.vy });
-    });
-
-    alpha  *= (1 - ALPHA_DECAY);
-    simRaf  = requestAnimationFrame(simTick);
+    d3Sim = d3.forceSimulation(d3Nodes)
+      .force('link',      d3.forceLink(edgeData).id(d => d.id).distance(linkDist))
+      .force('charge',    d3.forceManyBody().strength(chargeStrength).distanceMax(isHuge ? 1200 : 4000))
+      .force('center',    d3.forceCenter(0, 0))
+      .force('collision', d3.forceCollide().radius(isHuge ? 2 : GRAPH_NODE_R + 6))
+      .force('x',         d3.forceX(0).strength(isHuge ? 0.08 : 0.04))
+      .force('y',         d3.forceY(0).strength(isHuge ? 0.08 : 0.04))
+      .alphaDecay(alphaDecay)
+      .alphaTarget(0)
+      .alpha(alpha)
+      .on('tick', () => {
+        cy.nodes().forEach(node => {
+          const d = d3IdMap[node.id()];
+          if (d) node.position({ x: d.x, y: d.y });
+        });
+      });
   }
 
   function reheatSim(amount = ALPHA_REHEAT) {
-    alpha = Math.max(alpha, amount);
-    if (!simRaf) simRaf = requestAnimationFrame(simTick);
+    if (!d3Sim) return;
+    d3Sim.alpha(Math.max(d3Sim.alpha(), amount)).restart();
   }
 
-  // ─── Drag: pin the grabbed node so the sim doesn't fight the cursor ─────────
+  // ─── Drag: pin grabbed node so sim doesn't fight the cursor ──────────────────
   cy.on('grab', 'node', evt => {
-    pinnedId = evt.target.id();
-    vel[pinnedId] = { vx: 0, vy: 0 };
-    reheatSim(ALPHA_REHEAT);
-  });
-
-  cy.on('free', 'node', evt => {
     const id = evt.target.id();
-    // Keep pinnedId set for a further 12 frames after release so the sim
-    // cannot move the node while spring forces are still hot. After that
-    // the node becomes a normal participant and settles naturally.
-    let framesLeft = 12;
-    const holdPin = () => {
-      framesLeft--;
-      if (framesLeft > 0) {
-        requestAnimationFrame(holdPin);
-      } else {
-        vel[id] = { vx: 0, vy: 0 };
-        pinnedId = null;
+    pinnedId = id;
+    const simNode = getD3Node(id);
+    if (simNode) { simNode.fx = simNode.x; simNode.fy = simNode.y; }
+    if (d3Sim) d3Sim.alphaTarget(0.3).restart();
+  });
+  cy.on('drag', 'node', evt => {
+    if (evt.target.id() === pinnedId) {
+      const simNode = getD3Node(pinnedId);
+      if (simNode) {
+        const pos = evt.target.position();
+        simNode.fx = pos.x; simNode.fy = pos.y;
+        simNode.x  = pos.x; simNode.y  = pos.y;
       }
-    };
-    requestAnimationFrame(holdPin);
+    }
+  });
+  cy.on('free', 'node', () => {
+    if (d3Nodes) d3Nodes.forEach(d => { d.vx = 0; d.vy = 0; });
+    pinnedId = null;
+    if (d3Sim) d3Sim.alphaTarget(0);
   });
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -546,7 +458,8 @@ if (graphRoot) {
 
   const applyElements = (payload, label) => {
     activePayload = payload;
-    Object.keys(vel).forEach(id => delete vel[id]);
+    if (d3Sim) { d3Sim.stop(); d3Sim = null; }
+    d3Nodes = null; d3IdMap = {}; pinnedId = null;
     hideNodePopup();
 
     cy.json({ elements: payload });
@@ -558,12 +471,10 @@ if (graphRoot) {
       const r     = baseRadius * Math.sqrt((i + 0.5) / n);
       const theta = 2 * Math.PI * i / (PHI * PHI);
       node.position({ x: r * Math.cos(theta), y: r * Math.sin(theta) });
-      vel[node.id()] = { vx: 0, vy: 0 };
     });
 
     cy.fit(cy.elements(), 60);
-    if (simRaf) { cancelAnimationFrame(simRaf); simRaf = null; }
-    reheatSim(ALPHA_START);
+    initD3Sim(ALPHA_START);
 
     setLoadState(`${payload.nodes.length} nodes, ${payload.edges.length} edges`);
     if (summary) summary.textContent = label;
