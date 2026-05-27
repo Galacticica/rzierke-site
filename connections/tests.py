@@ -159,3 +159,41 @@ class MCUGraphServiceTests(TestCase):
 				{"id": later_movie.id, "title": "Later Movie", "year": 2025},
 			],
 		)
+
+	def test_to_cytoscape_format_can_omit_character_details(self):
+		earth = Earth.objects.create(number="Earth-616")
+		character = self._character("Lightweight")
+		character.earth_number = earth
+		character.status = "Alive"
+		character.save(update_fields=["earth_number", "status"])
+
+		graph = nx.DiGraph()
+		graph.add_node(character.id, **{"earth": earth.number, "status": character.status, "alignment": character.alignment})
+
+		payload = self.graph_service.to_cytoscape_format(graph, include_details=False)
+		node = payload["nodes"][0]["data"]
+
+		self.assertNotIn("details", node)
+		self.assertEqual(node["earth"], "Earth-616")
+		self.assertEqual(node["status"], "Alive")
+
+	def test_character_detail_payload_returns_full_details(self):
+		movie = self._movie("Detail Movie", "2024-02-02")
+		earth = Earth.objects.create(number="Earth-838")
+		character = self._character("Detailed")
+		character.status = "Unknown"
+		character.earth_number = earth
+		character.movie_introduced = movie
+		character.save(update_fields=["status", "earth_number", "movie_introduced"])
+		movie.characters.add(character)
+		AlterEgo.objects.create(character=character, name="Alias One")
+		team = Team.objects.create(name="Fantastic Four")
+		TeamMembership.objects.create(character=character, team=team, is_current_member=True)
+
+		details = self.graph_service.character_detail_payload(character.id)
+
+		self.assertEqual(details["name"], "Detailed")
+		self.assertEqual(details["earth"], "Earth-838")
+		self.assertEqual(details["aliases"], ["Alias One"])
+		self.assertEqual(details["teams"], [{"name": "Fantastic Four", "status": "Current"}])
+		self.assertEqual(details["movies"], [{"id": movie.id, "title": "Detail Movie", "year": 2024}])

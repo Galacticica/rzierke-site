@@ -29,6 +29,8 @@ if (graphRoot) {
   const nameToId = new Map(
     characterOptions.map((c) => [c.name.toLowerCase(), String(c.id)])
   );
+  const characterDetailCache = new Map();
+  const characterDetailRequests = new Map();
   let activePayload = { nodes: [], edges: [] };
   let fullGraphPayload = null;
   let popupDragState = null;
@@ -170,6 +172,36 @@ if (graphRoot) {
     popupDragState = null;
   };
 
+  const fetchCharacterDetails = async (characterId) => {
+    const cacheKey = String(characterId);
+
+    if (characterDetailCache.has(cacheKey)) {
+      return characterDetailCache.get(cacheKey);
+    }
+
+    if (characterDetailRequests.has(cacheKey)) {
+      return characterDetailRequests.get(cacheKey);
+    }
+
+    const request = fetch(`/api/graph/character/${cacheKey}/`, { headers: { Accept: 'application/json' } })
+      .then(async (response) => {
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload.error || `Failed to load character ${cacheKey}.`);
+        }
+
+        characterDetailCache.set(cacheKey, payload);
+        return payload;
+      })
+      .finally(() => {
+        characterDetailRequests.delete(cacheKey);
+      });
+
+    characterDetailRequests.set(cacheKey, request);
+    return request;
+  };
+
   const setNodePopupPosition = (left, top) => {
     if (!nodePopup || nodePopup.hidden) return;
 
@@ -218,9 +250,10 @@ if (graphRoot) {
     if (!nodePopup) return;
 
     const data = node.data() || {};
-    const details = data.details || {};
-    const statusLabel = details.status_label || details.status || data.status || 'Unknown';
-    const earthLabel = details.earth || 'Unknown';
+    const details = data.details || null;
+    const popupDetails = details || {};
+    const statusLabel = popupDetails.status_label || popupDetails.status || data.status || 'Unknown';
+    const earthLabel = popupDetails.earth || data.earth || 'Unknown';
 
     if (popupName) popupName.textContent = data.label || data.name || 'Character';
     if (popupStatus) popupStatus.textContent = `Status: ${statusLabel}`;
@@ -228,7 +261,7 @@ if (graphRoot) {
 
     renderPopupSection(
       popupAliases,
-      details.aliases || [],
+      popupDetails.aliases || [],
       (listItem, alias) => {
         listItem.textContent = alias;
       },
@@ -237,7 +270,7 @@ if (graphRoot) {
 
     renderPopupSection(
       popupTeams,
-      details.teams || [],
+      popupDetails.teams || [],
       (listItem, team) => {
         const title = document.createElement('div');
         title.className = 'graph-node-popup__list-title';
@@ -254,7 +287,7 @@ if (graphRoot) {
 
     renderPopupSection(
       popupMovies,
-      details.movies || [],
+      popupDetails.movies || [],
       (listItem, movie) => {
         const title = document.createElement('div');
         title.className = 'graph-node-popup__list-title';
@@ -319,7 +352,27 @@ if (graphRoot) {
   window.addEventListener('pointercancel', stopPopupDrag);
 
   cy.on('tap', 'node', (event) => {
-    showNodePopup(event.target);
+    const node = event.target;
+    const data = node.data() || {};
+
+    if (data.details) {
+      showNodePopup(node);
+      return;
+    }
+
+    showNodePopup(node);
+    fetchCharacterDetails(data.id)
+      .then((details) => {
+        if (!nodePopup || nodePopup.dataset.characterId !== String(data.id || '')) return;
+        node.data('details', details);
+        showNodePopup(node);
+      })
+      .catch((error) => {
+        console.error(error);
+        if (nodePopup && nodePopup.dataset.characterId === String(data.id || '')) {
+          setStatus('Failed to load character details.', 'warning');
+        }
+      });
   });
 
   const syncGraphSize = () => {
@@ -453,7 +506,7 @@ if (graphRoot) {
     const earths = new Set();
 
     (payload?.nodes || []).forEach((node) => {
-      const earth = node?.data?.details?.earth;
+      const earth = node?.data?.earth || node?.data?.details?.earth;
       if (typeof earth === 'string' && earth.trim()) {
         earths.add(earth.trim());
       }

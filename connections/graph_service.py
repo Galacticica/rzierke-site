@@ -62,8 +62,11 @@ class MCUGraphService:
 			return photo_path
 		return static(photo_path)
 
+	def _character_base_queryset(self, queryset):
+		return queryset.select_related("movie_introduced", "latest_appearance", "earth_number")
+
 	def _character_detail_queryset(self, queryset):
-		return queryset.select_related("movie_introduced", "latest_appearance", "earth_number").prefetch_related(
+		return self._character_base_queryset(queryset).prefetch_related(
 			Prefetch("alter_egos", queryset=AlterEgo.objects.order_by("name")),
 			Prefetch(
 				"team_memberships",
@@ -98,19 +101,24 @@ class MCUGraphService:
 			],
 		}
 
-	def _character_node_data(self, character):
-		return {
+	def _character_node_data(self, character, include_details=True):
+		data = {
 			"id": character.id,
 			"label": character.name,
 			"name": character.name,
 			"alignment": character.alignment,
 			"status": character.status,
+			"earth": character.earth_number.number if character.earth_number else None,
 			"phase_introduced": character.phase_introduced,
 			"movie_introduced_id": character.movie_introduced_id,
 			"latest_appearance_id": character.latest_appearance_id,
 			"photo_url": self._photo_url(character.photo_path),
-			"details": self._character_detail_payload(character),
 		}
+
+		if include_details:
+			data["details"] = self._character_detail_payload(character)
+
+		return data
 
 	def _edge_payload(self, edge_data):
 		relationship_types = sorted(set(edge_data.get("relationship_types", [])))
@@ -164,39 +172,47 @@ class MCUGraphService:
 
 		graph.add_edge(source_id, target_id, **payload)
 
-	def _build_graph_from_relationships(self, relationships):
+	def _build_graph_from_relationships(self, relationships, include_details=True):
 		graph = nx.DiGraph()
 
-		relationships = relationships.select_related("character1", "character2").prefetch_related(
-			Prefetch(
-				"character1__alter_egos",
-				queryset=AlterEgo.objects.order_by("name"),
-			),
-			Prefetch(
-				"character1__team_memberships",
-				queryset=TeamMembership.objects.select_related("team").order_by("team__name"),
-			),
-			Prefetch(
-				"character1__movies",
-				queryset=Movie.objects.order_by("release_date", "title"),
-			),
-			Prefetch(
-				"character2__alter_egos",
-				queryset=AlterEgo.objects.order_by("name"),
-			),
-			Prefetch(
-				"character2__team_memberships",
-				queryset=TeamMembership.objects.select_related("team").order_by("team__name"),
-			),
-			Prefetch(
-				"character2__movies",
-				queryset=Movie.objects.order_by("release_date", "title"),
-			),
-		)
+		relationships = relationships.select_related("character1", "character2")
+		if include_details:
+			relationships = relationships.prefetch_related(
+				Prefetch(
+					"character1__alter_egos",
+					queryset=AlterEgo.objects.order_by("name"),
+				),
+				Prefetch(
+					"character1__team_memberships",
+					queryset=TeamMembership.objects.select_related("team").order_by("team__name"),
+				),
+				Prefetch(
+					"character1__movies",
+					queryset=Movie.objects.order_by("release_date", "title"),
+				),
+				Prefetch(
+					"character2__alter_egos",
+					queryset=AlterEgo.objects.order_by("name"),
+				),
+				Prefetch(
+					"character2__team_memberships",
+					queryset=TeamMembership.objects.select_related("team").order_by("team__name"),
+				),
+				Prefetch(
+					"character2__movies",
+					queryset=Movie.objects.order_by("release_date", "title"),
+				),
+			)
 
 		for relationship in relationships:
-			graph.add_node(relationship.character1_id, **self._character_node_data(relationship.character1))
-			graph.add_node(relationship.character2_id, **self._character_node_data(relationship.character2))
+			graph.add_node(
+				relationship.character1_id,
+				**self._character_node_data(relationship.character1, include_details=include_details),
+			)
+			graph.add_node(
+				relationship.character2_id,
+				**self._character_node_data(relationship.character2, include_details=include_details),
+			)
 
 			# For directional relationships, mark directional True.
 			# For non-directional relationships we create a single undirected edge
@@ -212,7 +228,7 @@ class MCUGraphService:
 
 		return graph
 
-	def build_graph(self, queryset=None):
+	def build_graph(self, queryset=None, include_details=False):
 		if queryset is None:
 			cache_key = self._cache_key("full")
 			cached_graph = cache.get(cache_key)
@@ -220,11 +236,11 @@ class MCUGraphService:
 				return cached_graph.copy()
 
 			relationships = Relationship.objects.all()
-			graph = self._build_graph_from_relationships(relationships)
+			graph = self._build_graph_from_relationships(relationships, include_details=include_details)
 			cache.set(cache_key, graph.copy(), self.CACHE_TIMEOUT)
 			return graph
 
-		return self._build_graph_from_relationships(queryset)
+		return self._build_graph_from_relationships(queryset, include_details=include_details)
 
 	def _build_traversal_graph(self, graph):
 		"""Create a traversal graph where non-directional edges are traversable both ways."""
@@ -295,7 +311,7 @@ class MCUGraphService:
 		cache.set(cache_key, result, self.CACHE_TIMEOUT)
 		return result
 
-	def filtered_subgraph(self, alignment=None, phase=None, status=None, earth=None, team=None, movie=None, relationship_types=None):
+	def filtered_subgraph(self, alignment=None, phase=None, status=None, earth=None, team=None, movie=None, relationship_types=None, include_details=False):
 		normalized_alignment = [
 			value.strip()
 			for value in (alignment or [])
@@ -371,16 +387,17 @@ class MCUGraphService:
 			)
 			if normalized_relationship_types:
 				relationships = relationships.filter(relationship_type__in=normalized_relationship_types)
-			graph = self._build_graph_from_relationships(relationships)
+			graph = self._build_graph_from_relationships(relationships, include_details=include_details)
 
 		for character in characters:
-			graph.add_node(character.id, **self._character_node_data(character))
+			graph.add_node(character.id, **self._character_node_data(character, include_details=include_details))
 
 		cache.set(cache_key, graph.copy(), self.CACHE_TIMEOUT)
 		return graph, characters
 
-	def _filtered_character_queryset(self, alignment=None, phase=None, status=None, earth=None, team=None, movie=None):
-		queryset = self._character_detail_queryset(Character.objects.all())
+	def _filtered_character_queryset(self, alignment=None, phase=None, status=None, earth=None, team=None, movie=None, include_details=False):
+		base_queryset = Character.objects.all()
+		queryset = self._character_detail_queryset(base_queryset) if include_details else self._character_base_queryset(base_queryset)
 
 		if alignment:
 			queryset = queryset.filter(alignment__in=alignment)
@@ -402,14 +419,43 @@ class MCUGraphService:
 
 		return queryset.distinct().order_by("name")
 
-	def to_cytoscape_format(self, graph, characters=None):
+	def character_detail_payload(self, character_id):
+		character = self._character_detail_queryset(Character.objects.filter(pk=character_id)).first()
+		if character is None:
+			return None
+
+		return {
+			"id": character.id,
+			"name": character.name,
+			"status": character.status or "Unknown",
+			"status_label": character.get_status_display() if character.status else "Unknown",
+			"earth": character.earth_number.number if character.earth_number else None,
+			"aliases": [alter_ego.name for alter_ego in character.alter_egos.all()],
+			"teams": [
+				{
+					"name": membership.team.name,
+					"status": "Current" if membership.is_current_member else "Former",
+				}
+				for membership in character.team_memberships.all()
+			],
+			"movies": [
+				{
+					"id": movie.id,
+					"title": movie.title,
+					"year": movie.release_date.year,
+				}
+				for movie in character.movies.all()
+			],
+		}
+
+	def to_cytoscape_format(self, graph, characters=None, include_details=True):
 		character_lookup = {}
 		if characters is not None:
 			for character in characters:
 				character_lookup[character.id] = character
 
 		missing_ids = [node_id for node_id in graph.nodes if node_id not in character_lookup]
-		if missing_ids:
+		if include_details and missing_ids:
 			for character in self._character_detail_queryset(Character.objects.filter(pk__in=missing_ids)):
 				character_lookup[character.id] = character
 
@@ -430,15 +476,9 @@ class MCUGraphService:
 				alignment = character.alignment
 				status = character.status
 				photo_url = self._photo_url(character.photo_path)
-				details = self._character_detail_payload(character)
+				details = self._character_detail_payload(character) if include_details else None
 			else:
-				details = node_data.get("details") or {
-					"status": status or "Unknown",
-					"status_label": status or "Unknown",
-					"aliases": [],
-					"teams": [],
-					"movies": [],
-				}
+				details = node_data.get("details") if include_details else None
 
 			node_payload = {
 				"id": str(node_id),
@@ -446,12 +486,15 @@ class MCUGraphService:
 				"name": label or str(node_id),
 				"alignment": alignment,
 				"status": status,
+				"earth": node_data.get("earth") or (character.earth_number.number if character is not None and character.earth_number else None),
 				"phase_introduced": node_data.get("phase_introduced"),
 				"movie_introduced_id": node_data.get("movie_introduced_id"),
 				"latest_appearance_id": node_data.get("latest_appearance_id"),
 				"photo_url": photo_url or "",
-				"details": details,
 			}
+
+			if include_details and details is not None:
+				node_payload["details"] = details
 
 			classes = []
 			if alignment:

@@ -12,4 +12,5 @@ urlpatterns = [
 	path("graph/", views.graph_view, name="graph"),
 	path("graph/filter/", views.graph_filter_view, name="graph-filter"),
 	path("graph/path/", views.graph_path_view, name="graph-path"),
+	path("graph/character/<int:character_id>/", views.graph_character_detail_view, name="graph-character-detail"),
 ]
