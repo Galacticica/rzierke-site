@@ -63,7 +63,7 @@ class MCUGraphService:
 		return static(photo_path)
 
 	def _character_detail_queryset(self, queryset):
-		return queryset.select_related("movie_introduced", "latest_appearance").prefetch_related(
+		return queryset.select_related("movie_introduced", "latest_appearance", "earth_number").prefetch_related(
 			Prefetch("alter_egos", queryset=AlterEgo.objects.order_by("name")),
 			Prefetch(
 				"team_memberships",
@@ -79,6 +79,7 @@ class MCUGraphService:
 		return {
 			"status": status,
 			"status_label": status_label,
+			"earth": character.earth_number.number if character.earth_number else None,
 			"aliases": [alter_ego.name for alter_ego in character.alter_egos.all()],
 			"teams": [
 				{

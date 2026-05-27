@@ -4,7 +4,7 @@ import networkx as nx
 from networkx.exception import NetworkXNoPath
 
 from .graph_service import MCUGraphService
-from .models import AlterEgo, Character, Movie, Relationship, Team, TeamMembership
+from .models import AlterEgo, Character, Earth, Movie, Relationship, Team, TeamMembership
 
 
 class MCUGraphServiceTests(TestCase):
@@ -85,10 +85,12 @@ class MCUGraphServiceTests(TestCase):
 	def test_to_cytoscape_format_includes_character_details(self):
 		introducing_movie = self._movie("Introducing Movie", "2024-05-01")
 		later_movie = self._movie("Later Movie", "2025-06-01")
+		earth = Earth.objects.create(number="Earth-616")
 		character = self._character("Mockingbird")
 		character.status = "Alive"
+		character.earth_number = earth
 		character.movie_introduced = introducing_movie
-		character.save(update_fields=["status", "movie_introduced"])
+		character.save(update_fields=["status", "earth_number", "movie_introduced"])
 		introducing_movie.characters.add(character)
 		later_movie.characters.add(character)
 
@@ -104,6 +106,7 @@ class MCUGraphServiceTests(TestCase):
 		node = payload["nodes"][0]["data"]
 
 		self.assertEqual(node["details"]["status_label"], "Alive")
+		self.assertEqual(node["details"]["earth"], "Earth-616")
 		self.assertEqual(node["details"]["aliases"], ["Bobbi Morse"])
 		self.assertEqual(node["details"]["teams"], [{"name": "Avengers", "status": "Former"}])
 		self.assertEqual(

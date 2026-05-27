@@ -5,7 +5,7 @@ Created Date: 2026-05-25
 Author: Reagan Zierke
 Email: reaganzierke@gmail.com
 -----
-Last Modified: 2026-05-25 17:44:41
+Last Modified: 2026-05-26 20:48:37
 Modified By: Reagan Zierke
 -----
 Description: <<description>>
@@ -35,6 +35,7 @@ class Character(models.Model):
     latest_appearance = models.ForeignKey('Movie', on_delete=models.SET_NULL, null=True, blank=True, related_name='latest_characters')
     alignment = models.CharField(max_length=100, choices=ALIGNMENT_CHOICES, null=True, blank=True)
     status = models.CharField(max_length=100, choices=STATUS_CHOICES, null=True, blank=True)
+    earth_number = models.ForeignKey('Earth', on_delete=models.SET_NULL, null=True, blank=True, related_name='characters')
     photo_path = models.CharField(max_length=500, blank=True, help_text="Path to a photo of the character.")
 
     def __str__(self):
@@ -46,6 +47,13 @@ class Character(models.Model):
         if self.photo_path and not self.photo_path.startswith('connections/'):
             self.photo_path = 'connections/' + self.photo_path
         super().save(*args, **kwargs)
+    
+    
+class Earth(models.Model):
+    number = models.CharField(max_length=50, unique=True, null=False, blank=False)
+    
+    def __str__(self):
+        return self.number
     
 class AlterEgo(models.Model):
     character = models.ForeignKey(Character, on_delete=models.CASCADE, related_name='alter_egos')

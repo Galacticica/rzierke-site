@@ -15,7 +15,7 @@ from django.contrib import admin
 from django import forms
 from unfold.admin import ModelAdmin, TabularInline
 
-from .models import AlterEgo, Character, Movie, Relationship, Team, TeamMembership
+from .models import AlterEgo, Character, Movie, Relationship, Team, TeamMembership, Earth
 
 
 class OrderedChoiceAdminMixin:
@@ -139,3 +139,10 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 	list_display = ("character1", "character2", "relationship_type", "directional", "weight")
 	list_filter = ("relationship_type", "directional")
 	search_fields = ("character1__name", "character2__name", "notes")
+
+
+@admin.register(Earth)
+class EarthAdmin(ModelAdmin):
+	"""Admin configuration for Earth."""
+	list_display = ("number",)
+	search_fields = ("number",)

@@ -11,6 +11,7 @@ if (graphRoot) {
   const nodePopup    = document.getElementById('character-node-popup');
   const popupName    = nodePopup?.querySelector('[data-node-popup-name]');
   const popupStatus  = nodePopup?.querySelector('[data-node-popup-status]');
+  const popupEarth   = nodePopup?.querySelector('[data-node-popup-earth]');
   const popupAliases = nodePopup?.querySelector('[data-node-popup-aliases]');
   const popupTeams   = nodePopup?.querySelector('[data-node-popup-teams]');
   const popupMovies  = nodePopup?.querySelector('[data-node-popup-movies]');
@@ -218,9 +219,11 @@ if (graphRoot) {
     const data = node.data() || {};
     const details = data.details || {};
     const statusLabel = details.status_label || details.status || data.status || 'Unknown';
+    const earthLabel = details.earth || 'Unknown';
 
     if (popupName) popupName.textContent = data.label || data.name || 'Character';
     if (popupStatus) popupStatus.textContent = `Status: ${statusLabel}`;
+    if (popupEarth) popupEarth.textContent = `${earthLabel}`;
 
     renderPopupSection(
       popupAliases,
