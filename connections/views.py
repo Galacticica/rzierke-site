@@ -87,6 +87,7 @@ def graph_filter_view(request):
 	alignment = request.GET.getlist("alignment")
 	phase = request.GET.get("phase")
 	status = request.GET.getlist("status")
+	earth = request.GET.getlist("earth")
 	team = request.GET.getlist("team")
 	movie = request.GET.getlist("movie")
 	relationship_types = request.GET.getlist("relationship_types")
@@ -95,6 +96,7 @@ def graph_filter_view(request):
 		alignment=alignment,
 		phase=phase,
 		status=status,
+		earth=earth,
 		team=team,
 		movie=movie,
 		relationship_types=relationship_types,
@@ -104,6 +106,7 @@ def graph_filter_view(request):
 		"alignment": alignment,
 		"phase": phase,
 		"status": status,
+		"earth": earth,
 		"team": team,
 		"movie": movie,
 		"relationship_types": relationship_types,
