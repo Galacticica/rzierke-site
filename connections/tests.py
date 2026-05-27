@@ -82,6 +82,21 @@ class MCUGraphServiceTests(TestCase):
 		_, characters = self.graph_service.filtered_subgraph(movie=[str(later_movie.id)])
 		self.assertEqual(list(characters.values_list("name", flat=True)), ["Appears Later"])
 
+	def test_filtered_subgraph_filters_by_earth_number(self):
+		earth_616 = Earth.objects.create(number="Earth-616")
+		earth_838 = Earth.objects.create(number="Earth-838")
+
+		character_616 = self._character("Main Timeline")
+		character_616.earth_number = earth_616
+		character_616.save(update_fields=["earth_number"])
+
+		character_838 = self._character("Illuminati")
+		character_838.earth_number = earth_838
+		character_838.save(update_fields=["earth_number"])
+
+		_, characters = self.graph_service.filtered_subgraph(earth=["Earth-838"])
+		self.assertEqual(list(characters.values_list("name", flat=True)), ["Illuminati"])
+
 	def test_to_cytoscape_format_includes_character_details(self):
 		introducing_movie = self._movie("Introducing Movie", "2024-05-01")
 		later_movie = self._movie("Later Movie", "2025-06-01")

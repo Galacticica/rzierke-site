@@ -23,7 +23,8 @@ if (graphRoot) {
   const clearButton  = document.getElementById('path-clear-btn');
   const resetGraphButton = document.getElementById('reset-graph-btn');
   const fullscreenButton = document.getElementById('fullscreen-btn');
-  const filterInputs = Array.from(document.querySelectorAll('[data-graph-filter]'));
+  const earthFilterOptionsContainer = document.querySelector('[data-earth-filter-options]');
+  let filterInputs = [];
   const characterOptions = JSON.parse(document.getElementById('character-options').textContent);
   const nameToId = new Map(
     characterOptions.map((c) => [c.name.toLowerCase(), String(c.id)])
@@ -444,8 +445,69 @@ if (graphRoot) {
     statusBanner.textContent = '';
   };
   const setLoadState = (msg) => { if (loadState) loadState.textContent = msg; };
+  const refreshFilterInputs = () => {
+    filterInputs = Array.from(document.querySelectorAll('[data-graph-filter]'));
+  };
+
+  const earthValuesFromPayload = (payload) => {
+    const earths = new Set();
+
+    (payload?.nodes || []).forEach((node) => {
+      const earth = node?.data?.details?.earth;
+      if (typeof earth === 'string' && earth.trim()) {
+        earths.add(earth.trim());
+      }
+    });
+
+    return Array.from(earths).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  };
+
+  const updateEarthFilterOptions = (payload) => {
+    if (!earthFilterOptionsContainer) return;
+
+    const selected = new Set(
+      Array.from(earthFilterOptionsContainer.querySelectorAll('input[data-graph-filter="earth"]:checked'))
+        .map(input => input.value)
+    );
+    const earthValues = earthValuesFromPayload(payload);
+    earthFilterOptionsContainer.replaceChildren();
+
+    if (!earthValues.length) {
+      const empty = document.createElement('p');
+      empty.className = 'graph-node-popup__empty';
+      empty.textContent = 'No earths available.';
+      earthFilterOptionsContainer.appendChild(empty);
+      refreshFilterInputs();
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    earthValues.forEach((earth) => {
+      const option = document.createElement('label');
+      option.className = 'graph-filter-option';
+
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.dataset.graphFilter = 'earth';
+      input.value = earth;
+      if (selected.has(earth)) input.checked = true;
+
+      const text = document.createElement('span');
+      text.textContent = earth;
+
+      option.append(input, text);
+      fragment.appendChild(option);
+    });
+
+    earthFilterOptionsContainer.appendChild(fragment);
+    refreshFilterInputs();
+  };
+
+  refreshFilterInputs();
+
   const buildParams = () => {
     const params = new URLSearchParams();
+    refreshFilterInputs();
     filterInputs.forEach(input => {
       if (input.type === 'checkbox') {
         if (input.checked && input.value) params.append(input.dataset.graphFilter, input.value);
@@ -487,6 +549,7 @@ if (graphRoot) {
   const fetchGraph = async (url, label) => {
     setLoadState('Loading...');
     const payload = await fetchGraphPayload(url);
+    updateEarthFilterOptions(payload);
     applyElements(payload, label);
     clearStatus();
   };
@@ -684,10 +747,15 @@ document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
 
   // ─── Filter controls ───────────────────────────────────────────────────────
   const loadFilteredGraph = async () => {
+    refreshFilterInputs();
     const params = buildParams();
     const labelParts = [];
     filterInputs.forEach(input => {
-      if (!input.value) return;
+      if (input.type === 'checkbox') {
+        if (!input.checked || !input.value) return;
+      } else if (!input.value) {
+        return;
+      }
       const labelValue = input.dataset.graphFilterLabel || input.value;
       labelParts.push(`${input.dataset.graphFilter}: ${labelValue}`);
     });
@@ -698,13 +766,12 @@ document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
     await fetchGraph(query ? `/api/graph/filter/?${query}` : '/api/graph/filter/', label);
   };
 
-  filterInputs.forEach(input => {
-    input.addEventListener('change', () => {
+  document.addEventListener('change', (event) => {
+    if (!event.target.matches('[data-graph-filter]')) return;
       loadFilteredGraph().catch(err => {
         console.error(err);
         setStatus('Failed to load the filtered graph.', 'error');
       });
-    });
   });
 
   searchButton.addEventListener('click', () => {
@@ -724,6 +791,7 @@ document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
   });
 
   resetGraphButton?.addEventListener('click', () => {
+    refreshFilterInputs();
     filterInputs.forEach((input) => {
       if (input.type === 'checkbox') {
         input.checked = false;

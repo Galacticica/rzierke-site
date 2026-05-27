@@ -295,7 +295,7 @@ class MCUGraphService:
 		cache.set(cache_key, result, self.CACHE_TIMEOUT)
 		return result
 
-	def filtered_subgraph(self, alignment=None, phase=None, status=None, team=None, movie=None, relationship_types=None):
+	def filtered_subgraph(self, alignment=None, phase=None, status=None, earth=None, team=None, movie=None, relationship_types=None):
 		normalized_alignment = [
 			value.strip()
 			for value in (alignment or [])
@@ -304,6 +304,11 @@ class MCUGraphService:
 		normalized_status = [
 			value.strip()
 			for value in (status or [])
+			if isinstance(value, str) and value.strip()
+		]
+		normalized_earth = [
+			value.strip()
+			for value in (earth or [])
 			if isinstance(value, str) and value.strip()
 		]
 		normalized_team = [
@@ -331,6 +336,7 @@ class MCUGraphService:
 			f"{cache_key}:alignment={','.join(sorted(normalized_alignment)) or 'all'}"
 			f":phase={phase_value or 'all'}"
 			f":status={','.join(sorted(normalized_status)) or 'all'}"
+			f":earth={','.join(sorted(normalized_earth)) or 'all'}"
 			f":team={','.join(sorted(normalized_team)) or 'all'}"
 			f":movie={','.join(sorted(normalized_movie)) or 'all'}"
 			f":relationships={','.join(sorted(normalized_relationship_types)) or 'all'}"
@@ -341,6 +347,7 @@ class MCUGraphService:
 				normalized_alignment,
 				phase_value,
 				normalized_status,
+				normalized_earth,
 				normalized_team,
 				normalized_movie,
 			)
@@ -350,6 +357,7 @@ class MCUGraphService:
 			normalized_alignment,
 			phase_value,
 			normalized_status,
+			normalized_earth,
 			normalized_team,
 			normalized_movie,
 		)
@@ -371,7 +379,7 @@ class MCUGraphService:
 		cache.set(cache_key, graph.copy(), self.CACHE_TIMEOUT)
 		return graph, characters
 
-	def _filtered_character_queryset(self, alignment=None, phase=None, status=None, team=None, movie=None):
+	def _filtered_character_queryset(self, alignment=None, phase=None, status=None, earth=None, team=None, movie=None):
 		queryset = self._character_detail_queryset(Character.objects.all())
 
 		if alignment:
@@ -382,6 +390,9 @@ class MCUGraphService:
 
 		if status:
 			queryset = queryset.filter(status__in=status)
+
+		if earth:
+			queryset = queryset.filter(earth_number__number__in=earth)
 
 		if team:
 			queryset = queryset.filter(team_memberships__team__name__in=team)
