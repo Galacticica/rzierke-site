@@ -97,7 +97,7 @@
     padding: 1rem;
   }
 
-  .graph-node-popup__section + .graph-node-popup__section {
+  .graph-node-popup__section+.graph-node-popup__section {
     margin-top: 1rem;
   }
 
@@ -615,6 +615,14 @@
               </div>
               <div class="flex items-center gap-2">
                 <div id="graph-load-state" class="text-sm text-base-content/60">Loading graph...</div>
+                <button id="reset-graph-btn" type="button" class="btn btn-sm btn-circle btn-ghost" title="Reset graph"
+                  aria-label="Reset graph">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-14.9-3M4 15a8 8 0 0014.9 3" />
+                  </svg>
+                </button>
                 <div class="btn-group">
                   <button id="fullscreen-btn" class="btn btn-sm btn-circle btn-ghost" title="Enter fullscreen">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
@@ -623,18 +631,18 @@
                         d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
                     </svg>
                   </button>
-                  <button id="zoom-in-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom in">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM11 8v6M8 11h6" />
-                    </svg>
-                  </button>
                   <button id="zoom-fit-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom to fit">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                       stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5M9 9h6v6H9z" />
+                    </svg>
+                  </button>
+                  <button id="zoom-in-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom in">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM11 8v6M8 11h6" />
                     </svg>
                   </button>
                   <button id="zoom-out-btn" class="btn btn-sm btn-circle btn-ghost" title="Zoom out">
@@ -741,7 +749,7 @@
 </section>
 </section>
 
-  <script>
+<script>
   (function () {
     const FOOTER_MARGIN = 80; // pixels of space to keep above footer
 
@@ -832,6 +840,6 @@
     // Also recompute after clicks to handle cases where layout changed
     document.addEventListener('click', () => setTimeout(recomputeOpen, 10));
   })();
-  </script>
+</script>
 
 {% endblock %}
