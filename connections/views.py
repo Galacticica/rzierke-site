@@ -48,6 +48,10 @@ def _serialize_graph_response(graph, characters=None):
 	return JsonResponse(graph_service.to_cytoscape_format(graph, characters), safe=False)
 
 
+def _serialize_light_graph_response(graph, characters=None):
+	return JsonResponse(graph_service.to_cytoscape_format(graph, characters, include_details=False), safe=False)
+
+
 @require_GET
 def graph_page_view(request):
 	characters = Character.objects.select_related("movie_introduced").order_by(
@@ -67,8 +71,6 @@ def graph_page_view(request):
 			{
 				"id": character.id,
 				"name": character.name,
-				"movie_title": character.movie_introduced.title if character.movie_introduced else None,
-				"movie_release_date": character.movie_introduced.release_date.isoformat() if character.movie_introduced else None,
 			}
 			for character in characters
 		],
@@ -79,7 +81,7 @@ def graph_page_view(request):
 @require_GET
 def graph_view(request):
 	graph = graph_service.build_graph()
-	return JsonResponse(graph_service.to_cytoscape_format(graph))
+	return _serialize_light_graph_response(graph)
 
 
 @require_GET
@@ -101,7 +103,7 @@ def graph_filter_view(request):
 		movie=movie,
 		relationship_types=relationship_types,
 	)
-	payload = graph_service.to_cytoscape_format(graph, characters)
+	payload = graph_service.to_cytoscape_format(graph, characters, include_details=False)
 	payload["filters"] = {
 		"alignment": alignment,
 		"phase": phase,
@@ -112,6 +114,20 @@ def graph_filter_view(request):
 		"relationship_types": relationship_types,
 	}
 	return JsonResponse(payload)
+
+
+@require_GET
+def graph_character_detail_view(request, character_id):
+	try:
+		character_id = int(character_id)
+	except ValueError:
+		return _bad_request("'character_id' must be a numeric character ID.")
+
+	details = graph_service.character_detail_payload(character_id)
+	if details is None:
+		return JsonResponse({"error": "Character was not found."}, status=404)
+
+	return JsonResponse(details)
 
 
 @require_GET
