@@ -72,6 +72,35 @@ class GroupedCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
 	template_name = "connections/widgets/grouped_checkbox_select.html"
 
 
+class CharacterAdminForm(forms.ModelForm):
+	movies = forms.ModelMultipleChoiceField(
+		queryset=Movie.objects.order_by("release_date", "title"),
+		required=False,
+		widget=GroupedCheckboxSelectMultiple(attrs={"class": "character-movies-grouped-select"}),
+		label="Movies",
+		help_text="Select every movie this character appears in.",
+	)
+
+	class Meta:
+		model = Character
+		fields = (
+			"name",
+			"phase_introduced",
+			"movie_introduced",
+			"latest_appearance",
+			"alignment",
+			"status",
+			"earth_number",
+			"photo_path",
+			"movies",
+		)
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		if self.instance.pk:
+			self.fields["movies"].initial = self.instance.movies.all()
+
+
 class AlterEgoInline(TabularInline):
 	"""Editable alter egos on the Character admin page."""
 	model = AlterEgo
@@ -87,10 +116,15 @@ class TeamMembershipInline(TabularInline):
 @admin.register(Character)
 class CharacterAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 	"""Admin configuration for Character."""
+	form = CharacterAdminForm
 	list_display = ("name", "phase_introduced", "alignment", "status")
 	search_fields = ("name",)
 	list_filter = ("alignment", "status", "phase_introduced")
 	inlines = [AlterEgoInline, TeamMembershipInline]
+
+	def save_related(self, request, form, formsets, change):
+		super().save_related(request, form, formsets, change)
+		form.instance.movies.set(form.cleaned_data.get("movies", []))
 
 
 @admin.register(AlterEgo)

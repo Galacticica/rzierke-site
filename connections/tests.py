@@ -1,8 +1,10 @@
+from django.contrib import admin as django_admin
 from django.test import TestCase
 
 import networkx as nx
 from networkx.exception import NetworkXNoPath
 
+from .admin import CharacterAdmin, CharacterAdminForm
 from .graph_service import MCUGraphService
 from .models import AlterEgo, Character, Earth, Movie, Relationship, Team, TeamMembership
 
@@ -96,6 +98,32 @@ class MCUGraphServiceTests(TestCase):
 
 		_, characters = self.graph_service.filtered_subgraph(earth=["Earth-838"])
 		self.assertEqual(list(characters.values_list("name", flat=True)), ["Illuminati"])
+
+	def test_character_admin_form_syncs_movie_membership(self):
+		movie_one = self._movie("Movie One", "2024-01-01")
+		movie_two = self._movie("Movie Two", "2025-01-01")
+		character = self._character("Test Character")
+
+		form = CharacterAdminForm(
+			data={
+				"name": character.name,
+				"phase_introduced": "",
+				"movie_introduced": "",
+				"latest_appearance": "",
+				"alignment": "",
+				"status": "",
+				"earth_number": "",
+				"photo_path": "",
+				"movies": [str(movie_one.id), str(movie_two.id)],
+			},
+			instance=character,
+		)
+
+		self.assertTrue(form.is_valid(), form.errors)
+		form.save(commit=False)
+		CharacterAdmin(Character, django_admin.site).save_related(None, form, [], False)
+
+		self.assertEqual(list(character.movies.order_by("title").values_list("title", flat=True)), ["Movie One", "Movie Two"])
 
 	def test_to_cytoscape_format_includes_character_details(self):
 		introducing_movie = self._movie("Introducing Movie", "2024-05-01")
