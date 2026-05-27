@@ -20,6 +20,7 @@ if (graphRoot) {
   const toInput      = document.getElementById('path-to');
   const searchButton = document.getElementById('path-search-btn');
   const clearButton  = document.getElementById('path-clear-btn');
+  const resetGraphButton = document.getElementById('reset-graph-btn');
   const fullscreenButton = document.getElementById('fullscreen-btn');
   const filterInputs = Array.from(document.querySelectorAll('[data-graph-filter]'));
   const characterOptions = JSON.parse(document.getElementById('character-options').textContent);
@@ -665,9 +666,7 @@ document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
   });
 });
 
-// Update clearButton to also reset the custom dropdowns
-const originalClearHandler = clearButton.onclick;
-clearButton.addEventListener('click', () => {
+  const resetPathSelectors = () => {
   ['from', 'to'].forEach(side => {
     document.getElementById(`path-${side}`).value = '';
     document.getElementById(`path-${side}-label`).textContent = 'Select a character';
@@ -676,8 +675,9 @@ clearButton.addEventListener('click', () => {
     dd.querySelector(`[data-character-search="${side}"]`).value = '';
     dd.querySelectorAll(`[data-character-select="${side}"]`).forEach(o => o.style.display = '');
     dd.querySelectorAll(`[data-character-optgroup="${side}"]`).forEach(g => g.style.display = '');
+    dd.open = false;
   });
-});
+  };
 
   // ─── Filter controls ───────────────────────────────────────────────────────
   const loadFilteredGraph = async () => {
@@ -712,12 +712,29 @@ clearButton.addEventListener('click', () => {
   });
 
   clearButton.addEventListener('click', () => {
-    fromInput.value = '';
-    toInput.value   = '';
+    resetPathSelectors();
     clearStatus();
     loadFilteredGraph().catch(err => {
       console.error(err);
       setStatus('Failed to restore the graph.', 'error');
+    });
+  });
+
+  resetGraphButton?.addEventListener('click', () => {
+    filterInputs.forEach((input) => {
+      if (input.type === 'checkbox') {
+        input.checked = false;
+      } else {
+        input.value = '';
+      }
+    });
+
+    resetPathSelectors();
+    hideNodePopup();
+    clearStatus();
+    loadFilteredGraph().catch(err => {
+      console.error(err);
+      setStatus('Failed to reset the graph.', 'error');
     });
   });
 
