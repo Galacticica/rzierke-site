@@ -4,7 +4,7 @@ from django.test import TestCase
 import networkx as nx
 from networkx.exception import NetworkXNoPath
 
-from .admin import CharacterAdmin, CharacterAdminForm
+from .admin import CharacterAdmin, CharacterAdminForm, RelationshipAdmin
 from .graph_service import MCUGraphService
 from .models import AlterEgo, Character, Earth, Movie, Relationship, Team, TeamMembership
 
@@ -124,6 +124,42 @@ class MCUGraphServiceTests(TestCase):
 		CharacterAdmin(Character, django_admin.site).save_related(None, form, [], False)
 
 		self.assertEqual(list(character.movies.order_by("title").values_list("title", flat=True)), ["Movie One", "Movie Two"])
+
+	def test_character_admin_sorts_earth_choices_alphabetically(self):
+		Earth.objects.create(number="Earth-838")
+		Earth.objects.create(number="Earth-616")
+		Earth.objects.create(number="Earth-1610")
+
+		form_field = CharacterAdmin(Character, django_admin.site).formfield_for_foreignkey(
+			Character._meta.get_field("earth_number"),
+			None,
+		)
+
+		self.assertEqual(
+			list(form_field.queryset.values_list("number", flat=True)),
+			["Earth-1610", "Earth-616", "Earth-838"],
+		)
+
+	def test_relationship_admin_groups_characters_by_every_movie_and_shows_earth(self):
+		movie_one = self._movie("Movie One", "2024-01-01")
+		movie_two = self._movie("Movie Two", "2025-01-01")
+		earth = Earth.objects.create(number="Earth-616")
+		character = self._character("Test Character")
+		character.earth_number = earth
+		character.save(update_fields=["earth_number"])
+		movie_one.characters.add(character)
+		movie_two.characters.add(character)
+
+		form_field = RelationshipAdmin(Relationship, django_admin.site).formfield_for_foreignkey(
+			Relationship._meta.get_field("character1"),
+			None,
+		)
+
+		grouped_choices = {label: choices for label, choices in form_field.choices}
+		self.assertIn("Movie One", grouped_choices)
+		self.assertIn("Movie Two", grouped_choices)
+		self.assertEqual(grouped_choices["Movie One"], [(character.id, "Test Character (Earth-616)")])
+		self.assertEqual(grouped_choices["Movie Two"], [(character.id, "Test Character (Earth-616)")])
 
 	def test_to_cytoscape_format_includes_character_details(self):
 		introducing_movie = self._movie("Introducing Movie", "2024-05-01")
