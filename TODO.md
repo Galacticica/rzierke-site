@@ -11,3 +11,4 @@
  -->
 
 - Have claude make filter logic use django filters and querysets and see if it speeds up load time
+- Figure out why agvance graph loads so much quicker
