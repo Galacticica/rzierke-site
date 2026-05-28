@@ -15,7 +15,7 @@ from itertools import pairwise
 
 import networkx as nx
 from django.core.cache import cache
-from django.db.models import Prefetch
+from django.db.models import Exists, OuterRef, Prefetch
 from django.templatetags.static import static
 
 from .models import AlterEgo, Character, Movie, Relationship, TeamMembership
@@ -359,25 +359,25 @@ class MCUGraphService:
 		)
 		cached_graph = cache.get(cache_key)
 		if cached_graph is not None:
-			characters = self._filtered_character_queryset(
+			characters = list(self._filtered_character_queryset(
 				normalized_alignment,
 				phase_value,
 				normalized_status,
 				normalized_earth,
 				normalized_team,
 				normalized_movie,
-			)
+			))
 			return cached_graph.copy(), characters
 
-		characters = self._filtered_character_queryset(
+		characters = list(self._filtered_character_queryset(
 			normalized_alignment,
 			phase_value,
 			normalized_status,
 			normalized_earth,
 			normalized_team,
 			normalized_movie,
-		)
-		character_ids = list(characters.values_list("id", flat=True))
+		))
+		character_ids = [c.id for c in characters]
 
 		graph = nx.DiGraph()
 		if character_ids:
@@ -412,12 +412,14 @@ class MCUGraphService:
 			queryset = queryset.filter(earth_number__number__in=earth)
 
 		if team:
-			queryset = queryset.filter(team_memberships__team__name__in=team)
+			team_memberships = TeamMembership.objects.filter(character_id=OuterRef("pk"), team_id__in=team)
+			queryset = queryset.filter(Exists(team_memberships))
 
 		if movie:
-			queryset = queryset.filter(movies__id__in=movie)
+			movie_memberships = Movie.characters.through.objects.filter(character_id=OuterRef("pk"), movie_id__in=movie)
+			queryset = queryset.filter(Exists(movie_memberships))
 
-		return queryset.distinct().order_by("name")
+		return queryset.order_by("name")
 
 	def character_detail_payload(self, character_id):
 		character = self._character_detail_queryset(Character.objects.filter(pk=character_id)).first()

@@ -3,6 +3,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
+from django.core.cache import cache
 
 from networkx.exception import NetworkXNoPath, NodeNotFound
 
@@ -96,6 +97,21 @@ def graph_filter_view(request):
 	movie = request.GET.getlist("movie")
 	relationship_types = request.GET.getlist("relationship_types")
 
+	version = graph_service._get_cache_version()
+	payload_cache_key = (
+		f"connections:filter_payload:v{version}"
+		f":a={','.join(sorted(alignment)) or '-'}"
+		f":p={phase or '-'}"
+		f":s={','.join(sorted(status)) or '-'}"
+		f":e={','.join(sorted(earth)) or '-'}"
+		f":t={','.join(sorted(team)) or '-'}"
+		f":m={','.join(sorted(movie)) or '-'}"
+		f":r={','.join(sorted(relationship_types)) or '-'}"
+	)
+	cached_payload = cache.get(payload_cache_key)
+	if cached_payload is not None:
+		return JsonResponse(cached_payload)
+
 	graph, characters = graph_service.filtered_subgraph(
 		alignment=alignment,
 		phase=phase,
@@ -115,6 +131,7 @@ def graph_filter_view(request):
 		"movie": movie,
 		"relationship_types": relationship_types,
 	}
+	cache.set(payload_cache_key, payload, graph_service.CACHE_TIMEOUT)
 	return JsonResponse(payload)
 
 

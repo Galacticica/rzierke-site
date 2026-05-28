@@ -85,6 +85,17 @@ class MCUGraphServiceTests(TestCase):
 		_, characters = self.graph_service.filtered_subgraph(movie=[str(later_movie.id)])
 		self.assertEqual(list(characters.values_list("name", flat=True)), ["Appears Later"])
 
+	def test_filtered_subgraph_filters_by_team_membership(self):
+		team_one = Team.objects.create(name="Team One")
+		team_two = Team.objects.create(name="Team Two")
+		character = self._character("Team Member")
+
+		TeamMembership.objects.create(character=character, team=team_one)
+		TeamMembership.objects.create(character=character, team=team_two)
+
+		_, characters = self.graph_service.filtered_subgraph(team=[str(team_one.id)])
+		self.assertEqual(list(characters.values_list("name", flat=True)), ["Team Member"])
+
 	def test_filtered_subgraph_filters_by_earth_number(self):
 		earth_616 = Earth.objects.create(number="Earth-616")
 		earth_838 = Earth.objects.create(number="Earth-838")
