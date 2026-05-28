@@ -23,6 +23,7 @@ class OrderedChoiceAdminMixin:
 
 	character_ordering = ("movie_introduced__release_date", "phase_introduced", "name")
 	movie_ordering = ("release_date", "title")
+	earth_ordering = ("number",)
 	no_first_appearance_label = "No first appearance"
 
 	def _grouped_character_choices(self, queryset):
@@ -51,6 +52,8 @@ class OrderedChoiceAdminMixin:
 			kwargs["queryset"] = Character.objects.order_by(*self.character_ordering)
 		elif remote_model is Movie:
 			kwargs["queryset"] = Movie.objects.order_by(*self.movie_ordering)
+		elif remote_model is Earth:
+			kwargs["queryset"] = Earth.objects.order_by(*self.earth_ordering)
 		form_field = super().formfield_for_foreignkey(db_field, request, **kwargs)
 		if remote_model is Character:
 			form_field.choices = self._grouped_character_choices(form_field.queryset)
@@ -173,6 +176,67 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 	list_display = ("character1", "character2", "relationship_type", "directional", "weight")
 	list_filter = ("relationship_type", "directional")
 	search_fields = ("character1__name", "character2__name", "notes")
+
+	def _relationship_character_label(self, character):
+		earth = character.earth_number.number if character.earth_number else None
+		return f"{character.name} ({earth})" if earth else character.name
+
+	def _relationship_character_choices(self, queryset):
+		grouped_choices = {}
+
+		for character in queryset.select_related("earth_number", "movie_introduced").prefetch_related("movies"):
+			related_movies = list(character.movies.all())
+			if character.movie_introduced and character.movie_introduced not in related_movies:
+				related_movies.append(character.movie_introduced)
+
+			if not related_movies:
+				group = grouped_choices.setdefault(
+					None,
+					{
+						"movie": None,
+						"label": "No Movie Appearance",
+						"choices": [],
+					},
+				)
+				group["choices"].append((character.pk, self._relationship_character_label(character)))
+				continue
+
+			seen_movie_ids = set()
+			for movie in sorted(related_movies, key=lambda item: (item.release_date, item.title)):
+				if movie.pk in seen_movie_ids:
+					continue
+				seen_movie_ids.add(movie.pk)
+				group = grouped_choices.setdefault(
+					movie.pk,
+					{
+						"movie": movie,
+						"label": movie.title,
+						"choices": [],
+					},
+				)
+				group["choices"].append((character.pk, self._relationship_character_label(character)))
+
+		sorted_groups = sorted(
+			grouped_choices.values(),
+			key=lambda group: (
+				group["movie"] is None,
+				group["movie"].release_date if group["movie"] is not None else None,
+				group["movie"].title if group["movie"] is not None else group["label"],
+			),
+		)
+		return [(group["label"], group["choices"]) for group in sorted_groups]
+
+	def formfield_for_foreignkey(self, db_field, request, **kwargs):
+		remote_model = getattr(db_field.remote_field, "model", None)
+		if remote_model is Character:
+			kwargs["queryset"] = Character.objects.select_related("earth_number", "movie_introduced").prefetch_related("movies").order_by(
+				"earth_number__number",
+				"name",
+			)
+			form_field = super(OrderedChoiceAdminMixin, self).formfield_for_foreignkey(db_field, request, **kwargs)
+			form_field.choices = self._relationship_character_choices(form_field.queryset)
+			return form_field
+		return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(Earth)
