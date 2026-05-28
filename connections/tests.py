@@ -126,6 +126,22 @@ class MCUGraphServiceTests(TestCase):
 
 		self.assertEqual(list(character.movies.order_by("title").values_list("title", flat=True)), ["Movie One", "Movie Two"])
 
+	def test_character_admin_movie_selects_are_chronological(self):
+		later_movie = self._movie("Later Movie", "2025-01-01")
+		earliest_movie = self._movie("Earliest Movie", "2023-01-01")
+		middle_movie = self._movie("Middle Movie", "2024-01-01")
+
+		form = CharacterAdminForm()
+
+		self.assertEqual(
+			list(form.fields["movie_introduced"].queryset.values_list("title", flat=True)),
+			["Earliest Movie", "Middle Movie", "Later Movie"],
+		)
+		self.assertEqual(
+			list(form.fields["latest_appearance"].queryset.values_list("title", flat=True)),
+			["Earliest Movie", "Middle Movie", "Later Movie"],
+		)
+
 	def test_character_admin_sorts_earth_choices_alphabetically(self):
 		Earth.objects.create(number="Earth-838")
 		Earth.objects.create(number="Earth-616")

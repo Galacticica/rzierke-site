@@ -1,0 +1,36 @@
+{% with widget_id=widget.attrs.id %}
+<div class="movie-search-select" data-movie-search-select>
+  <details class="movie-search-select__dropdown">
+    <summary class="movie-search-select__summary" aria-label="Choose a movie">
+      <span class="movie-search-select__label placeholder" data-movie-search-label>Select a movie</span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="movie-search-select__chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+      </svg>
+    </summary>
+    <div class="movie-search-select__panel">
+      <input type="text" class="movie-search-select__search" data-movie-search-input placeholder="Search movies…">
+      <select name="{{ widget.name }}"{% if widget_id %} id="{{ widget_id }}"{% endif %} class="movie-search-select__native" hidden>
+        {% for group_name, group_options, group_index in widget.optgroups %}
+          {% for option in group_options %}
+            <option value="{{ option.value|stringformat:'s' }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        {% endfor %}
+      </select>
+      <div class="movie-search-select__options" data-movie-search-options>
+        {% for group_name, group_options, group_index in widget.optgroups %}
+          <div class="movie-search-select__group" data-movie-search-group>
+            {% if group_name %}
+              <div class="movie-search-select__group-label">{{ group_name }}</div>
+            {% endif %}
+            {% for option in group_options %}
+              <button type="button" class="movie-search-select__option{% if option.selected %} is-selected{% endif %}" data-movie-search-option data-value="{{ option.value|stringformat:'s' }}" data-label="{{ option.label }}">
+                <span>{{ option.label }}</span>
+              </button>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </details>
+</div>
+{% endwith %}
