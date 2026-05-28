@@ -425,10 +425,13 @@ if (graphRoot) {
   let d3IdMap = {};
   let pinnedId = null;
   let nodeDragStarted = false;
+  let _simRafId = null;
+  let _photoLoadToken = 0;
 
   function getD3Node(id) { return d3IdMap[id] || null; }
 
   function initD3Sim(alpha = 1.0) {
+    if (_simRafId !== null) { cancelAnimationFrame(_simRafId); _simRafId = null; }
     if (d3Sim) { d3Sim.stop(); d3Sim = null; }
 
     d3Nodes = cy.nodes().map(n => ({ id: n.id(), x: n.position('x'), y: n.position('y') }));
@@ -457,9 +460,15 @@ if (graphRoot) {
       .alphaTarget(0)
       .alpha(alpha)
       .on('tick', () => {
-        cy.nodes().forEach(node => {
-          const d = d3IdMap[node.id()];
-          if (d) node.position({ x: d.x, y: d.y });
+        if (_simRafId !== null) return;
+        _simRafId = requestAnimationFrame(() => {
+          _simRafId = null;
+          cy.batch(() => {
+            cy.nodes().forEach(node => {
+              const d = d3IdMap[node.id()];
+              if (d) node.position({ x: d.x, y: d.y });
+            });
+          });
         });
       });
   }
@@ -590,11 +599,24 @@ if (graphRoot) {
 
   const applyElements = (payload, label) => {
     activePayload = payload;
+    if (_simRafId !== null) { cancelAnimationFrame(_simRafId); _simRafId = null; }
     if (d3Sim) { d3Sim.stop(); d3Sim = null; }
     d3Nodes = null; d3IdMap = {}; pinnedId = null;
     hideNodePopup();
 
-    cy.json({ elements: payload });
+    const photoMap = new Map(
+      (payload.nodes || []).flatMap(node =>
+        node.data?.photo_url && node.data?.id != null
+          ? [[String(node.data.id), node.data.photo_url]]
+          : []
+      )
+    );
+    const strippedPayload = photoMap.size === 0 ? payload : {
+      nodes: payload.nodes.map(node => ({ ...node, data: { ...node.data, photo_url: 'none' } })),
+      edges: payload.edges || [],
+    };
+
+    cy.json({ elements: strippedPayload });
 
     const n = payload.nodes.length;
     const baseRadius = Math.max(300, Math.sqrt(n) * 130);
@@ -610,6 +632,24 @@ if (graphRoot) {
 
     setLoadState(`${payload.nodes.length} nodes, ${payload.edges.length} edges`);
     if (summary) summary.textContent = label;
+
+    if (photoMap.size > 0) {
+      const token = ++_photoLoadToken;
+      const loadPhotos = () => {
+        if (token !== _photoLoadToken) return;
+        if (!d3Sim || d3Sim.alpha() < 0.08) {
+          cy.batch(() => {
+            cy.nodes().forEach(node => {
+              const url = photoMap.get(node.id());
+              if (url) node.data('photo_url', url);
+            });
+          });
+        } else {
+          setTimeout(loadPhotos, 300);
+        }
+      };
+      setTimeout(loadPhotos, 500);
+    }
   };
 
   const fetchGraph = async (url, label) => {
