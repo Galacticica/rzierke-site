@@ -75,7 +75,27 @@ class GroupedCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
 	template_name = "connections/widgets/grouped_checkbox_select.html"
 
 
+class SearchableMovieSelect(forms.Select):
+	template_name = "connections/widgets/searchable_movie_select.html"
+
+	class Media:
+		css = {"all": ("connections/movie_search_select.css",)}
+		js = ("connections/movie_search_select.js",)
+
+
 class CharacterAdminForm(forms.ModelForm):
+	movie_introduced = forms.ModelChoiceField(
+		queryset=Movie.objects.order_by("release_date", "title"),
+		required=False,
+		widget=SearchableMovieSelect,
+		label="First appearance movie",
+	)
+	latest_appearance = forms.ModelChoiceField(
+		queryset=Movie.objects.order_by("release_date", "title"),
+		required=False,
+		widget=SearchableMovieSelect,
+		label="Latest appearance movie",
+	)
 	movies = forms.ModelMultipleChoiceField(
 		queryset=Movie.objects.order_by("release_date", "title"),
 		required=False,
