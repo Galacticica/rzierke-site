@@ -426,7 +426,6 @@ if (graphRoot) {
   let pinnedId = null;
   let nodeDragStarted = false;
   let _simRafId = null;
-  let _photoLoadToken = 0;
 
   function getD3Node(id) { return d3IdMap[id] || null; }
 
@@ -447,7 +446,7 @@ if (graphRoot) {
     const BASE_LINK_DIST = 350;
     const chargeStrength = isHuge ? BASE_CHARGE * 0.15 : isLarge ? BASE_CHARGE * 0.5 : BASE_CHARGE;
     const linkDist       = isHuge ? BASE_LINK_DIST * 0.3 : isLarge ? BASE_LINK_DIST * 0.7 : BASE_LINK_DIST;
-    const alphaDecay     = isHuge ? 0.06 : isLarge ? 0.04 : 0.02;
+    const alphaDecay     = isHuge ? 0.08 : isLarge ? 0.06 : 0.04;
 
     d3Sim = d3.forceSimulation(d3Nodes)
       .force('link',      d3.forceLink(edgeData).id(d => d.id).distance(linkDist))
@@ -604,19 +603,7 @@ if (graphRoot) {
     d3Nodes = null; d3IdMap = {}; pinnedId = null;
     hideNodePopup();
 
-    const photoMap = new Map(
-      (payload.nodes || []).flatMap(node =>
-        node.data?.photo_url && node.data?.id != null
-          ? [[String(node.data.id), node.data.photo_url]]
-          : []
-      )
-    );
-    const strippedPayload = photoMap.size === 0 ? payload : {
-      nodes: payload.nodes.map(node => ({ ...node, data: { ...node.data, photo_url: 'none' } })),
-      edges: payload.edges || [],
-    };
-
-    cy.json({ elements: strippedPayload });
+    cy.json({ elements: payload });
 
     const n = payload.nodes.length;
     const baseRadius = Math.max(300, Math.sqrt(n) * 130);
@@ -633,23 +620,6 @@ if (graphRoot) {
     setLoadState(`${payload.nodes.length} nodes, ${payload.edges.length} edges`);
     if (summary) summary.textContent = label;
 
-    if (photoMap.size > 0) {
-      const token = ++_photoLoadToken;
-      const loadPhotos = () => {
-        if (token !== _photoLoadToken) return;
-        if (!d3Sim || d3Sim.alpha() < 0.08) {
-          cy.batch(() => {
-            cy.nodes().forEach(node => {
-              const url = photoMap.get(node.id());
-              if (url) node.data('photo_url', url);
-            });
-          });
-        } else {
-          setTimeout(loadPhotos, 300);
-        }
-      };
-      setTimeout(loadPhotos, 500);
-    }
   };
 
   const fetchGraph = async (url, label) => {

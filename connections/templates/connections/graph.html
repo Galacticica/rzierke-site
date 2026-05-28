@@ -528,7 +528,7 @@
               <div class="graph-filter-dropdown-panel">
                 {% for team in team_choices %}
                 <label class="graph-filter-option">
-                  <input type="checkbox" data-graph-filter="team" value="{{ team.name }}">
+                  <input type="checkbox" data-graph-filter="team" value="{{ team.id }}">
                   <span>{{ team.name }}</span>
                 </label>
                 {% endfor %}
