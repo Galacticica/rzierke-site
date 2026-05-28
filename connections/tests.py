@@ -7,6 +7,7 @@ from networkx.exception import NetworkXNoPath
 from .admin import CharacterAdmin, CharacterAdminForm, RelationshipAdmin
 from .graph_service import MCUGraphService
 from .models import AlterEgo, Character, Earth, Movie, Relationship, Team, TeamMembership
+from .views import _group_character_options
 
 
 class MCUGraphServiceTests(TestCase):
@@ -139,6 +140,17 @@ class MCUGraphServiceTests(TestCase):
 			list(form_field.queryset.values_list("number", flat=True)),
 			["Earth-1610", "Earth-616", "Earth-838"],
 		)
+
+	def test_group_character_options_includes_earth_display_name(self):
+		earth = Earth.objects.create(number="Earth-616")
+		movie = self._movie("Movie One", "2024-01-01")
+		character = self._character("Test Character")
+		character.earth_number = earth
+		character.movie_introduced = movie
+		character.save(update_fields=["earth_number", "movie_introduced"])
+
+		grouped_options = _group_character_options(Character.objects.select_related("movie_introduced", "earth_number").order_by("name"))
+		self.assertEqual(grouped_options[0]["characters"][0]["display_name"], "Test Character (Earth-616)")
 
 	def test_relationship_admin_groups_characters_by_every_movie_and_shows_earth(self):
 		movie_one = self._movie("Movie One", "2024-01-01")

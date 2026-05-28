@@ -31,6 +31,7 @@ def _group_character_options(characters):
 			{
 				"id": character.id,
 				"name": character.name,
+				"display_name": f"{character.name} ({character.earth_number.number})" if character.earth_number else character.name,
 			}
 		)
 
@@ -54,7 +55,7 @@ def _serialize_light_graph_response(graph, characters=None):
 
 @require_GET
 def graph_page_view(request):
-	characters = Character.objects.select_related("movie_introduced").order_by(
+	characters = Character.objects.select_related("movie_introduced", "earth_number").order_by(
 		"movie_introduced__release_date",
 		"phase_introduced",
 		"name",
@@ -71,6 +72,7 @@ def graph_page_view(request):
 			{
 				"id": character.id,
 				"name": character.name,
+				"display_name": f"{character.name} ({character.earth_number.number})" if character.earth_number else character.name,
 			}
 			for character in characters
 		],

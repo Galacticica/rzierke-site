@@ -17,6 +17,8 @@ if (graphRoot) {
   const popupMovies  = nodePopup?.querySelector('[data-node-popup-movies]');
   const popupHandle  = nodePopup?.querySelector('[data-node-popup-handle]');
   const popupClose   = nodePopup?.querySelector('[data-node-popup-close]');
+  const characterSearchInput = document.querySelector('[data-character-search="single"]');
+  const characterSearchDropdown = document.getElementById('character-search-dropdown');
   const fromInput    = document.getElementById('path-from');
   const toInput      = document.getElementById('path-to');
   const searchButton = document.getElementById('path-search-btn');
@@ -26,9 +28,14 @@ if (graphRoot) {
   const earthFilterOptionsContainer = document.querySelector('[data-earth-filter-options]');
   let filterInputs = [];
   const characterOptions = JSON.parse(document.getElementById('character-options').textContent);
-  const nameToId = new Map(
-    characterOptions.map((c) => [c.name.toLowerCase(), String(c.id)])
-  );
+  const nameToId = new Map();
+  characterOptions.forEach((character) => {
+    const id = String(character.id);
+    nameToId.set(character.name.toLowerCase(), id);
+    if (character.display_name) {
+      nameToId.set(character.display_name.toLowerCase(), id);
+    }
+  });
   const characterDetailCache = new Map();
   const characterDetailRequests = new Map();
   let activePayload = { nodes: [], edges: [] };
@@ -80,7 +87,7 @@ if (graphRoot) {
   const cy = cytoscape({
     container: graphRoot,
     elements: [],
-    wheelSensitivity: 0.75,
+    wheelSensitivity: 0.9,
     boxSelectionEnabled: false,
     layout: { name: 'preset' },
     style: [
@@ -672,23 +679,68 @@ if (graphRoot) {
     return { nodes, edges };
   };
 
+  const findCharacterByInput = (input) => {
+    if (!input) return null;
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    if (/^\d+$/.test(trimmed)) {
+      return characterOptions.find((character) => String(character.id) === trimmed) || null;
+    }
+
+    const normalized = trimmed.toLowerCase();
+    return characterOptions.find((character) => {
+      const nameMatch = character.name?.toLowerCase() === normalized;
+      const displayMatch = character.display_name?.toLowerCase() === normalized;
+      return nameMatch || displayMatch;
+    }) || null;
+  };
+
   // ─── Path search ───────────────────────────────────────────────────────────
   const getCharacterId = (input) => {
+    const match = findCharacterByInput(input);
+    if (match) return String(match.id);
     if (!input) return '';
-    const trimmed = input.trim();
-    if (/^\d+$/.test(trimmed)) return trimmed;
-    const direct = characterOptions.find(
-      c => c.name.toLowerCase() === trimmed.toLowerCase()
-    );
-    if (direct) return String(direct.id);
-    return nameToId.get(trimmed.toLowerCase()) || '';
+    return nameToId.get(input.trim().toLowerCase()) || '';
+  };
+
+  const zoomToCharacter = async (characterId) => {
+    if (!characterId) {
+      setStatus('Select a valid character from the suggestions.', 'warning');
+      return;
+    }
+
+    let node = cy.getElementById(String(characterId));
+    if (!node || node.empty()) {
+      const fullGraph = await getFullGraphPayload();
+      const hasCharacter = fullGraph.nodes.some((entry) => String(entry.data.id) === String(characterId));
+      if (!hasCharacter) {
+        setStatus('That character is not available in the current graph.', 'warning');
+        return;
+      }
+
+      applyElements(fullGraph, 'Showing the full graph.');
+      node = cy.getElementById(String(characterId));
+    }
+
+    if (!node || node.empty()) {
+      setStatus('That character could not be found in the graph.', 'warning');
+      return;
+    }
+
+    cy.animate({
+      fit: { eles: node, padding: 120 },
+      duration: 650,
+      easing: 'ease-out',
+    });
+    setStatus(`Zoomed to ${node.data('label') || node.data('name')}.`, 'success');
   };
 
   const runPathSearch = async () => {
     const fromId = getCharacterId(fromInput.value);
     const toId   = getCharacterId(toInput.value);
     if (!fromId || !toId) {
-      setStatus('Select two valid character names from the suggestions.', 'warning');
+      setStatus('Select two valid character labels from the suggestions.', 'warning');
       return;
     }
     setStatus('Searching for the shortest path...', 'info');
@@ -722,7 +774,7 @@ if (graphRoot) {
   };
 
   // ─── Zoom controls ─────────────────────────────────────────────────────────
-  const ZOOM_FACTOR = 1.2;
+  const ZOOM_FACTOR = 1.12;
   document.getElementById('zoom-fit-btn')?.addEventListener('click', () => cy.fit(cy.elements(), 60));
   document.getElementById('zoom-in-btn')?.addEventListener('click', () => {
     const c = { x: cy.width() / 2, y: cy.height() / 2 };
@@ -804,6 +856,19 @@ document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
   });
   };
 
+  const resetCharacterSearch = () => {
+    if (characterSearchInput) characterSearchInput.value = '';
+    if (characterSearchDropdown) {
+      characterSearchDropdown.querySelectorAll('[data-character-select="single"]').forEach((option) => {
+        option.style.display = '';
+      });
+      characterSearchDropdown.querySelectorAll('[data-character-optgroup="single"]').forEach((group) => {
+        group.style.display = '';
+      });
+      characterSearchDropdown.removeAttribute('open');
+    }
+  };
+
   // ─── Filter controls ───────────────────────────────────────────────────────
   const loadFilteredGraph = async () => {
     refreshFilterInputs();
@@ -840,6 +905,37 @@ document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
     });
   });
 
+  characterSearchInput?.addEventListener('click', (event) => event.stopPropagation());
+  characterSearchInput?.addEventListener('input', () => {
+    const query = characterSearchInput.value.toLowerCase();
+    characterSearchDropdown?.querySelectorAll('[data-character-optgroup="single"]').forEach((group) => {
+      let anyVisible = false;
+      group.querySelectorAll('[data-character-select="single"]').forEach((option) => {
+        const match = option.dataset.characterName.toLowerCase().includes(query);
+        option.style.display = match ? '' : 'none';
+        if (match) anyVisible = true;
+      });
+      group.style.display = anyVisible ? '' : 'none';
+    });
+  });
+
+  characterSearchDropdown?.querySelectorAll('[data-character-select="single"]').forEach((option) => {
+    option.addEventListener('click', () => {
+      if (characterSearchInput) characterSearchInput.value = '';
+      characterSearchDropdown.querySelectorAll('[data-character-select="single"]').forEach((entry) => {
+        entry.style.display = '';
+      });
+      characterSearchDropdown.querySelectorAll('[data-character-optgroup="single"]').forEach((group) => {
+        group.style.display = '';
+      });
+      characterSearchDropdown.removeAttribute('open');
+      zoomToCharacter(option.dataset.characterId).catch((error) => {
+        console.error(error);
+        setStatus('Character search failed.', 'error');
+      });
+    });
+  });
+
   clearButton.addEventListener('click', () => {
     resetPathSelectors();
     clearStatus();
@@ -860,6 +956,7 @@ document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
     });
 
     resetPathSelectors();
+    resetCharacterSearch();
     hideNodePopup();
     clearStatus();
     loadFilteredGraph().catch(err => {
