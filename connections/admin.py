@@ -87,13 +87,13 @@ class CharacterAdminForm(forms.ModelForm):
 	movie_introduced = forms.ModelChoiceField(
 		queryset=Movie.objects.order_by("release_date", "title"),
 		required=False,
-		widget=SearchableMovieSelect,
+		widget=SearchableMovieSelect(),
 		label="First appearance movie",
 	)
 	latest_appearance = forms.ModelChoiceField(
 		queryset=Movie.objects.order_by("release_date", "title"),
 		required=False,
-		widget=SearchableMovieSelect,
+		widget=SearchableMovieSelect(),
 		label="Latest appearance movie",
 	)
 	movies = forms.ModelMultipleChoiceField(

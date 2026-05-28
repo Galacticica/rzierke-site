@@ -1,10 +1,11 @@
-document.querySelectorAll('[data-movie-search-select]').forEach((root) => {
-  const dropdown = root.querySelector('.movie-search-select__dropdown');
-  const searchInput = root.querySelector('[data-movie-search-input]');
-  const label = root.querySelector('[data-movie-search-label]');
-  const nativeSelect = root.querySelector('.movie-search-select__native');
-  const optionButtons = Array.from(root.querySelectorAll('[data-movie-search-option]'));
-  const groups = Array.from(root.querySelectorAll('[data-movie-search-group]'));
+const initMovieSearchSelect = () => {
+  document.querySelectorAll('[data-movie-search-select]').forEach((root) => {
+    const dropdown = root.querySelector('.movie-search-select__dropdown');
+    const searchInput = root.querySelector('[data-movie-search-input]');
+    const label = root.querySelector('[data-movie-search-label]');
+    const nativeSelect = root.querySelector('.movie-search-select__native');
+    const optionButtons = Array.from(root.querySelectorAll('[data-movie-search-option]'));
+    const groups = Array.from(root.querySelectorAll('[data-movie-search-group]'));
 
   const setSelectedLabel = () => {
     if (!nativeSelect || !label) return;
@@ -61,6 +62,13 @@ document.querySelectorAll('[data-movie-search-select]').forEach((root) => {
     }
   });
 
-  setSelectedLabel();
-  filterOptions();
-});
+    setSelectedLabel();
+    filterOptions();
+  });
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMovieSearchSelect, { once: true });
+} else {
+  initMovieSearchSelect();
+}
