@@ -392,6 +392,31 @@
     box-sizing: border-box;
   }
 
+  #character-search-dropdown > summary {
+    width: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0;
+    justify-content: center;
+    border: 0;
+    box-shadow: none;
+    outline: none;
+    background: transparent;
+  }
+
+  #character-search-dropdown > summary:focus,
+  #character-search-dropdown > summary:focus-visible {
+    outline: none;
+    box-shadow: none;
+    border: 0;
+  }
+
+  #character-search-dropdown .graph-filter-dropdown-panel {
+    left: auto;
+    right: 0;
+    width: min(24rem, calc(100vw - 1.5rem));
+  }
+
   /* When there's not enough room below, flip the panel above the summary */
   .graph-filter-dropdown.flip-up .graph-filter-dropdown-panel {
     top: auto;
@@ -593,8 +618,8 @@
                   <div class="graph-character-group-label">{{ group.label }}</div>
                   {% for character in group.characters %}
                   <div class="graph-filter-option graph-character-option" data-character-select="from"
-                    data-character-id="{{ character.id }}" data-character-name="{{ character.name }}">
-                    {{ character.name }}
+                    data-character-id="{{ character.id }}" data-character-name="{{ character.display_name }}">
+                    {{ character.display_name }}
                   </div>
                   {% endfor %}
                 </div>
@@ -624,8 +649,8 @@
                   <div class="graph-character-group-label">{{ group.label }}</div>
                   {% for character in group.characters %}
                   <div class="graph-filter-option graph-character-option" data-character-select="to"
-                    data-character-id="{{ character.id }}" data-character-name="{{ character.name }}">
-                    {{ character.name }}
+                    data-character-id="{{ character.id }}" data-character-name="{{ character.display_name }}">
+                    {{ character.display_name }}
                   </div>
                   {% endfor %}
                 </div>
@@ -659,6 +684,30 @@
                       d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-14.9-3M4 15a8 8 0 0014.9 3" />
                   </svg>
                 </button>
+                <details class="graph-filter-dropdown" id="character-search-dropdown" data-flip-default="up">
+                  <summary class="btn btn-sm btn-circle btn-ghost" title="Search character" aria-label="Search character">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
+                    </svg>
+                  </summary>
+                  <div class="graph-filter-dropdown-panel graph-character-search-panel">
+                    <input type="text" class="graph-filter-search" data-character-search="single"
+                      placeholder="Search characters…">
+                    {% for group in grouped_character_options %}
+                    <div class="graph-character-group" data-character-optgroup="single">
+                      <div class="graph-character-group-label">{{ group.label }}</div>
+                      {% for character in group.characters %}
+                      <div class="graph-filter-option graph-character-option" data-character-select="single"
+                        data-character-id="{{ character.id }}" data-character-name="{{ character.display_name }}">
+                        {{ character.display_name }}
+                      </div>
+                      {% endfor %}
+                    </div>
+                    {% endfor %}
+                  </div>
+                </details>
                 <div class="btn-group">
                   <button id="fullscreen-btn" class="btn btn-sm btn-circle btn-ghost" title="Enter fullscreen">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
