@@ -4,7 +4,7 @@ from django.test import TestCase
 import networkx as nx
 from networkx.exception import NetworkXNoPath
 
-from .admin import CharacterAdmin, CharacterAdminForm, RelationshipAdmin
+from .admin import CharacterAdmin, CharacterAdminForm, RelationshipAdmin, RelationshipAdminForm
 from .graph_service import MCUGraphService
 from .models import AlterEgo, Character, Earth, Movie, Relationship, Team, TeamMembership
 from .views import _group_character_options
@@ -188,6 +188,27 @@ class MCUGraphServiceTests(TestCase):
 		self.assertIn("Movie Two", grouped_choices)
 		self.assertEqual(grouped_choices["Movie One"], [(character.id, "Test Character (Earth-616)")])
 		self.assertEqual(grouped_choices["Movie Two"], [(character.id, "Test Character (Earth-616)")])
+
+	def test_relationship_admin_form_can_reverse_direction(self):
+		first = self._character("First")
+		second = self._character("Second")
+
+		form = RelationshipAdminForm(
+			data={
+				"character1": str(first.id),
+				"character2": str(second.id),
+				"relationship_type": "Ally",
+				"directional": True,
+				"notes": "",
+				"direction": "reverse",
+			}
+		)
+
+		self.assertTrue(form.is_valid(), form.errors)
+		relationship = form.save(commit=False)
+
+		self.assertEqual((relationship.character1_id, relationship.character2_id), (second.id, first.id))
+		self.assertTrue(relationship.directional)
 
 	def test_to_cytoscape_format_includes_character_details(self):
 		introducing_movie = self._movie("Introducing Movie", "2024-05-01")

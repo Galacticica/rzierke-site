@@ -124,6 +124,37 @@ class CharacterAdminForm(forms.ModelForm):
 			self.fields["movies"].initial = self.instance.movies.all()
 
 
+class RelationshipAdminForm(forms.ModelForm):
+	direction = forms.ChoiceField(
+		choices=(
+			("forward", "Character 1 -> Character 2"),
+			("reverse", "Character 2 -> Character 1"),
+		),
+		initial="forward",
+		help_text="Choose which character should be treated as the source for directional relationships.",
+	)
+
+	class Meta:
+		model = Relationship
+		fields = (
+			"character1",
+			"character2",
+			"relationship_type",
+			"directional",
+			"direction",
+			"notes",
+		)
+
+	def save(self, commit=True):
+		relationship = super().save(commit=False)
+		if self.cleaned_data.get("direction") == "reverse":
+			relationship.character1, relationship.character2 = relationship.character2, relationship.character1
+		if commit:
+			relationship.save()
+			self.save_m2m()
+		return relationship
+
+
 class AlterEgoInline(TabularInline):
 	"""Editable alter egos on the Character admin page."""
 	model = AlterEgo
@@ -193,6 +224,7 @@ class MovieAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 @admin.register(Relationship)
 class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 	"""Admin configuration for Relationship."""
+	form = RelationshipAdminForm
 	list_display = ("character1", "character2", "relationship_type", "directional", "weight")
 	list_filter = ("relationship_type", "directional")
 	search_fields = ("character1__name", "character2__name", "notes")
