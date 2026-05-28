@@ -417,6 +417,7 @@ if (graphRoot) {
   let d3Nodes = null;
   let d3IdMap = {};
   let pinnedId = null;
+  let nodeDragStarted = false;
 
   function getD3Node(id) { return d3IdMap[id] || null; }
 
@@ -465,23 +466,28 @@ if (graphRoot) {
   cy.on('grab', 'node', evt => {
     const id = evt.target.id();
     pinnedId = id;
-    const simNode = getD3Node(id);
-    if (simNode) { simNode.fx = simNode.x; simNode.fy = simNode.y; }
-    if (d3Sim) d3Sim.alphaTarget(0.3).restart();
+    nodeDragStarted = false;
   });
   cy.on('drag', 'node', evt => {
     if (evt.target.id() === pinnedId) {
       const simNode = getD3Node(pinnedId);
       if (simNode) {
         const pos = evt.target.position();
+        if (!nodeDragStarted) {
+          simNode.fx = pos.x;
+          simNode.fy = pos.y;
+          nodeDragStarted = true;
+          if (d3Sim) d3Sim.alphaTarget(0.3).restart();
+        }
         simNode.fx = pos.x; simNode.fy = pos.y;
         simNode.x  = pos.x; simNode.y  = pos.y;
       }
     }
   });
   cy.on('free', 'node', () => {
-    if (d3Nodes) d3Nodes.forEach(d => { d.vx = 0; d.vy = 0; });
+    if (pinnedId && nodeDragStarted && d3Nodes) d3Nodes.forEach(d => { d.vx = 0; d.vy = 0; });
     pinnedId = null;
+    nodeDragStarted = false;
     if (d3Sim) d3Sim.alphaTarget(0);
   });
 
