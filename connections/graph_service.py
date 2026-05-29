@@ -175,7 +175,10 @@ class MCUGraphService:
 	def _build_graph_from_relationships(self, relationships, include_details=True):
 		graph = nx.DiGraph()
 
-		relationships = relationships.select_related("character1", "character2")
+		relationships = relationships.select_related(
+			"character1", "character1__earth_number",
+			"character2", "character2__earth_number",
+		)
 		if include_details:
 			relationships = relationships.prefetch_related(
 				Prefetch(
