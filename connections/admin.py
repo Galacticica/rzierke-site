@@ -83,6 +83,14 @@ class SearchableMovieSelect(forms.Select):
 		js = ("connections/movie_search_select.js",)
 
 
+class SearchableRelationshipCharacterSelect(forms.Select):
+	template_name = "connections/widgets/searchable_relationship_character_select.html"
+
+	class Media:
+		css = {"all": ("connections/relationship_character_search_select.css",)}
+		js = ("connections/relationship_character_search_select.js",)
+
+
 class CharacterAdminForm(forms.ModelForm):
 	movie_introduced = forms.ModelChoiceField(
 		queryset=Movie.objects.order_by("release_date", "title"),
@@ -287,6 +295,8 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 			)
 			form_field = super(OrderedChoiceAdminMixin, self).formfield_for_foreignkey(db_field, request, **kwargs)
 			form_field.choices = self._relationship_character_choices(form_field.queryset)
+			form_field.widget = SearchableRelationshipCharacterSelect()
+			form_field.widget.choices = form_field.choices
 			return form_field
 		return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
