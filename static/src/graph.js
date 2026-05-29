@@ -419,6 +419,7 @@ if (graphRoot) {
   const GRAPH_NODE_R = 46;
   const ALPHA_START  = 1.0;
   const ALPHA_REHEAT = 0.55;
+  const SETTLE_TICK_CAP = 400;
 
   let d3Sim   = null;
   let d3Nodes = null;
@@ -428,6 +429,23 @@ if (graphRoot) {
   let _simRafId = null;
 
   function getD3Node(id) { return d3IdMap[id] || null; }
+
+  function syncPositionsFromSim() {
+    cy.batch(() => {
+      cy.nodes().forEach(node => {
+        const d = d3IdMap[node.id()];
+        if (d) node.position({ x: d.x, y: d.y });
+      });
+    });
+  }
+
+  function scheduleSimRender() {
+    if (_simRafId !== null) return;
+    _simRafId = requestAnimationFrame(() => {
+      _simRafId = null;
+      syncPositionsFromSim();
+    });
+  }
 
   function initD3Sim(alpha = 1.0) {
     if (_simRafId !== null) { cancelAnimationFrame(_simRafId); _simRafId = null; }
@@ -448,6 +466,8 @@ if (graphRoot) {
     const linkDist       = isHuge ? BASE_LINK_DIST * 0.3 : isLarge ? BASE_LINK_DIST * 0.7 : BASE_LINK_DIST;
     const alphaDecay     = isHuge ? 0.08 : isLarge ? 0.06 : 0.04;
 
+    // Build the simulation but keep it stopped — we settle it synchronously
+    // below instead of letting d3 animate node positions over many frames.
     d3Sim = d3.forceSimulation(d3Nodes)
       .force('link',      d3.forceLink(edgeData).id(d => d.id).distance(linkDist))
       .force('charge',    d3.forceManyBody().strength(chargeStrength).distanceMax(isHuge ? 1200 : 4000))
@@ -458,18 +478,22 @@ if (graphRoot) {
       .alphaDecay(alphaDecay)
       .alphaTarget(0)
       .alpha(alpha)
-      .on('tick', () => {
-        if (_simRafId !== null) return;
-        _simRafId = requestAnimationFrame(() => {
-          _simRafId = null;
-          cy.batch(() => {
-            cy.nodes().forEach(node => {
-              const d = d3IdMap[node.id()];
-              if (d) node.position({ x: d.x, y: d.y });
-            });
-          });
-        });
-      });
+      .stop();
+
+    // Pre-settle the layout off-screen: run the physics ticks without
+    // rendering, then paint the final arrangement once. This turns a
+    // multi-second animated settle into a single instant layout, and the
+    // saved per-frame Cytoscape re-renders are what make large graphs viable.
+    const settleTicks = Math.min(
+      SETTLE_TICK_CAP,
+      Math.max(1, Math.ceil(Math.log(d3Sim.alphaMin() / alpha) / Math.log(1 - alphaDecay)))
+    );
+    for (let i = 0; i < settleTicks; i++) d3Sim.tick();
+    syncPositionsFromSim();
+
+    // Keep the simulation around (stopped) so interactions like node drags
+    // can reheat and animate from the settled state.
+    d3Sim.on('tick', scheduleSimRender);
   }
 
   function reheatSim(amount = ALPHA_REHEAT) {
@@ -614,8 +638,8 @@ if (graphRoot) {
       node.position({ x: r * Math.cos(theta), y: r * Math.sin(theta) });
     });
 
-    cy.fit(cy.elements(), 60);
     initD3Sim(ALPHA_START);
+    cy.fit(cy.elements(), 60);
 
     setLoadState(`${payload.nodes.length} nodes, ${payload.edges.length} edges`);
     if (summary) summary.textContent = label;
@@ -900,12 +924,19 @@ document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
     await fetchGraph(query ? `/api/graph/filter/?${query}` : '/api/graph/filter/', label);
   };
 
+  let filterReloadTimer = null;
   document.addEventListener('change', (event) => {
     if (!event.target.matches('[data-graph-filter]')) return;
+    // Debounce so flipping several filters in quick succession triggers a
+    // single fetch + layout instead of one full reload per checkbox.
+    if (filterReloadTimer) clearTimeout(filterReloadTimer);
+    filterReloadTimer = setTimeout(() => {
+      filterReloadTimer = null;
       loadFilteredGraph().catch(err => {
         console.error(err);
         setStatus('Failed to load the filtered graph.', 'error');
       });
+    }, 200);
   });
 
   searchButton.addEventListener('click', () => {
