@@ -58,8 +58,8 @@ if (graphRoot) {
   const relationshipColors = {
     Variant:      '#FACC15',
     Ally:         '#7DD3FC',
-    Enemy:        '#FB7185',
-    Romantic:     '#F472B6',
+    Enemy:        '#fa4460',
+    Romantic:     '#ff75bc',
     Mentor:       '#FB923C',
     Family:       '#16A34A',
     Acquaintance: '#E5E7EB',
