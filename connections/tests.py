@@ -4,7 +4,7 @@ from django.test import TestCase
 import networkx as nx
 from networkx.exception import NetworkXNoPath
 
-from .admin import CharacterAdmin, CharacterAdminForm, RelationshipAdmin, RelationshipAdminForm
+from .admin import CharacterAdmin, CharacterAdminForm, RelationshipAdmin, RelationshipAdminForm, SearchableRelationshipCharacterSelect
 from .graph_service import MCUGraphService
 from .models import AlterEgo, Character, Earth, Movie, Relationship, Team, TeamMembership
 from .views import _group_character_options
@@ -179,7 +179,7 @@ class MCUGraphServiceTests(TestCase):
 		grouped_options = _group_character_options(Character.objects.select_related("movie_introduced", "earth_number").order_by("name"))
 		self.assertEqual(grouped_options[0]["characters"][0]["display_name"], "Test Character (Earth-616)")
 
-	def test_relationship_admin_groups_characters_by_every_movie_and_shows_earth(self):
+	def test_relationship_admin_keeps_grouped_characters_and_adds_search(self):
 		movie_one = self._movie("Movie One", "2024-01-01")
 		movie_two = self._movie("Movie Two", "2025-01-01")
 		earth = Earth.objects.create(number="Earth-616")
@@ -194,6 +194,7 @@ class MCUGraphServiceTests(TestCase):
 			None,
 		)
 
+		self.assertIsInstance(form_field.widget, SearchableRelationshipCharacterSelect)
 		grouped_choices = {label: choices for label, choices in form_field.choices}
 		self.assertIn("Movie One", grouped_choices)
 		self.assertIn("Movie Two", grouped_choices)
