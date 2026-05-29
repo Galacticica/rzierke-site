@@ -1,0 +1,178 @@
+{% extends "admin/base_site.html" %}
+{% load static i18n %}
+
+{% block title %}Bulk Add Relationships{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'connections/relationship_character_search_select.css' %}">
+<link rel="stylesheet" href="{% static 'connections/bulk_add_relationships.css' %}">
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'connections/relationship_character_search_select.js' %}" defer></script>
+<script src="{% static 'connections/bulk_add_relationships.js' %}" defer></script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='connections' %}">Connections</a>
+  &rsaquo; <a href="{% url 'admin:connections_relationship_changelist' %}">Relationships</a>
+  &rsaquo; Bulk Add
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <h1>Bulk Add Relationships</h1>
+  <p class="bulk-add-help">Choose one source character, then define as many relationships as you need. All rows are saved at once.</p>
+
+  <form method="post" id="bulk-add-form" novalidate>
+    {% csrf_token %}
+
+    <fieldset class="module aligned">
+      <h2>Source Character</h2>
+      <div class="form-row">
+        <div class="bulk-add-source-wrap">
+          <label class="block font-semibold text-font-important-light dark:text-font-important-dark required">Character</label>
+          <div class="relationship-character-search-select" data-relationship-character-search-select>
+            <details class="relationship-character-search-select__dropdown">
+              <summary class="relationship-character-search-select__summary" aria-label="Choose source character">
+                <span class="relationship-character-search-select__label placeholder" data-relationship-character-search-label>Select a character</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="relationship-character-search-select__chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                </svg>
+              </summary>
+              <div class="relationship-character-search-select__panel">
+                <input type="text" class="relationship-character-search-select__search" data-relationship-character-search-input placeholder="Search movies…">
+                <select name="source_character" id="id_source_character" class="relationship-character-search-select__native" hidden required>
+                  <option value="">---------</option>
+                  {% for group_label, group_choices in character_choices %}
+                    {% for pk, label in group_choices %}
+                      <option value="{{ pk }}">{{ label }}</option>
+                    {% endfor %}
+                  {% endfor %}
+                </select>
+                <div class="relationship-character-search-select__options" data-relationship-character-search-options>
+                  {% for group_label, group_choices in character_choices %}
+                    <div class="relationship-character-search-select__group" data-relationship-character-search-group data-group-label="{{ group_label|default:'No Movie Appearance' }}">
+                      {% if group_label %}
+                        <div class="relationship-character-search-select__group-label">{{ group_label }}</div>
+                      {% endif %}
+                      {% for pk, label in group_choices %}
+                        <button type="button" class="relationship-character-search-select__option" data-relationship-character-search-option data-value="{{ pk }}" data-label="{{ label }}">
+                          <span>{{ label }}</span>
+                        </button>
+                      {% endfor %}
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="module aligned">
+      <h2>Relationships to Add</h2>
+
+      <template id="bulk-row-template">
+        <div class="bulk-add-row" data-row>
+
+          <div class="bulk-add-row__field bulk-add-row__field--char">
+            <label class="block font-semibold text-font-important-light dark:text-font-important-dark">Target character</label>
+            <div class="relationship-character-search-select" data-relationship-character-search-select>
+              <details class="relationship-character-search-select__dropdown">
+                <summary class="relationship-character-search-select__summary" aria-label="Choose target character">
+                  <span class="relationship-character-search-select__label placeholder" data-relationship-character-search-label>Select a character</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="relationship-character-search-select__chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                  </svg>
+                </summary>
+                <div class="relationship-character-search-select__panel">
+                  <input type="text" class="relationship-character-search-select__search" data-relationship-character-search-input placeholder="Search movies…">
+                  <select name="rows-__INDEX__-character2" class="relationship-character-search-select__native" hidden>
+                    <option value="">---------</option>
+                    {% for group_label, group_choices in character_choices %}
+                      {% for pk, label in group_choices %}
+                        <option value="{{ pk }}">{{ label }}</option>
+                      {% endfor %}
+                    {% endfor %}
+                  </select>
+                  <div class="relationship-character-search-select__options" data-relationship-character-search-options>
+                    {% for group_label, group_choices in character_choices %}
+                      <div class="relationship-character-search-select__group" data-relationship-character-search-group data-group-label="{{ group_label|default:'No Movie Appearance' }}">
+                        {% if group_label %}
+                          <div class="relationship-character-search-select__group-label">{{ group_label }}</div>
+                        {% endif %}
+                        {% for pk, label in group_choices %}
+                          <button type="button" class="relationship-character-search-select__option" data-relationship-character-search-option data-value="{{ pk }}" data-label="{{ label }}">
+                            <span>{{ label }}</span>
+                          </button>
+                        {% endfor %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <div class="bulk-add-row__field bulk-add-row__field--type">
+            <label class="block font-semibold text-font-important-light dark:text-font-important-dark">Relationship type</label>
+            <div class="relative">
+              <select name="rows-__INDEX__-relationship_type" class="border border-base-200 bg-white font-medium rounded-default shadow-xs text-font-default-light text-sm focus:outline-2 focus:-outline-offset-2 focus:outline-primary-600 dark:bg-base-900 dark:border-base-700 dark:text-font-default-dark dark:scheme-dark px-3 py-2 w-full appearance-none text-ellipsis pr-8">
+                <option value="">Select type…</option>
+                {% for value, display in relationship_choices %}
+                  <option value="{{ value }}">{{ display }}</option>
+                {% endfor %}
+              </select>
+              <span class="material-symbols-outlined absolute pointer-events-none right-0 mr-3 text-base-400 top-1/2 -translate-y-1/2 dark:text-base-500" aria-hidden="true">expand_more</span>
+            </div>
+          </div>
+
+          <div class="bulk-add-row__field bulk-add-row__field--control">
+            <label class="bulk-row-directional-label">
+              <input type="checkbox" name="rows-__INDEX__-directional" class="bulk-row-directional appearance-none bg-white block border border-base-300 h-4 min-w-4 relative rounded-[4px] shadow-xs w-4 dark:bg-base-900 dark:border-base-700 checked:bg-primary-600 dark:checked:bg-primary-600 checked:border-primary-600 dark:checked:border-primary-600 cursor-pointer">
+              <span class="text-sm text-font-default-light dark:text-font-default-dark font-medium">Directional</span>
+            </label>
+            <div class="bulk-row-direction-wrapper" hidden>
+              <div class="relative mt-2">
+                <select name="rows-__INDEX__-direction" class="border border-base-200 bg-white font-medium rounded-default shadow-xs text-font-default-light text-sm focus:outline-2 focus:-outline-offset-2 focus:outline-primary-600 dark:bg-base-900 dark:border-base-700 dark:text-font-default-dark dark:scheme-dark px-3 py-2 w-full appearance-none text-ellipsis pr-8">
+                  <option value="forward">Source → Target</option>
+                  <option value="reverse">Target → Source</option>
+                </select>
+                <span class="material-symbols-outlined absolute pointer-events-none right-0 mr-3 text-base-400 top-1/2 -translate-y-1/2 dark:text-base-500" aria-hidden="true">expand_more</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bulk-add-row__field bulk-add-row__field--notes">
+            <label class="block font-semibold text-font-important-light dark:text-font-important-dark">Notes <span class="bulk-add-optional">(optional)</span></label>
+            <input type="text" name="rows-__INDEX__-notes" placeholder="Add notes…" class="border border-base-200 bg-white font-medium rounded-default shadow-xs text-font-default-light text-sm placeholder-base-400 focus:outline-2 focus:-outline-offset-2 focus:outline-primary-600 dark:bg-base-900 dark:border-base-700 dark:text-font-default-dark px-3 py-2 w-full">
+          </div>
+
+          <div class="bulk-add-row__remove">
+            <button type="button" class="bulk-row-remove" aria-label="Remove row" title="Remove">✕</button>
+          </div>
+
+        </div>
+      </template>
+
+      <div id="bulk-rows-container"></div>
+
+      <div class="bulk-add-row-actions">
+        <button type="button" id="add-row-btn" class="button">+ Add Another Relationship</button>
+      </div>
+    </fieldset>
+
+    <div class="submit-row">
+      <input type="submit" value="Save All Relationships" class="default">
+      <a href="../" class="closelink">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

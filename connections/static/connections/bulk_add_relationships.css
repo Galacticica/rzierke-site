@@ -1,0 +1,114 @@
+.bulk-add-help {
+  margin-bottom: 1.25rem;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.bulk-add-source-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 36rem;
+}
+
+.bulk-add-optional {
+  font-weight: 400;
+  opacity: 0.65;
+}
+
+/* ── Rows ── */
+
+#bulk-rows-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.bulk-add-row {
+  display: grid;
+  grid-template-columns: 2fr 1.4fr 1fr 1.6fr auto;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.bulk-add-row__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* ── Control column (directional + direction) ── */
+
+.bulk-add-row__field--control {
+  padding-top: 1.6rem;
+}
+
+.bulk-row-directional-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+/* ── Remove button ── */
+
+.bulk-add-row__remove {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 1.6rem;
+}
+
+.bulk-row-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: rgba(148, 163, 184, 0.7);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+
+.bulk-row-remove:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: rgb(239, 68, 68);
+}
+
+.bulk-row-remove:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── Add button ── */
+
+.bulk-add-row-actions {
+  margin-top: 0.25rem;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 960px) {
+  .bulk-add-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bulk-add-row__field--control,
+  .bulk-add-row__remove {
+    padding-top: 0;
+  }
+
+  .bulk-add-row__remove {
+    grid-column: 2;
+    justify-content: flex-end;
+  }
+}

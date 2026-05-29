@@ -10,7 +10,7 @@ const initRelationshipCharacterSearchSelect = () => {
     const setSelectedLabel = () => {
       if (!nativeSelect || !label) return;
       const selectedOption = nativeSelect.selectedOptions?.[0];
-      if (selectedOption) {
+      if (selectedOption && selectedOption.value) {
         label.textContent = selectedOption.textContent;
         label.classList.remove('placeholder');
       } else {

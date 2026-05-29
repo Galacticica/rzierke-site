@@ -11,8 +11,11 @@ Modified By: Reagan Zierke
 Description: Admin registrations for the connections app.
 """
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django import forms
+from django.http import HttpResponseRedirect
+from django.template.response import TemplateResponse
+from django.urls import path
 from unfold.admin import ModelAdmin, TabularInline
 
 from .models import AlterEgo, Character, Movie, Relationship, Team, TeamMembership, Earth
@@ -233,6 +236,7 @@ class MovieAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 	"""Admin configuration for Relationship."""
 	form = RelationshipAdminForm
+	change_list_template = "connections/admin/relationship_change_list.html"
 	list_display = ("character1", "character2", "relationship_type", "directional", "weight")
 	list_filter = ("relationship_type", "directional")
 	search_fields = ("character1__name", "character2__name", "notes")
@@ -299,6 +303,95 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 			form_field.widget.choices = form_field.choices
 			return form_field
 		return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+	def get_urls(self):
+		urls = super().get_urls()
+		custom_urls = [
+			path(
+				"bulk-add/",
+				self.admin_site.admin_view(self.bulk_add_view),
+				name="connections_relationship_bulk_add",
+			),
+		]
+		return custom_urls + urls
+
+	def bulk_add_view(self, request):
+		queryset = (
+			Character.objects.select_related("earth_number", "movie_introduced")
+			.prefetch_related("movies")
+			.order_by("earth_number__number", "name")
+		)
+		character_choices = self._relationship_character_choices(queryset)
+		created_count = 0
+
+		if request.method == "POST":
+			source_id = request.POST.get("source_character", "").strip()
+			if not source_id:
+				messages.error(request, "Please select a source character.")
+			else:
+				try:
+					source_character = Character.objects.get(pk=source_id)
+				except Character.DoesNotExist:
+					messages.error(request, "Selected source character does not exist.")
+					source_character = None
+
+				if source_character:
+					row_indices = sorted({
+						int(key.split("-")[1])
+						for key in request.POST
+						if key.startswith("rows-") and key.endswith("-character2") and key.split("-")[1].isdigit()
+					})
+
+					for idx in row_indices:
+						char2_id = request.POST.get(f"rows-{idx}-character2", "").strip()
+						rel_type = request.POST.get(f"rows-{idx}-relationship_type", "").strip()
+						directional = bool(request.POST.get(f"rows-{idx}-directional"))
+						direction = request.POST.get(f"rows-{idx}-direction", "forward")
+						notes = request.POST.get(f"rows-{idx}-notes", "").strip()
+
+						if not char2_id or not rel_type:
+							continue
+
+						try:
+							char2 = Character.objects.get(pk=char2_id)
+						except Character.DoesNotExist:
+							messages.error(request, f"Row {idx + 1}: target character not found.")
+							continue
+
+						char1, char2_final = source_character, char2
+						if directional and direction == "reverse":
+							char1, char2_final = char2, source_character
+
+						try:
+							_, created = Relationship.objects.get_or_create(
+								character1=char1,
+								character2=char2_final,
+								relationship_type=rel_type,
+								defaults={"directional": directional, "notes": notes},
+							)
+							if created:
+								created_count += 1
+							else:
+								messages.warning(
+									request,
+									f"Already exists: {char1.name} ↔ {char2_final.name} ({rel_type})",
+								)
+						except Exception as e:
+							messages.error(request, f"Row {idx + 1}: {e}")
+
+			if created_count:
+				messages.success(request, f"Created {created_count} relationship(s).")
+				return HttpResponseRedirect("../")
+
+		context = {
+			**self.admin_site.each_context(request),
+			"title": "Bulk Add Relationships",
+			"character_choices": character_choices,
+			"relationship_choices": Relationship.RELATIONSHIP_CHOICES,
+			"opts": self.model._meta,
+			"app_label": self.model._meta.app_label,
+		}
+		return TemplateResponse(request, "connections/admin/bulk_add_relationships.html", context)
 
 
 @admin.register(Earth)
