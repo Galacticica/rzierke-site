@@ -11,6 +11,8 @@ Modified By: Reagan Zierke
 Description: Admin registrations for the connections app.
 """
 
+from urllib.parse import urlencode
+
 from django.contrib import admin, messages
 from django import forms
 from django.http import HttpResponseRedirect
@@ -419,15 +421,22 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 				messages.success(request, f"Created {created_count} relationship(s).")
 				if "_save" in request.POST:
 					return HttpResponseRedirect("../")
-				# Default ("Save and add another"): start a fresh bulk add form.
+				# Default ("Save and add another"): start a fresh bulk add form,
+				# keeping the movie filter applied if one was selected.
+				movie_filter = request.POST.get("movie", "").strip()
+				if movie_filter:
+					return HttpResponseRedirect(f"{request.path}?{urlencode({'movie': movie_filter})}")
 				return HttpResponseRedirect(request.path)
 
+		selected_movie = request.POST.get("movie", "") if request.method == "POST" else request.GET.get("movie", "")
 		context = {
 			**self.admin_site.each_context(request),
 			"title": "Bulk Add Relationships",
 			"character_choices": character_choices,
 			"relationship_choices": Relationship.RELATIONSHIP_CHOICES,
 			"relationship_adjacency": self._relationship_adjacency(),
+			"movie_choices": Movie.objects.order_by("release_date", "title"),
+			"selected_movie": selected_movie,
 			"opts": self.model._meta,
 			"app_label": self.model._meta.app_label,
 		}
