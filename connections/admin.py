@@ -326,6 +326,76 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 			adjacency.setdefault(char2_id, set()).add(char1_id)
 		return {character_id: sorted(related) for character_id, related in adjacency.items()}
 
+	def _movie_variant_data(self):
+		"""Compute variant relationships used by the bulk picker's Variants section.
+
+		A "variant" is a different character that shares a name or an alias with a
+		given character (e.g. the same hero on another earth). Returns a tuple of
+		(variant_adjacency, movie_members, variant_options):
+
+		- variant_adjacency: {character_id: [variant_character_id, ...]} — the
+		  variants of each character. Drives the target picker: once a source is
+		  chosen, its variants are surfaced even when a movie filter hides them.
+		- movie_members: {movie_title: [character_id, ...]} — used to avoid showing
+		  a variant in the Variants section when it is already in the filtered movie.
+		- variant_options: [(character_id, label), ...] — the de-duplicated union of
+		  every character that is some character's variant, rendered once per picker.
+		"""
+		characters = list(
+			Character.objects.select_related("earth_number", "movie_introduced")
+			.prefetch_related("alter_egos", "movies")
+		)
+
+		# Identity tokens (name + aliases) per character, and a reverse index.
+		tokens_by_character = {}
+		characters_by_token = {}
+		characters_by_id = {}
+		for character in characters:
+			characters_by_id[character.pk] = character
+			tokens = set()
+			if character.name:
+				tokens.add(character.name.strip().lower())
+			for alter_ego in character.alter_egos.all():
+				if alter_ego.name:
+					tokens.add(alter_ego.name.strip().lower())
+			tokens_by_character[character.pk] = tokens
+			for token in tokens:
+				characters_by_token.setdefault(token, set()).add(character.pk)
+
+		# Characters sharing any token with the given character (excluding itself).
+		variant_adjacency = {}
+		variant_union = set()
+		for character in characters:
+			related = set()
+			for token in tokens_by_character[character.pk]:
+				related |= characters_by_token.get(token, set())
+			related.discard(character.pk)
+			if related:
+				variant_adjacency[character.pk] = sorted(related)
+				variant_union |= related
+
+		# Which characters belong to each movie (matching the picker's grouping).
+		members_by_movie = {}
+		for character in characters:
+			titles = {movie.title for movie in character.movies.all()}
+			if character.movie_introduced:
+				titles.add(character.movie_introduced.title)
+			for title in titles:
+				members_by_movie.setdefault(title, set()).add(character.pk)
+		movie_members = {title: sorted(members) for title, members in members_by_movie.items()}
+
+		variant_options = [
+			(pk, self._relationship_character_label(characters_by_id[pk]))
+			for pk in sorted(
+				variant_union,
+				key=lambda pk: (
+					characters_by_id[pk].earth_number.number if characters_by_id[pk].earth_number else "",
+					characters_by_id[pk].name,
+				),
+			)
+		]
+		return variant_adjacency, movie_members, variant_options
+
 	change_form_template = "connections/admin/relationship_change_form.html"
 
 	def add_view(self, request, form_url="", extra_context=None):
@@ -429,6 +499,7 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 				return HttpResponseRedirect(request.path)
 
 		selected_movie = request.POST.get("movie", "") if request.method == "POST" else request.GET.get("movie", "")
+		variant_adjacency, movie_members, variant_options = self._movie_variant_data()
 		context = {
 			**self.admin_site.each_context(request),
 			"title": "Bulk Add Relationships",
@@ -437,6 +508,9 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 			"relationship_adjacency": self._relationship_adjacency(),
 			"movie_choices": Movie.objects.order_by("release_date", "title"),
 			"selected_movie": selected_movie,
+			"variant_adjacency": variant_adjacency,
+			"movie_members": movie_members,
+			"variant_options": variant_options,
 			"opts": self.model._meta,
 			"app_label": self.model._meta.app_label,
 		}

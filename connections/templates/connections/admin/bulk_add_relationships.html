@@ -29,6 +29,8 @@
 {% block content %}
 <div id="content-main">
   {{ relationship_adjacency|json_script:"relationship-adjacency-data" }}
+  {{ variant_adjacency|json_script:"bulk-variant-adjacency-data" }}
+  {{ movie_members|json_script:"bulk-movie-members-data" }}
   <h1>Bulk Add Relationships</h1>
   <p class="bulk-add-help">Choose one source character, then define as many relationships as you need. All rows are saved at once.</p>
 
@@ -155,6 +157,16 @@
                         {% endfor %}
                       </div>
                     {% endfor %}
+                    {% if variant_options %}
+                      <div class="relationship-character-search-select__group" data-relationship-character-search-group data-variants-group data-group-label="Variants" hidden>
+                        <div class="relationship-character-search-select__group-label">Variants</div>
+                        {% for pk, label in variant_options %}
+                          <button type="button" class="relationship-character-search-select__option" data-relationship-character-search-option data-value="{{ pk }}" data-label="{{ label }}">
+                            <span>{{ label }}</span>
+                          </button>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
                   </div>
                 </div>
               </details>
