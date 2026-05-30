@@ -26,6 +26,9 @@ if (graphRoot) {
   const resetGraphButton = document.getElementById('reset-graph-btn');
   const fullscreenButton = document.getElementById('fullscreen-btn');
   const earthFilterOptionsContainer = document.querySelector('[data-earth-filter-options]');
+  // Every earth we've ever seen. This only grows so the earth filter list never
+  // shrinks when a filtered payload returns a subset of earths.
+  const allEarthValues = new Set();
   let filterInputs = [];
   const characterOptions = JSON.parse(document.getElementById('character-options').textContent);
   const nameToId = new Map();
@@ -567,7 +570,22 @@ if (graphRoot) {
       Array.from(earthFilterOptionsContainer.querySelectorAll('input[data-graph-filter="earth"]:checked'))
         .map(input => input.value)
     );
-    const earthValues = earthValuesFromPayload(payload);
+
+    // Merge the current payload's earths into the running set so the list never
+    // loses an earth just because the active filter excluded it. Without this,
+    // selecting one earth returns a single-earth payload and wipes the rest,
+    // making it impossible to pick more than one.
+    earthValuesFromPayload(payload).forEach(earth => allEarthValues.add(earth));
+    const earthValues = Array.from(allEarthValues).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+    // Nothing to do if the rendered options already match — avoids tearing down
+    // the checkboxes (and any in-progress interaction) on every filtered fetch.
+    const rendered = Array.from(earthFilterOptionsContainer.querySelectorAll('input[data-graph-filter="earth"]')).map(input => input.value);
+    if (rendered.length === earthValues.length && rendered.every((value, index) => value === earthValues[index])) {
+      refreshFilterInputs();
+      return;
+    }
+
     earthFilterOptionsContainer.replaceChildren();
 
     if (!earthValues.length) {

@@ -47,21 +47,28 @@ function initSingleSearchSelect(root) {
   const filterOptions = () => {
     if (!searchInput) return;
     const query = searchInput.value.trim().toLowerCase();
+    const movieFilterEl = document.getElementById('bulk-movie-filter');
+    const movieFilter = movieFilterEl ? movieFilterEl.value : '';
     groups.forEach((group) => {
-      const groupLabel = (group.dataset.groupLabel || '').toLowerCase();
+      const rawGroupLabel = group.dataset.groupLabel || '';
+      const passesMovieFilter = !movieFilter || rawGroupLabel === movieFilter;
+      const groupLabel = rawGroupLabel.toLowerCase();
       const movieMatches = groupLabel.includes(query);
       let hasVisibleOptions = false;
       group.querySelectorAll('[data-relationship-character-search-option]').forEach((option) => {
         const optionValue = option.dataset.value || '';
         const optionLabel = (option.dataset.label || option.textContent || '').toLowerCase();
         const matchesSearch = movieMatches || optionLabel.includes(query);
-        const isVisible = matchesSearch && !isExcluded(optionValue);
+        const isVisible = passesMovieFilter && matchesSearch && !isExcluded(optionValue);
         option.hidden = !isVisible;
         if (isVisible) hasVisibleOptions = true;
       });
       group.hidden = !hasVisibleOptions;
     });
   };
+
+  // Re-filter when the page-level movie filter changes.
+  document.addEventListener('bulk-movie-filter-change', filterOptions);
 
   const applyNativeExclusions = () => {
     if (!nativeSelect) return;
@@ -190,6 +197,12 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   sourceSelect?.addEventListener('change', applyExclusions);
   applyExclusions();
+
+  // When the movie filter changes, ask every character picker to re-filter.
+  const movieFilter = document.getElementById('bulk-movie-filter');
+  movieFilter?.addEventListener('change', () => {
+    document.dispatchEvent(new CustomEvent('bulk-movie-filter-change'));
+  });
 
   addBtn?.addEventListener('click', () => {
     const row = createRow();
