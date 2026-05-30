@@ -15,6 +15,48 @@ function getAdjacency() {
   }
 }
 
+// { characterId: [variantCharacterId, ...] } — variants (same name/alias) of each
+// character, used to surface the selected source's variants in the target picker.
+let variantAdjacencyCache = null;
+function getVariantAdjacency() {
+  if (variantAdjacencyCache) return variantAdjacencyCache;
+  const el = document.getElementById('bulk-variant-adjacency-data');
+  try {
+    variantAdjacencyCache = el ? JSON.parse(el.textContent || '{}') : {};
+  } catch (error) {
+    variantAdjacencyCache = {};
+  }
+  return variantAdjacencyCache;
+}
+
+// { movieTitle: [characterId, ...] } — cast of each movie, so variants already in
+// the filtered movie aren't duplicated in the Variants section.
+let movieMembersCache = null;
+const movieMemberIdSets = {};
+function getMovieMemberIds(movieTitle) {
+  if (!(movieTitle in movieMemberIdSets)) {
+    let map = {};
+    const el = document.getElementById('bulk-movie-members-data');
+    if (movieMembersCache) {
+      map = movieMembersCache;
+    } else {
+      try { movieMembersCache = el ? JSON.parse(el.textContent || '{}') : {}; }
+      catch (error) { movieMembersCache = {}; }
+      map = movieMembersCache;
+    }
+    movieMemberIdSets[movieTitle] = new Set((map[movieTitle] || []).map(String));
+  }
+  return movieMemberIdSets[movieTitle];
+}
+
+// The variants of the currently selected source character (or null if none).
+function getSourceVariantIds() {
+  const sourceSelect = document.getElementById('id_source_character');
+  const sourceId = sourceSelect ? sourceSelect.value : '';
+  if (!sourceId) return null;
+  return new Set((getVariantAdjacency()[sourceId] || []).map(String));
+}
+
 function initSingleSearchSelect(root) {
   const dropdown = root.querySelector('.relationship-character-search-select__dropdown');
   const summary = root.querySelector('.relationship-character-search-select__summary');
@@ -49,9 +91,17 @@ function initSingleSearchSelect(root) {
     const query = searchInput.value.trim().toLowerCase();
     const movieFilterEl = document.getElementById('bulk-movie-filter');
     const movieFilter = movieFilterEl ? movieFilterEl.value : '';
+    // The Variants section surfaces the selected source's variants (same
+    // name/alias) when a movie filter is active — so the filter doesn't hide
+    // them — excluding any that are already part of the filtered movie's cast.
+    const sourceVariantIds = movieFilter ? getSourceVariantIds() : null;
+    const movieMemberIds = movieFilter ? getMovieMemberIds(movieFilter) : null;
     groups.forEach((group) => {
+      const isVariantsGroup = group.hasAttribute('data-variants-group');
       const rawGroupLabel = group.dataset.groupLabel || '';
-      const passesMovieFilter = !movieFilter || rawGroupLabel === movieFilter;
+      const passesMovieFilter = isVariantsGroup
+        ? Boolean(movieFilter && sourceVariantIds)
+        : (!movieFilter || rawGroupLabel === movieFilter);
       const groupLabel = rawGroupLabel.toLowerCase();
       const movieMatches = groupLabel.includes(query);
       let hasVisibleOptions = false;
@@ -59,7 +109,12 @@ function initSingleSearchSelect(root) {
         const optionValue = option.dataset.value || '';
         const optionLabel = (option.dataset.label || option.textContent || '').toLowerCase();
         const matchesSearch = movieMatches || optionLabel.includes(query);
-        const isVisible = passesMovieFilter && matchesSearch && !isExcluded(optionValue);
+        let isVisible = passesMovieFilter && matchesSearch && !isExcluded(optionValue);
+        if (isVariantsGroup) {
+          isVisible = isVisible
+            && Boolean(sourceVariantIds) && sourceVariantIds.has(optionValue)
+            && !(movieMemberIds && movieMemberIds.has(optionValue));
+        }
         option.hidden = !isVisible;
         if (isVisible) hasVisibleOptions = true;
       });
