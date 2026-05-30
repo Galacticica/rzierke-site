@@ -156,6 +156,14 @@ class RelationshipAdminForm(forms.ModelForm):
 			"notes",
 		)
 
+	def clean(self):
+		cleaned_data = super().clean()
+		character1 = cleaned_data.get("character1")
+		character2 = cleaned_data.get("character2")
+		if character1 and character2 and character1 == character2:
+			raise forms.ValidationError("A character can't be related to themself.")
+		return cleaned_data
+
 	def save(self, commit=True):
 		relationship = super().save(commit=False)
 		if self.cleaned_data.get("direction") == "reverse":
@@ -382,6 +390,10 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 							messages.error(request, f"Row {idx + 1}: target character not found.")
 							continue
 
+						if char2.pk == source_character.pk:
+							messages.error(request, f"Row {idx + 1}: a character can't be related to themself.")
+							continue
+
 						char1, char2_final = source_character, char2
 						if directional and direction == "reverse":
 							char1, char2_final = char2, source_character
@@ -405,13 +417,17 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 
 			if created_count:
 				messages.success(request, f"Created {created_count} relationship(s).")
-				return HttpResponseRedirect("../")
+				if "_save" in request.POST:
+					return HttpResponseRedirect("../")
+				# Default ("Save and add another"): start a fresh bulk add form.
+				return HttpResponseRedirect(request.path)
 
 		context = {
 			**self.admin_site.each_context(request),
 			"title": "Bulk Add Relationships",
 			"character_choices": character_choices,
 			"relationship_choices": Relationship.RELATIONSHIP_CHOICES,
+			"relationship_adjacency": self._relationship_adjacency(),
 			"opts": self.model._meta,
 			"app_label": self.model._meta.app_label,
 		}

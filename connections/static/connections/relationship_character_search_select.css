@@ -124,3 +124,8 @@
   border-color: rgba(59, 130, 246, 0.55);
   background: rgba(59, 130, 246, 0.12);
 }
+
+/* Character already has a relationship with the selected source. */
+.relationship-character-search-select__option.is-related {
+  color: rgb(248, 113, 113);
+}
