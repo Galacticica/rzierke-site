@@ -1,4 +1,6 @@
 const initRelationshipCharacterSearchSelect = () => {
+  const controls = [];
+
   document.querySelectorAll('[data-relationship-character-search-select]').forEach((root) => {
     const dropdown = root.querySelector('.relationship-character-search-select__dropdown');
     const summary = root.querySelector('.relationship-character-search-select__summary');
@@ -8,6 +10,17 @@ const initRelationshipCharacterSearchSelect = () => {
     const nativeSelect = root.querySelector('.relationship-character-search-select__native');
     const optionButtons = Array.from(root.querySelectorAll('[data-relationship-character-search-option]'));
     const groups = Array.from(root.querySelectorAll('[data-relationship-character-search-group]'));
+
+    // Characters that already have a relationship with the chosen source: kept
+    // selectable but flagged in red.
+    let relatedValues = new Set();
+    // Characters that must not be selectable at all (e.g. the source itself, so a
+    // character cannot be related to themself): hidden from the list.
+    let excludedValues = new Set();
+
+    const currentValue = () => (nativeSelect ? nativeSelect.value : '');
+    // The currently selected value is never excluded, so editing keeps its target.
+    const isExcluded = (value) => excludedValues.has(value) && value !== currentValue();
 
     const setSelectedLabel = () => {
       if (!nativeSelect || !label) return;
@@ -29,13 +42,57 @@ const initRelationshipCharacterSearchSelect = () => {
         const movieMatches = groupLabel.includes(query);
         let hasVisibleOptions = false;
         group.querySelectorAll('[data-relationship-character-search-option]').forEach((option) => {
+          const optionValue = option.dataset.value || '';
           const optionLabel = (option.dataset.label || option.textContent || '').toLowerCase();
-          const isVisible = movieMatches || optionLabel.includes(query);
+          const matchesSearch = movieMatches || optionLabel.includes(query);
+          const isVisible = matchesSearch && !isExcluded(optionValue);
           option.hidden = !isVisible;
           if (isVisible) hasVisibleOptions = true;
         });
         group.hidden = !hasVisibleOptions;
       });
+    };
+
+    const applyNativeExclusions = () => {
+      if (!nativeSelect) return;
+      Array.from(nativeSelect.options).forEach((option) => {
+        if (!option.value) return;
+        const excluded = isExcluded(option.value);
+        option.disabled = excluded;
+        option.hidden = excluded;
+      });
+    };
+
+    // Flag (in red) every option whose character already has a relationship with
+    // the selected source. The currently selected value is never flagged so that
+    // editing an existing relationship does not paint its own target red.
+    const applyRelatedStyling = () => {
+      optionButtons.forEach((button) => {
+        const value = button.dataset.value || '';
+        const isRelated = relatedValues.has(value) && value !== currentValue() && !isExcluded(value);
+        button.classList.toggle('is-related', isRelated);
+        if (isRelated) {
+          button.title = 'Already has a relationship with the selected character';
+        } else {
+          button.removeAttribute('title');
+        }
+      });
+    };
+
+    const refresh = () => {
+      applyNativeExclusions();
+      filterOptions();
+      applyRelatedStyling();
+    };
+
+    const setRelated = (values) => {
+      relatedValues = new Set(Array.from(values || [], String));
+      applyRelatedStyling();
+    };
+
+    const setExcluded = (values) => {
+      excludedValues = new Set(Array.from(values || [], String));
+      refresh();
     };
 
     optionButtons.forEach((button) => {
@@ -52,7 +109,7 @@ const initRelationshipCharacterSearchSelect = () => {
         if (searchInput) {
           searchInput.value = '';
         }
-        filterOptions();
+        refresh();
         dropdown?.removeAttribute('open');
       });
     });
@@ -80,8 +137,36 @@ const initRelationshipCharacterSearchSelect = () => {
     });
 
     setSelectedLabel();
-    filterOptions();
+    refresh();
+
+    controls.push({ nativeSelect, setRelated, setExcluded });
   });
+
+  // On the relationship admin form: flag every character that already has a
+  // relationship with the selected source (character1) in red, and hide the
+  // source itself so a character cannot be related to themself.
+  const adjacencyEl = document.getElementById('relationship-adjacency-data');
+  if (!adjacencyEl) return;
+
+  let adjacency = {};
+  try {
+    adjacency = JSON.parse(adjacencyEl.textContent || '{}');
+  } catch (error) {
+    adjacency = {};
+  }
+
+  const sourceControl = controls.find((control) => control.nativeSelect?.name === 'character1');
+  const targetControl = controls.find((control) => control.nativeSelect?.name === 'character2');
+  if (!sourceControl || !targetControl) return;
+
+  const applyFromSource = () => {
+    const value = sourceControl.nativeSelect.value;
+    targetControl.setRelated(value ? adjacency[value] || [] : []);
+    targetControl.setExcluded(value ? [value] : []);
+  };
+
+  sourceControl.nativeSelect.addEventListener('change', applyFromSource);
+  applyFromSource();
 };
 
 if (document.readyState === 'loading') {

@@ -1,5 +1,20 @@
 let bulkRowCount = 0;
 
+// Character ids that already have a relationship with the chosen source.
+// Updated whenever the source character changes; applied to every target row.
+let currentExcluded = new Set();
+const rowControls = [];
+
+function getAdjacency() {
+  const el = document.getElementById('relationship-adjacency-data');
+  if (!el) return {};
+  try {
+    return JSON.parse(el.textContent || '{}');
+  } catch (error) {
+    return {};
+  }
+}
+
 function initSingleSearchSelect(root) {
   const dropdown = root.querySelector('.relationship-character-search-select__dropdown');
   const summary = root.querySelector('.relationship-character-search-select__summary');
@@ -9,6 +24,8 @@ function initSingleSearchSelect(root) {
   const nativeSelect = root.querySelector('.relationship-character-search-select__native');
   const optionButtons = Array.from(root.querySelectorAll('[data-relationship-character-search-option]'));
   const groups = Array.from(root.querySelectorAll('[data-relationship-character-search-group]'));
+
+  let excludedValues = new Set();
 
   const setSelectedLabel = () => {
     if (!nativeSelect || !label) return;
@@ -22,6 +39,11 @@ function initSingleSearchSelect(root) {
     }
   };
 
+  // The currently selected value is never excluded, so a target already chosen
+  // before the source changed is kept rather than silently dropped.
+  const isExcluded = (value) =>
+    excludedValues.has(value) && value !== (nativeSelect ? nativeSelect.value : '');
+
   const filterOptions = () => {
     if (!searchInput) return;
     const query = searchInput.value.trim().toLowerCase();
@@ -30,13 +52,31 @@ function initSingleSearchSelect(root) {
       const movieMatches = groupLabel.includes(query);
       let hasVisibleOptions = false;
       group.querySelectorAll('[data-relationship-character-search-option]').forEach((option) => {
+        const optionValue = option.dataset.value || '';
         const optionLabel = (option.dataset.label || option.textContent || '').toLowerCase();
-        const isVisible = movieMatches || optionLabel.includes(query);
+        const matchesSearch = movieMatches || optionLabel.includes(query);
+        const isVisible = matchesSearch && !isExcluded(optionValue);
         option.hidden = !isVisible;
         if (isVisible) hasVisibleOptions = true;
       });
       group.hidden = !hasVisibleOptions;
     });
+  };
+
+  const applyNativeExclusions = () => {
+    if (!nativeSelect) return;
+    Array.from(nativeSelect.options).forEach((option) => {
+      if (!option.value) return;
+      const excluded = isExcluded(option.value);
+      option.disabled = excluded;
+      option.hidden = excluded;
+    });
+  };
+
+  const setExcluded = (values) => {
+    excludedValues = new Set(Array.from(values || [], String));
+    applyNativeExclusions();
+    filterOptions();
   };
 
   optionButtons.forEach((button) => {
@@ -79,6 +119,8 @@ function initSingleSearchSelect(root) {
 
   setSelectedLabel();
   filterOptions();
+
+  return { setExcluded };
 }
 
 function createRow() {
@@ -94,7 +136,12 @@ function createRow() {
 
 function initRow(row) {
   const searchSelectRoot = row.querySelector('[data-relationship-character-search-select]');
-  if (searchSelectRoot) initSingleSearchSelect(searchSelectRoot);
+  if (searchSelectRoot) {
+    const control = initSingleSearchSelect(searchSelectRoot);
+    control.row = row;
+    control.setExcluded(currentExcluded);
+    rowControls.push(control);
+  }
 
   const directionalCheckbox = row.querySelector('.bulk-row-directional');
   const directionWrapper = row.querySelector('.bulk-row-direction-wrapper');
@@ -105,6 +152,8 @@ function initRow(row) {
   });
 
   removeBtn?.addEventListener('click', () => {
+    const index = rowControls.findIndex((control) => control.row === row);
+    if (index !== -1) rowControls.splice(index, 1);
     row.remove();
     updateRemoveButtons();
   });
@@ -126,6 +175,21 @@ document.addEventListener('DOMContentLoaded', () => {
     container.appendChild(createRow());
   }
   updateRemoveButtons();
+
+  // When the source character changes, hide every character it already has a
+  // relationship with from all target dropdowns (existing and future rows).
+  const adjacency = getAdjacency();
+  const sourceSelect = document.getElementById('id_source_character');
+  const applyExclusions = () => {
+    const value = sourceSelect ? sourceSelect.value : '';
+    const related = value && adjacency[value] ? adjacency[value] : [];
+    currentExcluded = new Set(related.map(String));
+    // Hide the source itself so a character cannot be related to themself.
+    if (value) currentExcluded.add(String(value));
+    rowControls.forEach((control) => control.setExcluded(currentExcluded));
+  };
+  sourceSelect?.addEventListener('change', applyExclusions);
+  applyExclusions();
 
   addBtn?.addEventListener('click', () => {
     const row = createRow();

@@ -1,0 +1,5 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrahead %}{{ block.super }}
+{{ relationship_adjacency|json_script:"relationship-adjacency-data" }}
+{% endblock %}

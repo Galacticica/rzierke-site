@@ -26,6 +26,7 @@
 
 {% block content %}
 <div id="content-main">
+  {{ relationship_adjacency|json_script:"relationship-adjacency-data" }}
   <h1>Bulk Add Relationships</h1>
   <p class="bulk-add-help">Choose one source character, then define as many relationships as you need. All rows are saved at once.</p>
 
@@ -170,7 +171,8 @@
     </fieldset>
 
     <div class="submit-row">
-      <input type="submit" value="Save All Relationships" class="default">
+      <input type="submit" name="_addanother" value="Save and add another" class="default">
+      <input type="submit" name="_save" value="Save">
       <a href="../" class="closelink">Cancel</a>
     </div>
   </form>
