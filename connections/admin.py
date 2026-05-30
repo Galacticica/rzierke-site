@@ -304,6 +304,30 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 			return form_field
 		return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+	def _relationship_adjacency(self):
+		"""Map each character to the characters it already has any relationship with.
+
+		Relationships are treated as undirected here so a target is hidden from a
+		source regardless of which side it was stored on.
+		"""
+		adjacency = {}
+		for char1_id, char2_id in Relationship.objects.values_list("character1_id", "character2_id"):
+			adjacency.setdefault(char1_id, set()).add(char2_id)
+			adjacency.setdefault(char2_id, set()).add(char1_id)
+		return {character_id: sorted(related) for character_id, related in adjacency.items()}
+
+	change_form_template = "connections/admin/relationship_change_form.html"
+
+	def add_view(self, request, form_url="", extra_context=None):
+		extra_context = extra_context or {}
+		extra_context["relationship_adjacency"] = self._relationship_adjacency()
+		return super().add_view(request, form_url, extra_context)
+
+	def change_view(self, request, object_id, form_url="", extra_context=None):
+		extra_context = extra_context or {}
+		extra_context["relationship_adjacency"] = self._relationship_adjacency()
+		return super().change_view(request, object_id, form_url, extra_context)
+
 	def get_urls(self):
 		urls = super().get_urls()
 		custom_urls = [
