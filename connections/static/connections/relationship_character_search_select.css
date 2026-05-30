@@ -68,6 +68,11 @@
   box-shadow: 0 20px 48px rgba(15, 23, 42, 0.24);
 }
 
+.relationship-character-search-select__panel--up {
+  top: auto;
+  bottom: calc(100% + 0.5rem);
+}
+
 .relationship-character-search-select__search {
   width: 100%;
   margin-bottom: 0.75rem;

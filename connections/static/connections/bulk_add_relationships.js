@@ -2,6 +2,8 @@ let bulkRowCount = 0;
 
 function initSingleSearchSelect(root) {
   const dropdown = root.querySelector('.relationship-character-search-select__dropdown');
+  const summary = root.querySelector('.relationship-character-search-select__summary');
+  const panel = root.querySelector('.relationship-character-search-select__panel');
   const searchInput = root.querySelector('[data-relationship-character-search-input]');
   const label = root.querySelector('[data-relationship-character-search-label]');
   const nativeSelect = root.querySelector('.relationship-character-search-select__native');
@@ -25,7 +27,15 @@ function initSingleSearchSelect(root) {
     const query = searchInput.value.trim().toLowerCase();
     groups.forEach((group) => {
       const groupLabel = (group.dataset.groupLabel || '').toLowerCase();
-      group.hidden = !groupLabel.includes(query);
+      const movieMatches = groupLabel.includes(query);
+      let hasVisibleOptions = false;
+      group.querySelectorAll('[data-relationship-character-search-option]').forEach((option) => {
+        const optionLabel = (option.dataset.label || option.textContent || '').toLowerCase();
+        const isVisible = movieMatches || optionLabel.includes(query);
+        option.hidden = !isVisible;
+        if (isVisible) hasVisibleOptions = true;
+      });
+      group.hidden = !hasVisibleOptions;
     });
   };
 
@@ -45,11 +55,24 @@ function initSingleSearchSelect(root) {
     });
   });
 
+  const positionPanel = () => {
+    if (!summary || !panel) return;
+    panel.classList.remove('relationship-character-search-select__panel--up');
+    const summaryRect = summary.getBoundingClientRect();
+    const panelHeight = panel.offsetHeight;
+    const spaceBelow = window.innerHeight - summaryRect.bottom;
+    const spaceAbove = summaryRect.top;
+    if (spaceBelow < panelHeight && spaceAbove > spaceBelow) {
+      panel.classList.add('relationship-character-search-select__panel--up');
+    }
+  };
+
   searchInput?.addEventListener('input', filterOptions);
   searchInput?.addEventListener('click', (e) => e.stopPropagation());
   dropdown?.addEventListener('toggle', () => {
     if (dropdown.open) {
       filterOptions();
+      positionPanel();
       searchInput?.focus();
     }
   });

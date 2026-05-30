@@ -8,7 +8,7 @@
       </svg>
     </summary>
     <div class="relationship-character-search-select__panel">
-      <input type="text" class="relationship-character-search-select__search" data-relationship-character-search-input placeholder="Search movies…">
+      <input type="text" class="relationship-character-search-select__search" data-relationship-character-search-input placeholder="Search characters or movies…">
       <select name="{{ widget.name }}"{% if widget_id %} id="{{ widget_id }}"{% endif %} class="relationship-character-search-select__native" hidden>
         {% for group_name, group_options, group_index in widget.optgroups %}
           {% for option in group_options %}

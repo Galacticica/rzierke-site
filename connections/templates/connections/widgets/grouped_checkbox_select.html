@@ -1,20 +1,47 @@
 {% if widget.optgroups %}
-<div style="max-height: 32rem; overflow: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 0.9rem; padding: 0.25rem 0.25rem 0.5rem;">
-  {% for group_name, group_options, group_index in widget.optgroups %}
-    <fieldset style="margin: 0; min-width: 0; border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 0.9rem; padding: 0.8rem 0.9rem 0.85rem; background: rgba(15, 23, 42, 0.28);">
-      {% if group_name %}
-        <legend style="padding: 0 0.45rem; margin-left: 0.3rem; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: rgb(191, 219, 254);">
-          {{ group_name }}
-        </legend>
-      {% endif %}
-      <div style="display: grid; gap: 0.55rem;">
-        {% for option in group_options %}
-          <div>
-            {% include option.template_name with widget=option %}
-          </div>
-        {% endfor %}
-      </div>
-    </fieldset>
-  {% endfor %}
+<div class="grouped-checkbox-select" data-grouped-checkbox-select>
+  <input type="text" class="grouped-checkbox-select__search" data-grouped-checkbox-search placeholder="Search…" style="width: 100%; margin-bottom: 0.75rem; padding: 0.55rem 0.7rem; border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 0.6rem; background: rgba(255, 255, 255, 0.04); color: inherit;">
+  <div style="max-height: 32rem; overflow: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 0.9rem; padding: 0.25rem 0.25rem 0.5rem;">
+    {% for group_name, group_options, group_index in widget.optgroups %}
+      <fieldset data-grouped-checkbox-group style="margin: 0; min-width: 0; border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 0.9rem; padding: 0.8rem 0.9rem 0.85rem; background: rgba(15, 23, 42, 0.28);">
+        {% if group_name %}
+          <legend style="padding: 0 0.45rem; margin-left: 0.3rem; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: rgb(191, 219, 254);">
+            {{ group_name }}
+          </legend>
+        {% endif %}
+        <div style="display: grid; gap: 0.55rem;">
+          {% for option in group_options %}
+            <div data-grouped-checkbox-option>
+              {% include option.template_name with widget=option %}
+            </div>
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% endfor %}
+  </div>
 </div>
+<script>
+(function () {
+  document.querySelectorAll('[data-grouped-checkbox-select]').forEach(function (root) {
+    if (root.dataset.groupedCheckboxInit) return;
+    root.dataset.groupedCheckboxInit = '1';
+    var searchInput = root.querySelector('[data-grouped-checkbox-search]');
+    var groups = Array.prototype.slice.call(root.querySelectorAll('[data-grouped-checkbox-group]'));
+    if (!searchInput) return;
+    searchInput.addEventListener('input', function () {
+      var query = searchInput.value.trim().toLowerCase();
+      groups.forEach(function (group) {
+        var hasVisibleOptions = false;
+        group.querySelectorAll('[data-grouped-checkbox-option]').forEach(function (option) {
+          var label = (option.textContent || '').toLowerCase();
+          var isVisible = label.includes(query);
+          option.hidden = !isVisible;
+          if (isVisible) hasVisibleOptions = true;
+        });
+        group.hidden = !hasVisibleOptions;
+      });
+    });
+  });
+})();
+</script>
 {% endif %}
