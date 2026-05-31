@@ -33,6 +33,7 @@ def _group_character_options(characters):
 				"id": character.id,
 				"name": character.name,
 				"display_name": f"{character.name} ({character.earth_number.number})" if character.earth_number else character.name,
+				"aliases": [alter_ego.name for alter_ego in character.alter_egos.all()],
 			}
 		)
 
@@ -56,7 +57,7 @@ def _serialize_light_graph_response(graph, characters=None):
 
 @require_GET
 def graph_page_view(request):
-	characters = Character.objects.select_related("movie_introduced", "earth_number").order_by(
+	characters = Character.objects.select_related("movie_introduced", "earth_number").prefetch_related("alter_egos").order_by(
 		"movie_introduced__release_date",
 		"phase_introduced",
 		"name",
