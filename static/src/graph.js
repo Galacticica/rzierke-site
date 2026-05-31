@@ -518,7 +518,7 @@ if (graphRoot) {
     const isHuge  = n > 300;
     const isLarge = n > 100;
     const BASE_CHARGE    = -2500;
-    const BASE_LINK_DIST = 350;
+    const BASE_LINK_DIST = 437.5; // 1.25x the original 350 for a bit more breathing room between nodes
     const chargeStrength = isHuge ? BASE_CHARGE * 0.15 : isLarge ? BASE_CHARGE * 0.5 : BASE_CHARGE;
     const linkDist       = isHuge ? BASE_LINK_DIST * 0.3 : isLarge ? BASE_LINK_DIST * 0.7 : BASE_LINK_DIST;
     const alphaDecay     = isHuge ? 0.08 : isLarge ? 0.06 : 0.04;
