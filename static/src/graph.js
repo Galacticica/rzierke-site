@@ -17,6 +17,7 @@ if (graphRoot) {
   const popupMovies  = nodePopup?.querySelector('[data-node-popup-movies]');
   const popupHandle  = nodePopup?.querySelector('[data-node-popup-handle]');
   const popupClose   = nodePopup?.querySelector('[data-node-popup-close]');
+  const popupFocus   = nodePopup?.querySelector('[data-node-popup-focus]');
   const characterSearchInput = document.querySelector('[data-character-search="single"]');
   const characterSearchDropdown = document.getElementById('character-search-dropdown');
   const fromInput    = document.getElementById('path-from');
@@ -45,6 +46,9 @@ if (graphRoot) {
   let fullGraphPayload = null;
   let popupDragState = null;
   let popupPosition = { left: 0, top: 0 };
+  // ID of the character the graph is currently focused on (its neighborhood
+  // filter is active). null when showing the normal/filtered graph.
+  let focusedCharacterId = null;
 
   if (nodePopup && nodePopup.parentElement !== document.body) {
     document.body.appendChild(nodePopup);
@@ -256,7 +260,7 @@ if (graphRoot) {
     container.appendChild(list);
   };
 
-  const showNodePopup = (node) => {
+  const showNodePopup = (node, { keepPosition = false } = {}) => {
     if (!nodePopup) return;
 
     const data = node.data() || {};
@@ -268,6 +272,10 @@ if (graphRoot) {
     if (popupName) popupName.textContent = data.label || data.name || 'Character';
     if (popupStatus) popupStatus.textContent = `Status: ${statusLabel}`;
     if (popupEarth) popupEarth.textContent = `${earthLabel}`;
+
+    if (popupFocus) {
+      popupFocus.checked = focusedCharacterId === String(data.id || '');
+    }
 
     renderPopupSection(
       popupAliases,
@@ -315,6 +323,11 @@ if (graphRoot) {
     nodePopup.hidden = false;
     nodePopup.dataset.characterId = String(data.id || '');
 
+    // When re-showing the popup after a re-render (e.g. toggling the focus
+    // switch), keep it where the user last saw it instead of snapping back to
+    // the node's new on-screen position.
+    if (keepPosition) return;
+
     const renderedPosition = node.renderedPosition();
     const viewerRect = graphRoot.getBoundingClientRect();
     requestAnimationFrame(() => {
@@ -323,9 +336,30 @@ if (graphRoot) {
   };
 
   nodePopup?.addEventListener('click', (event) => {
-    const closeButton = event.target.closest('[data-node-popup-close]');
-    if (closeButton) {
+    if (event.target.closest('[data-node-popup-close]')) {
       hideNodePopup();
+    }
+  });
+
+  popupFocus?.addEventListener('change', () => {
+    const characterId = nodePopup?.dataset.characterId;
+    if (!characterId) return;
+
+    if (popupFocus.checked) {
+      applyNeighborhoodFilter(characterId).catch((err) => {
+        console.error(err);
+        popupFocus.checked = false;
+        setStatus('Failed to focus on this character.', 'error');
+      });
+    } else {
+      // Toggle back to the full/filtered graph, keeping the popup open.
+      focusedCharacterId = null;
+      loadFilteredGraph()
+        .then(() => reopenPopupForCharacter(characterId))
+        .catch((err) => {
+          console.error(err);
+          setStatus('Failed to restore the graph.', 'error');
+        });
     }
   });
 
@@ -361,21 +395,31 @@ if (graphRoot) {
   window.addEventListener('pointerup', stopPopupDrag);
   window.addEventListener('pointercancel', stopPopupDrag);
 
-  cy.on('tap', 'node', (event) => {
-    const node = event.target;
+  const openCharacterPopup = (node, { keepPosition = false } = {}) => {
+    if (!node || node.empty()) return;
     const data = node.data() || {};
+    const cacheKey = String(data.id || '');
 
-    if (data.details) {
-      showNodePopup(node);
+    // Re-renders (filter/focus changes) rebuild nodes from light payloads that
+    // drop the details, so re-hydrate from the cache before showing.
+    if (!data.details && characterDetailCache.has(cacheKey)) {
+      node.data('details', characterDetailCache.get(cacheKey));
+    }
+
+    if (node.data('details')) {
+      showNodePopup(node, { keepPosition });
       return;
     }
 
-    showNodePopup(node);
+    showNodePopup(node, { keepPosition });
     fetchCharacterDetails(data.id)
       .then((details) => {
         if (!nodePopup || nodePopup.dataset.characterId !== String(data.id || '')) return;
         node.data('details', details);
-        showNodePopup(node);
+        // The popup was already placed by the synchronous open above; this is
+        // just a content refresh, so never reposition (avoids snapping back if
+        // the graph re-rendered while details were loading).
+        showNodePopup(node, { keepPosition: true });
       })
       .catch((error) => {
         console.error(error);
@@ -383,7 +427,17 @@ if (graphRoot) {
           setStatus('Failed to load character details.', 'warning');
         }
       });
-  });
+  };
+
+  // Re-show the popup for a character once a new graph render has settled,
+  // keeping it at its current on-screen position.
+  const reopenPopupForCharacter = (characterId) => {
+    if (!characterId) return;
+    const node = cy.getElementById(String(characterId));
+    if (node && node.nonempty()) openCharacterPopup(node, { keepPosition: true });
+  };
+
+  cy.on('tap', 'node', (event) => openCharacterPopup(event.target));
 
   const syncGraphSize = () => {
     cy.resize();
@@ -639,6 +693,9 @@ if (graphRoot) {
   const PHI = (1 + Math.sqrt(5)) / 2;
 
   const applyElements = (payload, label) => {
+    // Any fresh render clears focus mode. applyNeighborhoodFilter re-sets it
+    // immediately after its own applyElements call.
+    focusedCharacterId = null;
     activePayload = payload;
     if (_simRafId !== null) { cancelAnimationFrame(_simRafId); _simRafId = null; }
     if (d3Sim) { d3Sim.stop(); d3Sim = null; }
@@ -729,6 +786,66 @@ if (graphRoot) {
       .filter(Boolean);
 
     return { nodes, edges };
+  };
+
+  // ─── Character focus (neighborhood) filter ─────────────────────────────────
+  // Show only the given character and the characters directly connected to it,
+  // along with every relationship among that set.
+  const applyNeighborhoodFilter = async (characterId) => {
+    const centerId = String(characterId);
+    const fullGraph = await getFullGraphPayload();
+
+    const neighborIds = new Set([centerId]);
+    fullGraph.edges.forEach((edge) => {
+      const source = String(edge.data.source);
+      const target = String(edge.data.target);
+      if (source === centerId) neighborIds.add(target);
+      else if (target === centerId) neighborIds.add(source);
+    });
+
+    const nodeMap = new Map(fullGraph.nodes.map((node) => [String(node.data.id), node]));
+    // A character with no relationships isn't part of the relationship-built
+    // full graph, so fall back to the node from the current view so it can
+    // still be shown on its own.
+    if (!nodeMap.has(centerId)) {
+      const fallback = activePayload.nodes.find((node) => String(node.data.id) === centerId);
+      if (fallback) nodeMap.set(centerId, fallback);
+    }
+
+    const nodes = Array.from(neighborIds)
+      .map((id) => nodeMap.get(id))
+      .filter(Boolean)
+      .map(cloneNode);
+
+    if (!nodes.length) {
+      setStatus('That character could not be found in the graph.', 'warning');
+      return;
+    }
+
+    const edges = fullGraph.edges
+      .filter((edge) => neighborIds.has(String(edge.data.source)) && neighborIds.has(String(edge.data.target)))
+      .map(cloneEdge);
+
+    const centerNode = nodeMap.get(centerId);
+    const centerName = centerNode?.data.label || centerNode?.data.name || 'character';
+    const connectionCount = nodes.length - 1;
+
+    applyElements(
+      { nodes, edges },
+      connectionCount
+        ? `Showing ${centerName} and ${connectionCount} connected character${connectionCount === 1 ? '' : 's'}.`
+        : `Showing ${centerName} (no connections found).`
+    );
+    // applyElements resets focusedCharacterId, so set it after the render.
+    focusedCharacterId = centerId;
+    setStatus(
+      connectionCount
+        ? `Focused on ${centerName} and direct connections.`
+        : `Focused on ${centerName}. No direct connections found.`,
+      'success'
+    );
+    // Keep the detail popup open, repositioned over the node in the new view.
+    reopenPopupForCharacter(centerId);
   };
 
   const findCharacterByInput = (input) => {
@@ -873,7 +990,8 @@ document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
     dropdown.querySelectorAll(`[data-character-optgroup="${side}"]`).forEach(group => {
       let anyVisible = false;
       group.querySelectorAll(`[data-character-select="${side}"]`).forEach(opt => {
-        const match = opt.dataset.characterName.toLowerCase().includes(query);
+        const haystack = `${opt.dataset.characterName} ${opt.dataset.characterAliases || ''}`.toLowerCase();
+        const match = haystack.includes(query);
         opt.style.display = match ? '' : 'none';
         if (match) anyVisible = true;
       });
@@ -970,7 +1088,8 @@ document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
     characterSearchDropdown?.querySelectorAll('[data-character-optgroup="single"]').forEach((group) => {
       let anyVisible = false;
       group.querySelectorAll('[data-character-select="single"]').forEach((option) => {
-        const match = option.dataset.characterName.toLowerCase().includes(query);
+        const haystack = `${option.dataset.characterName} ${option.dataset.characterAliases || ''}`.toLowerCase();
+        const match = haystack.includes(query);
         option.style.display = match ? '' : 'none';
         if (match) anyVisible = true;
       });
