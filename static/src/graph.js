@@ -515,8 +515,8 @@ if (graphRoot) {
     const edgeData = cy.edges().map(e => ({ source: e.data('source'), target: e.data('target') }));
 
     const n = d3Nodes.length;
-    const BASE_CHARGE    = -2500;
-    const BASE_LINK_DIST = 437.5; // 1.25x the original 350 for a bit more breathing room between nodes
+    const BASE_CHARGE    = -3600;
+    const BASE_LINK_DIST = 600;
 
     // Scale the forces smoothly with graph size instead of using hard tiers.
     // The old n>100 / n>300 cliffs caused a visible collapse: crossing 300
@@ -528,7 +528,7 @@ if (graphRoot) {
     const density        = Math.min(1, 120 / n);
     const chargeStrength = BASE_CHARGE    * (0.18 + 0.82 * density);
     const linkDist       = BASE_LINK_DIST * (0.45 + 0.55 * density);
-    const collideR       = GRAPH_NODE_R + 4;          // hard floor: no overlap, ever
+    const collideR       = GRAPH_NODE_R + 18;         // hard floor: no overlap + breathing room, at any count
     const centerPull     = 0.04 + 0.06 * (1 - density);
     const alphaDecay     = 0.04 + 0.05 * (1 - density);
     const chargeMax      = 1200 + 2800 * density;     // cap Barnes-Hut range so charge stays cheap when huge
