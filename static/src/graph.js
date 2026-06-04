@@ -515,23 +515,33 @@ if (graphRoot) {
     const edgeData = cy.edges().map(e => ({ source: e.data('source'), target: e.data('target') }));
 
     const n = d3Nodes.length;
-    const isHuge  = n > 300;
-    const isLarge = n > 100;
     const BASE_CHARGE    = -2500;
     const BASE_LINK_DIST = 437.5; // 1.25x the original 350 for a bit more breathing room between nodes
-    const chargeStrength = isHuge ? BASE_CHARGE * 0.15 : isLarge ? BASE_CHARGE * 0.5 : BASE_CHARGE;
-    const linkDist       = isHuge ? BASE_LINK_DIST * 0.3 : isLarge ? BASE_LINK_DIST * 0.7 : BASE_LINK_DIST;
-    const alphaDecay     = isHuge ? 0.08 : isLarge ? 0.06 : 0.04;
+
+    // Scale the forces smoothly with graph size instead of using hard tiers.
+    // The old n>100 / n>300 cliffs caused a visible collapse: crossing 300
+    // nodes flipped the layout into a 2px-collision "blob" where 46px nodes
+    // overlapped completely. `density` runs 1 (small graph) → 0 (huge graph);
+    // bigger graphs get weaker per-pair repulsion and shorter links so the
+    // whole network stays manageable on screen, while the collision radius is
+    // PINNED at the node's visual size so nodes never overlap, at any count.
+    const density        = Math.min(1, 120 / n);
+    const chargeStrength = BASE_CHARGE    * (0.18 + 0.82 * density);
+    const linkDist       = BASE_LINK_DIST * (0.45 + 0.55 * density);
+    const collideR       = GRAPH_NODE_R + 4;          // hard floor: no overlap, ever
+    const centerPull     = 0.04 + 0.06 * (1 - density);
+    const alphaDecay     = 0.04 + 0.05 * (1 - density);
+    const chargeMax      = 1200 + 2800 * density;     // cap Barnes-Hut range so charge stays cheap when huge
 
     // Build the simulation but keep it stopped — we settle it synchronously
     // below instead of letting d3 animate node positions over many frames.
     d3Sim = d3.forceSimulation(d3Nodes)
       .force('link',      d3.forceLink(edgeData).id(d => d.id).distance(linkDist))
-      .force('charge',    d3.forceManyBody().strength(chargeStrength).distanceMax(isHuge ? 1200 : 4000))
+      .force('charge',    d3.forceManyBody().strength(chargeStrength).distanceMax(chargeMax))
       .force('center',    d3.forceCenter(0, 0))
-      .force('collision', d3.forceCollide().radius(isHuge ? 2 : GRAPH_NODE_R + 6))
-      .force('x',         d3.forceX(0).strength(isHuge ? 0.08 : 0.04))
-      .force('y',         d3.forceY(0).strength(isHuge ? 0.08 : 0.04))
+      .force('collision', d3.forceCollide().radius(collideR).strength(0.9))
+      .force('x',         d3.forceX(0).strength(centerPull))
+      .force('y',         d3.forceY(0).strength(centerPull))
       .alphaDecay(alphaDecay)
       .alphaTarget(0)
       .alpha(alpha)
