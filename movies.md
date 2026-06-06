@@ -21,7 +21,7 @@
 - [x] Captain America: Civil War (2016)
 - [ ] Doctor Strange (2016)
 - [ ] Guardians of the Galaxy Vol. 2 (2017)
-- [ ] Spider-Man: Homecoming (2017)
+- [x] Spider-Man: Homecoming (2017)
 - [ ] Thor: Ragnarok (2017)
 - [ ] Black Panther (2018)
 - [ ] Avengers: Infinity War (2018)
