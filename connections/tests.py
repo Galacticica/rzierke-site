@@ -2,7 +2,6 @@ from django.contrib import admin as django_admin
 from django.test import TestCase
 
 import networkx as nx
-from networkx.exception import NetworkXNoPath
 
 from .admin import CharacterAdmin, CharacterAdminForm, RelationshipAdmin, RelationshipAdminForm, SearchableRelationshipCharacterSelect
 from .graph_service import MCUGraphService
@@ -45,7 +44,9 @@ class MCUGraphServiceTests(TestCase):
 		self.assertEqual(forward["character_ids"], [start.id, hub.id, finish.id])
 		self.assertEqual(reverse["character_ids"], [finish.id, hub.id, start.id])
 
-	def test_shortest_path_respects_directional_edges(self):
+	def test_shortest_path_traverses_directional_edges_both_ways(self):
+		# Relationship direction is display-only: a directional edge still
+		# connects the two characters, so the path search must walk it either way.
 		origin = self._character("Origin")
 		target = self._character("Target")
 
@@ -56,10 +57,19 @@ class MCUGraphServiceTests(TestCase):
 			directional=True,
 		)
 
-		self.graph_service.shortest_path(origin.id, target.id)
+		forward = self.graph_service.shortest_path(origin.id, target.id)
+		reverse = self.graph_service.shortest_path(target.id, origin.id)
 
-		with self.assertRaises(NetworkXNoPath):
-			self.graph_service.shortest_path(target.id, origin.id)
+		self.assertEqual(forward["character_ids"], [origin.id, target.id])
+		self.assertEqual(reverse["character_ids"], [target.id, origin.id])
+
+		# Even when walked in reverse, the edge keeps its stored orientation and
+		# directional flag so the arrow renders correctly.
+		reverse_edge = reverse["edges"][0]
+		self.assertEqual(reverse_edge["source"], origin.id)
+		self.assertEqual(reverse_edge["target"], target.id)
+		self.assertTrue(reverse_edge["directional"])
+		self.assertEqual(reverse_edge["relationship_type"], "Mentor")
 
 	def test_filtered_subgraph_filters_by_any_movie_appearance(self):
 		introduced_movie = self._movie("Intro Movie", "2024-01-01")

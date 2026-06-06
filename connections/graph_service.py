@@ -246,13 +246,17 @@ class MCUGraphService:
 		return self._build_graph_from_relationships(queryset, include_details=include_details)
 
 	def _build_traversal_graph(self, graph):
-		"""Create a traversal graph where non-directional edges are traversable both ways."""
+		"""Create a traversal graph where every edge is traversable both ways.
+
+		Relationship direction is only meaningful for display (arrowheads). For
+		connectivity/path-finding a directional edge (e.g. a Mentor edge stored
+		as Tony -> Peter) still connects the two characters, so the path search
+		must be able to walk it in either direction. We keep the original
+		directional metadata so display can still render the correct arrow.
+		"""
 		traversal_graph = graph.copy()
 
 		for source_id, target_id, edge_data in graph.edges(data=True):
-			if edge_data.get("directional", False):
-				continue
-
 			if traversal_graph.has_edge(target_id, source_id):
 				existing = traversal_graph[target_id][source_id]
 				existing["weight"] = min(existing.get("weight", edge_data.get("weight", 1)), edge_data.get("weight", 1))
@@ -271,9 +275,10 @@ class MCUGraphService:
 			return source_node, target_node, edge_data
 
 		if graph.has_edge(target_node, source_node):
+			# Walked in reverse. Return the edge in its stored orientation so the
+			# correct relationship type and arrow direction are preserved for display.
 			reverse_edge = graph[target_node][source_node]
-			if not reverse_edge.get("directional", False):
-				return target_node, source_node, reverse_edge
+			return target_node, source_node, reverse_edge
 
 		raise nx.NetworkXNoPath(f"No traversable edge between {source_node} and {target_node}.")
 
