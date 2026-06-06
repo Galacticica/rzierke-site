@@ -28,6 +28,14 @@ class MCUGraphService:
 	CACHE_TIMEOUT = 900
 	VERSION_KEY = f"{CACHE_PREFIX}:version"
 
+	# Path search prioritizes the fewest number of connections (hops). Each hop
+	# costs HOP_PENALTY, which dwarfs any single relationship weight, so a path
+	# with fewer edges always wins over a longer one. Among paths of equal length
+	# the relationship weights act as a tiebreaker (e.g. prefer Variant/Family
+	# over Enemy). HOP_PENALTY just needs to exceed the largest relationship
+	# weight for this to hold across any realistic path length.
+	HOP_PENALTY = 1000
+
 	def _cache_key(self, suffix, version=None):
 		if version is None:
 			version = self._get_cache_version()
@@ -292,7 +300,12 @@ class MCUGraphService:
 
 		graph = self.build_graph()
 		traversal_graph = self._build_traversal_graph(graph)
-		path = nx.shortest_path(traversal_graph, source=source_id, target=target_id, weight="weight")
+
+		def _hop_cost(_source, _target, edge_data):
+			# Fewest hops first; relationship weight breaks ties between paths of equal length.
+			return self.HOP_PENALTY + edge_data.get("weight", 1)
+
+		path = nx.shortest_path(traversal_graph, source=source_id, target=target_id, weight=_hop_cost)
 
 		edges = []
 		total_cost = 0
