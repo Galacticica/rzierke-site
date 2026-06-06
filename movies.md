@@ -17,7 +17,7 @@
 - [x] Captain America: The Winter Soldier (2014)
 - [x] Guardians of the Galaxy (2014)
 - [x] Avengers: Age of Ultron (2015)
-- [ ] Ant-Man (2015)
+- [x] Ant-Man (2015)
 - [ ] Captain America: Civil War (2016)
 - [ ] Doctor Strange (2016)
 - [ ] Guardians of the Galaxy Vol. 2 (2017)
