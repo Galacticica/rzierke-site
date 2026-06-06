@@ -71,6 +71,49 @@ class MCUGraphServiceTests(TestCase):
 		self.assertTrue(reverse_edge["directional"])
 		self.assertEqual(reverse_edge["relationship_type"], "Mentor")
 
+	def test_shortest_path_prefers_fewest_hops_over_lower_weight(self):
+		# A direct connection (1 hop) must win over a longer path even when the
+		# longer path has a lower total relationship weight.
+		ross = self._character("Thaddeus")
+		bruce = self._character("Bruce")
+		betty = self._character("Betty")
+
+		# Direct heavy edge: Enemy (weight 6).
+		Relationship.objects.create(
+			character1=ross, character2=bruce, relationship_type="Enemy", directional=False,
+		)
+		# Two-hop lighter route: Family (2) + Romantic (3) = 5 < 6.
+		Relationship.objects.create(
+			character1=ross, character2=betty, relationship_type="Family", directional=False,
+		)
+		Relationship.objects.create(
+			character1=betty, character2=bruce, relationship_type="Romantic", directional=False,
+		)
+
+		result = self.graph_service.shortest_path(ross.id, bruce.id)
+
+		self.assertEqual(result["character_ids"], [ross.id, bruce.id])
+		self.assertEqual(len(result["edges"]), 1)
+		self.assertEqual(result["edges"][0]["relationship_type"], "Enemy")
+
+	def test_shortest_path_breaks_hop_ties_by_weight(self):
+		# Among paths with the same number of hops, the lower-weight relationship wins.
+		start = self._character("Start")
+		finish = self._character("Finish")
+		cheap = self._character("CheapHub")
+		pricey = self._character("PriceyHub")
+
+		# Route via cheap hub: Variant (1) + Variant (1) = 2.
+		Relationship.objects.create(character1=start, character2=cheap, relationship_type="Variant", directional=False)
+		Relationship.objects.create(character1=cheap, character2=finish, relationship_type="Variant", directional=False)
+		# Route via pricey hub: Enemy (6) + Enemy (6) = 12. Same hop count, higher weight.
+		Relationship.objects.create(character1=start, character2=pricey, relationship_type="Enemy", directional=False)
+		Relationship.objects.create(character1=pricey, character2=finish, relationship_type="Enemy", directional=False)
+
+		result = self.graph_service.shortest_path(start.id, finish.id)
+
+		self.assertEqual(result["character_ids"], [start.id, cheap.id, finish.id])
+
 	def test_filtered_subgraph_filters_by_any_movie_appearance(self):
 		introduced_movie = self._movie("Intro Movie", "2024-01-01")
 		later_movie = self._movie("Later Movie", "2025-01-01")
