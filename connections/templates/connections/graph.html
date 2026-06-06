@@ -686,7 +686,7 @@
                       d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-14.9-3M4 15a8 8 0 0014.9 3" />
                   </svg>
                 </button>
-                <details class="graph-filter-dropdown" id="character-search-dropdown" data-flip-default="up">
+                <details class="graph-filter-dropdown" id="character-search-dropdown">
                   <summary class="btn btn-sm btn-circle btn-ghost" title="Search character" aria-label="Search character">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
                       stroke="currentColor">
@@ -862,13 +862,15 @@
       if (!wantsDefaultUp) details.classList.remove('flip-up');
 
       requestAnimationFrame(() => {
-        const rect = panel.getBoundingClientRect();
         const summaryRect = summary.getBoundingClientRect();
         const spaceBelow = window.innerHeight - summaryRect.bottom - FOOTER_MARGIN - 8; // pad
         const spaceAbove = summaryRect.top - FOOTER_MARGIN - 8;
 
-        if (rect.bottom > window.innerHeight - FOOTER_MARGIN && spaceAbove > 120) {
-          // flip above if there's more room above
+        // Only flip above when there isn't enough usable room below AND there's
+        // more room above. A long list alone shouldn't force a flip — the panel
+        // scrolls inside its max-height, so opening downward into open space is
+        // preferable to cramming it into a smaller area above.
+        if (spaceBelow < 200 && spaceAbove > spaceBelow) {
           details.classList.add('flip-up');
         } else {
           if (!wantsDefaultUp) details.classList.remove('flip-up');
@@ -929,10 +931,22 @@
       });
     });
 
+    // Re-fit the open dropdown as its search box filters the list, so the panel
+    // never ends up sized for the full list while showing a filtered subset.
+    document.querySelectorAll('.graph-filter-search').forEach((searchInput) => {
+      const details = searchInput.closest('.graph-filter-dropdown');
+      if (details) searchInput.addEventListener('input', () => updateDropdown(details));
+    });
+
     // Recompute on resize/scroll and when clicking (handles dynamic content)
     const recomputeOpen = () => document.querySelectorAll('.graph-filter-dropdown[open]').forEach(updateDropdown);
     window.addEventListener('resize', recomputeOpen);
-    window.addEventListener('scroll', recomputeOpen, true);
+    // Capture-phase catches page scrolling, but ignore scrolling that happens
+    // inside a dropdown panel — re-laying-out mid-scroll fights the user's wheel.
+    window.addEventListener('scroll', (event) => {
+      if (event.target instanceof Element && event.target.closest('.graph-filter-dropdown-panel')) return;
+      recomputeOpen();
+    }, true);
 
     // Also recompute after clicks to handle cases where layout changed
     document.addEventListener('click', () => setTimeout(recomputeOpen, 10));
