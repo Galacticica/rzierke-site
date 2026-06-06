@@ -22,6 +22,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_CHAT_MODEL = "gpt-5.2"
 OPENAI_TITLE_MODEL = "gpt-5.2-mini"
 
+# Default initial rows for the connections app bulk-add view. Can be overridden
+# via the environment variable `CONNECTIONS_BULK_ADD_DEFAULT_ROWS`.
+CONNECTIONS_BULK_ADD_DEFAULT_ROWS = int(os.getenv("CONNECTIONS_BULK_ADD_DEFAULT_ROWS", "15"))
+
 SECURE_SSL_REDIRECT = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG

@@ -131,3 +131,15 @@ class Relationship(models.Model):
                 name='unique_relationship'
             )
         ]
+
+
+class BulkAddConfig(models.Model):
+    """Singleton-ish config to control the connections bulk-add initial rows."""
+    default_rows = models.IntegerField(default=15)
+
+    class Meta:
+        verbose_name = "Bulk Add Configuration"
+        verbose_name_plural = "Bulk Add Configuration"
+
+    def __str__(self):
+        return f"Bulk add initial rows: {self.default_rows}"

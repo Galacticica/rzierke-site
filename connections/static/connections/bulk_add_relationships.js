@@ -233,7 +233,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('bulk-rows-container');
   const addBtn = document.getElementById('add-row-btn');
 
-  for (let i = 0; i < 3; i++) {
+  const initialRows = (() => {
+    try {
+      const val = parseInt(container?.dataset?.initialRows, 10);
+      return Number.isFinite(val) && val > 0 ? val : 15;
+    } catch (e) {
+      return 15;
+    }
+  })();
+
+  for (let i = 0; i < initialRows; i++) {
     container.appendChild(createRow());
   }
   updateRemoveButtons();

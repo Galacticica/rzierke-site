@@ -18,9 +18,10 @@ from django import forms
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path
+from django.conf import settings
 from unfold.admin import ModelAdmin, TabularInline
 
-from .models import AlterEgo, Character, Movie, Relationship, Team, TeamMembership, Earth
+from .models import AlterEgo, Character, Movie, Relationship, Team, TeamMembership, Earth, BulkAddConfig
 
 
 class OrderedChoiceAdminMixin:
@@ -500,6 +501,17 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 
 		selected_movie = request.POST.get("movie", "") if request.method == "POST" else request.GET.get("movie", "")
 		variant_adjacency, movie_members, variant_options = self._movie_variant_data()
+
+		# Determine initial rows: prefer DB config, fallback to settings/env default.
+		initial_rows = int(getattr(settings, "CONNECTIONS_BULK_ADD_DEFAULT_ROWS", 15))
+		try:
+			cfg = BulkAddConfig.objects.first()
+			if cfg and cfg.default_rows:
+				initial_rows = int(cfg.default_rows)
+		except Exception:
+			# If migrations haven't been run or DB unavailable, fall back to settings.
+			pass
+
 		context = {
 			**self.admin_site.each_context(request),
 			"title": "Bulk Add Relationships",
@@ -512,6 +524,7 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 			"movie_members": movie_members,
 			"variant_options": variant_options,
 			"opts": self.model._meta,
+			"initial_rows": initial_rows,
 			"app_label": self.model._meta.app_label,
 		}
 		return TemplateResponse(request, "connections/admin/bulk_add_relationships.html", context)
@@ -522,3 +535,12 @@ class EarthAdmin(ModelAdmin):
 	"""Admin configuration for Earth."""
 	list_display = ("number",)
 	search_fields = ("number",)
+
+
+@admin.register(BulkAddConfig)
+class BulkAddConfigAdmin(ModelAdmin):
+	list_display = ("default_rows",)
+
+	def has_add_permission(self, request):
+		# Only allow a single config instance
+		return not BulkAddConfig.objects.exists()
