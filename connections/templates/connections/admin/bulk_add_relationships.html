@@ -14,7 +14,7 @@
 {{ block.super }}
 <script src="{% static 'connections/movie_search_select.js' %}" defer></script>
 <script src="{% static 'connections/relationship_character_search_select.js' %}" defer></script>
-<script src="{% static 'connections/bulk_add_relationships.js' %}?v=2" defer></script>
+<script src="{% static 'connections/bulk_add_relationships.js' %}?v=3" defer></script>
 {% endblock %}
 
 {% block breadcrumbs %}
@@ -31,6 +31,7 @@
   {{ relationship_adjacency|json_script:"relationship-adjacency-data" }}
   {{ variant_adjacency|json_script:"bulk-variant-adjacency-data" }}
   {{ movie_members|json_script:"bulk-movie-members-data" }}
+  {{ character_aliases|json_script:"bulk-character-aliases-data" }}
   <h1>Bulk Add Relationships</h1>
   <p class="bulk-add-help">Choose one source character, then define as many relationships as you need. All rows are saved at once.</p>
 
