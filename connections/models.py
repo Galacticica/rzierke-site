@@ -5,7 +5,7 @@ Created Date: 2026-05-25
 Author: Reagan Zierke
 Email: reaganzierke@gmail.com
 -----
-Last Modified: 2026-05-26 20:48:37
+Last Modified: 2026-06-06 21:44:47
 Modified By: Reagan Zierke
 -----
 Description: <<description>>
@@ -32,7 +32,6 @@ class Character(models.Model):
     name = models.CharField(max_length=100, null=False, blank=False)
     phase_introduced = models.IntegerField(null=True, blank=True)
     movie_introduced = models.ForeignKey('Movie', on_delete=models.SET_NULL, null=True, blank=True, related_name='introduced_characters')
-    latest_appearance = models.ForeignKey('Movie', on_delete=models.SET_NULL, null=True, blank=True, related_name='latest_characters')
     alignment = models.CharField(max_length=100, choices=ALIGNMENT_CHOICES, null=True, blank=True)
     status = models.CharField(max_length=100, choices=STATUS_CHOICES, null=True, blank=True)
     earth_number = models.ForeignKey('Earth', on_delete=models.SET_NULL, null=True, blank=True, related_name='characters')
