@@ -17,7 +17,6 @@ if (graphRoot) {
   const popupMovies  = nodePopup?.querySelector('[data-node-popup-movies]');
   const popupHandle  = nodePopup?.querySelector('[data-node-popup-handle]');
   const popupClose   = nodePopup?.querySelector('[data-node-popup-close]');
-  const popupFocus   = nodePopup?.querySelector('[data-node-popup-focus]');
   const characterSearchInput = document.querySelector('[data-character-search="single"]');
   const characterSearchDropdown = document.getElementById('character-search-dropdown');
   const fromInput    = document.getElementById('path-from');
@@ -46,9 +45,6 @@ if (graphRoot) {
   let fullGraphPayload = null;
   let popupDragState = null;
   let popupPosition = { left: 0, top: 0 };
-  // ID of the character the graph is currently focused on (its neighborhood
-  // filter is active). null when showing the normal/filtered graph.
-  let focusedCharacterId = null;
 
   if (nodePopup && nodePopup.parentElement !== document.body) {
     document.body.appendChild(nodePopup);
@@ -154,6 +150,10 @@ if (graphRoot) {
           label: '',
           'font-size': 9,
           color: '#D8D5DD',
+          // Resting state: edges sit faint so the graph reads as a soft
+          // structure instead of a hairball. Clicking a node lights up only
+          // that node's connections (see .nbr-edge / .faded below).
+          'opacity': 0.4,
         },
       },
       { selector: 'edge[relationship_type = "Variant"]',  style: { 'line-color': relationshipColors.Variant, 'target-arrow-color': relationshipColors.Variant } },
@@ -174,6 +174,21 @@ if (graphRoot) {
           'line-color': '#22D3EE',
           'target-arrow-color': '#22D3EE',
           'z-index': 999,
+        },
+      },
+      // ─── Hover dim-and-highlight ──────────────────────────────────────────
+      // While a node is hovered, everything outside its neighborhood gets
+      // `.faded` (pushed far back) and the node + its direct connections get
+      // `.nbr-node` / `.nbr-edge` (pulled to full strength and front).
+      { selector: 'node.faded', style: { 'opacity': 0.15 } },
+      { selector: 'edge.faded', style: { 'opacity': 0.03 } },
+      { selector: 'node.nbr-node', style: { 'opacity': 1, 'z-index': 900 } },
+      {
+        selector: 'edge.nbr-edge',
+        style: {
+          'opacity': 1,
+          'width': 4,
+          'z-index': 900,
         },
       },
     ],
@@ -273,10 +288,6 @@ if (graphRoot) {
     if (popupStatus) popupStatus.textContent = `Status: ${statusLabel}`;
     if (popupEarth) popupEarth.textContent = `${earthLabel}`;
 
-    if (popupFocus) {
-      popupFocus.checked = focusedCharacterId === String(data.id || '');
-    }
-
     renderPopupSection(
       popupAliases,
       popupDetails.aliases || [],
@@ -338,28 +349,7 @@ if (graphRoot) {
   nodePopup?.addEventListener('click', (event) => {
     if (event.target.closest('[data-node-popup-close]')) {
       hideNodePopup();
-    }
-  });
-
-  popupFocus?.addEventListener('change', () => {
-    const characterId = nodePopup?.dataset.characterId;
-    if (!characterId) return;
-
-    if (popupFocus.checked) {
-      applyNeighborhoodFilter(characterId).catch((err) => {
-        console.error(err);
-        popupFocus.checked = false;
-        setStatus('Failed to focus on this character.', 'error');
-      });
-    } else {
-      // Toggle back to the full/filtered graph, keeping the popup open.
-      focusedCharacterId = null;
-      loadFilteredGraph()
-        .then(() => reopenPopupForCharacter(characterId))
-        .catch((err) => {
-          console.error(err);
-          setStatus('Failed to restore the graph.', 'error');
-        });
+      clearNodeHighlight();
     }
   });
 
@@ -429,15 +419,54 @@ if (graphRoot) {
       });
   };
 
-  // Re-show the popup for a character once a new graph render has settled,
-  // keeping it at its current on-screen position.
-  const reopenPopupForCharacter = (characterId) => {
-    if (!characterId) return;
-    const node = cy.getElementById(String(characterId));
-    if (node && node.nonempty()) openCharacterPopup(node, { keepPosition: true });
+  // ─── Click dim-and-highlight ───────────────────────────────────────────────
+  // Fade the whole graph and surface only the clicked node's neighborhood, so
+  // a single character's relationships become traceable in a dense network.
+  const clearNodeHighlight = () => {
+    cy.batch(() => {
+      cy.elements().removeClass('faded nbr-node nbr-edge');
+    });
   };
 
-  cy.on('tap', 'node', (event) => openCharacterPopup(event.target));
+  const highlightNeighborhood = (node) => {
+    const neighborhood = node.closedNeighborhood(); // node + connected edges + their nodes
+    cy.batch(() => {
+      // Drop any previous selection's highlight first, so clicking a new node
+      // deselects the old one instead of leaving both lit.
+      cy.elements().removeClass('nbr-node nbr-edge').addClass('faded');
+      neighborhood.removeClass('faded');
+      neighborhood.nodes().addClass('nbr-node');
+      neighborhood.edges().addClass('nbr-edge');
+    });
+  };
+
+  cy.on('tap', 'node', (event) => {
+    const node = event.target;
+    // Clicking the node whose detail panel is already open toggles it shut and
+    // drops the highlight, rather than re-opening the same panel.
+    const alreadyOpen = nodePopup && !nodePopup.hidden
+      && nodePopup.dataset.characterId === String(node.id());
+    if (alreadyOpen) {
+      hideNodePopup();
+      clearNodeHighlight();
+      return;
+    }
+    // If a panel is already open for another node, leave it where it sits
+    // instead of snapping it over to the newly clicked node.
+    const panelWasOpen = nodePopup && !nodePopup.hidden;
+    highlightNeighborhood(node);
+    openCharacterPopup(node, { keepPosition: panelWasOpen });
+  });
+
+  // Tapping empty canvas clears the highlight and returns to the faint resting
+  // view.
+  cy.on('tap', (event) => {
+    if (event.target === cy) clearNodeHighlight();
+  });
+
+  // A re-render (filter/focus/path change) tears down elements mid-highlight,
+  // so drop any lingering highlight classes when the graph reloads.
+  cy.on('layoutstart', clearNodeHighlight);
 
   const syncGraphSize = () => {
     cy.resize();
@@ -515,19 +544,22 @@ if (graphRoot) {
     const edgeData = cy.edges().map(e => ({ source: e.data('source'), target: e.data('target') }));
 
     const n = d3Nodes.length;
-    const BASE_CHARGE    = -3600;
+    const BASE_CHARGE    = -5200;
     const BASE_LINK_DIST = 600;
 
     // Scale the forces smoothly with graph size instead of using hard tiers.
     // The old n>100 / n>300 cliffs caused a visible collapse: crossing 300
     // nodes flipped the layout into a 2px-collision "blob" where 46px nodes
-    // overlapped completely. `density` runs 1 (small graph) → 0 (huge graph);
-    // bigger graphs get weaker per-pair repulsion and shorter links so the
-    // whole network stays manageable on screen, while the collision radius is
-    // PINNED at the node's visual size so nodes never overlap, at any count.
+    // overlapped completely. `density` runs 1 (small graph) → 0 (huge graph).
+    // The floors here are intentionally HIGH so large graphs still spread out
+    // hard instead of collapsing into a hairball — a dense 400+ node graph
+    // needs strong repulsion and long links to stay legible, and the
+    // dim-and-highlight interaction (below) does the rest of the readability
+    // work. Collision radius is PINNED at the node's visual size so nodes
+    // never overlap, at any count.
     const density        = Math.min(1, 120 / n);
-    const chargeStrength = BASE_CHARGE    * (0.18 + 0.82 * density);
-    const linkDist       = BASE_LINK_DIST * (0.45 + 0.55 * density);
+    const chargeStrength = BASE_CHARGE    * (0.55 + 0.45 * density);
+    const linkDist       = BASE_LINK_DIST * (0.70 + 0.30 * density);
     const collideR       = GRAPH_NODE_R + 18;         // hard floor: no overlap + breathing room, at any count
     const centerPull     = 0.04 + 0.06 * (1 - density);
     const alphaDecay     = 0.04 + 0.05 * (1 - density);
@@ -703,9 +735,6 @@ if (graphRoot) {
   const PHI = (1 + Math.sqrt(5)) / 2;
 
   const applyElements = (payload, label) => {
-    // Any fresh render clears focus mode. applyNeighborhoodFilter re-sets it
-    // immediately after its own applyElements call.
-    focusedCharacterId = null;
     activePayload = payload;
     if (_simRafId !== null) { cancelAnimationFrame(_simRafId); _simRafId = null; }
     if (d3Sim) { d3Sim.stop(); d3Sim = null; }
@@ -796,66 +825,6 @@ if (graphRoot) {
       .filter(Boolean);
 
     return { nodes, edges };
-  };
-
-  // ─── Character focus (neighborhood) filter ─────────────────────────────────
-  // Show only the given character and the characters directly connected to it,
-  // along with every relationship among that set.
-  const applyNeighborhoodFilter = async (characterId) => {
-    const centerId = String(characterId);
-    const fullGraph = await getFullGraphPayload();
-
-    const neighborIds = new Set([centerId]);
-    fullGraph.edges.forEach((edge) => {
-      const source = String(edge.data.source);
-      const target = String(edge.data.target);
-      if (source === centerId) neighborIds.add(target);
-      else if (target === centerId) neighborIds.add(source);
-    });
-
-    const nodeMap = new Map(fullGraph.nodes.map((node) => [String(node.data.id), node]));
-    // A character with no relationships isn't part of the relationship-built
-    // full graph, so fall back to the node from the current view so it can
-    // still be shown on its own.
-    if (!nodeMap.has(centerId)) {
-      const fallback = activePayload.nodes.find((node) => String(node.data.id) === centerId);
-      if (fallback) nodeMap.set(centerId, fallback);
-    }
-
-    const nodes = Array.from(neighborIds)
-      .map((id) => nodeMap.get(id))
-      .filter(Boolean)
-      .map(cloneNode);
-
-    if (!nodes.length) {
-      setStatus('That character could not be found in the graph.', 'warning');
-      return;
-    }
-
-    const edges = fullGraph.edges
-      .filter((edge) => neighborIds.has(String(edge.data.source)) && neighborIds.has(String(edge.data.target)))
-      .map(cloneEdge);
-
-    const centerNode = nodeMap.get(centerId);
-    const centerName = centerNode?.data.label || centerNode?.data.name || 'character';
-    const connectionCount = nodes.length - 1;
-
-    applyElements(
-      { nodes, edges },
-      connectionCount
-        ? `Showing ${centerName} and ${connectionCount} connected character${connectionCount === 1 ? '' : 's'}.`
-        : `Showing ${centerName} (no connections found).`
-    );
-    // applyElements resets focusedCharacterId, so set it after the render.
-    focusedCharacterId = centerId;
-    setStatus(
-      connectionCount
-        ? `Focused on ${centerName} and direct connections.`
-        : `Focused on ${centerName}. No direct connections found.`,
-      'success'
-    );
-    // Keep the detail popup open, repositioned over the node in the new view.
-    reopenPopupForCharacter(centerId);
   };
 
   const findCharacterByInput = (input) => {
