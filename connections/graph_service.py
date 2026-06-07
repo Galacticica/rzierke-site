@@ -5,7 +5,7 @@ Created Date: 2026-05-25
 Author: Reagan Zierke
 Email: reaganzierke@gmail.com
 -----
-Last Modified: 2026-05-25 18:14:10
+Last Modified: 2026-06-06 22:52:31
 Modified By: Reagan Zierke
 -----
 Description: 
@@ -71,7 +71,7 @@ class MCUGraphService:
 		return static(photo_path)
 
 	def _character_base_queryset(self, queryset):
-		return queryset.select_related("movie_introduced", "latest_appearance", "earth_number")
+		return queryset.select_related("movie_introduced", "earth_number")
 
 	def _character_detail_queryset(self, queryset):
 		return self._character_base_queryset(queryset).prefetch_related(
@@ -119,7 +119,6 @@ class MCUGraphService:
 			"earth": character.earth_number.number if character.earth_number else None,
 			"phase_introduced": character.phase_introduced,
 			"movie_introduced_id": character.movie_introduced_id,
-			"latest_appearance_id": character.latest_appearance_id,
 			"photo_url": self._photo_url(character.photo_path),
 		}
 
@@ -512,7 +511,6 @@ class MCUGraphService:
 				"earth": node_data.get("earth") or (character.earth_number.number if character is not None and character.earth_number else None),
 				"phase_introduced": node_data.get("phase_introduced"),
 				"movie_introduced_id": node_data.get("movie_introduced_id"),
-				"latest_appearance_id": node_data.get("latest_appearance_id"),
 				"photo_url": photo_url or "",
 			}
 
