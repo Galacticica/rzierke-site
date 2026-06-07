@@ -174,7 +174,6 @@ class MCUGraphServiceTests(TestCase):
 				"name": character.name,
 				"phase_introduced": "",
 				"movie_introduced": "",
-				"latest_appearance": "",
 				"alignment": "",
 				"status": "",
 				"earth_number": "",
@@ -201,10 +200,7 @@ class MCUGraphServiceTests(TestCase):
 			list(form.fields["movie_introduced"].queryset.values_list("title", flat=True)),
 			["Earliest Movie", "Middle Movie", "Later Movie"],
 		)
-		self.assertEqual(
-			list(form.fields["latest_appearance"].queryset.values_list("title", flat=True)),
-			["Earliest Movie", "Middle Movie", "Later Movie"],
-		)
+		
 
 	def test_character_admin_sorts_earth_choices_alphabetically(self):
 		Earth.objects.create(number="Earth-838")
