@@ -89,7 +89,7 @@
 - [x] Spider-Man 3 (2007)
 - [x] The Amazing Spider-Man (2012)
 - [x] The Amazing Spider-Man 2 (2014)
-- [ ] Spider-Man: Into the Spider-Verse (2018)
+- [x] Spider-Man: Into the Spider-Verse (2018)
 - [ ] Venom (2018)
 - [ ] Venom: Let There Be Carnage (2021)
 - [ ] Morbius (2022)
