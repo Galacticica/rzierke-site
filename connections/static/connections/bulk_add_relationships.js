@@ -29,6 +29,20 @@ function getVariantAdjacency() {
   return variantAdjacencyCache;
 }
 
+// { characterId: "alias1 alias2 ..." } — aliases per character, so the picker can
+// match a search query against a character's aliases (like the public graph search).
+let characterAliasesCache = null;
+function getCharacterAliases() {
+  if (characterAliasesCache) return characterAliasesCache;
+  const el = document.getElementById('bulk-character-aliases-data');
+  try {
+    characterAliasesCache = el ? JSON.parse(el.textContent || '{}') : {};
+  } catch (error) {
+    characterAliasesCache = {};
+  }
+  return characterAliasesCache;
+}
+
 // { movieTitle: [characterId, ...] } — cast of each movie, so variants already in
 // the filtered movie aren't duplicated in the Variants section.
 let movieMembersCache = null;
@@ -96,6 +110,7 @@ function initSingleSearchSelect(root) {
     // them — excluding any that are already part of the filtered movie's cast.
     const sourceVariantIds = movieFilter ? getSourceVariantIds() : null;
     const movieMemberIds = movieFilter ? getMovieMemberIds(movieFilter) : null;
+    const aliasMap = getCharacterAliases();
     groups.forEach((group) => {
       const isVariantsGroup = group.hasAttribute('data-variants-group');
       const rawGroupLabel = group.dataset.groupLabel || '';
@@ -108,7 +123,8 @@ function initSingleSearchSelect(root) {
       group.querySelectorAll('[data-relationship-character-search-option]').forEach((option) => {
         const optionValue = option.dataset.value || '';
         const optionLabel = (option.dataset.label || option.textContent || '').toLowerCase();
-        const matchesSearch = movieMatches || optionLabel.includes(query);
+        const optionAliases = (aliasMap[optionValue] || '').toLowerCase();
+        const matchesSearch = movieMatches || optionLabel.includes(query) || optionAliases.includes(query);
         let isVisible = passesMovieFilter && matchesSearch && !isExcluded(optionValue);
         if (isVariantsGroup) {
           isVisible = isVisible

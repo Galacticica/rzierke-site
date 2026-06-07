@@ -502,6 +502,14 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 		selected_movie = request.POST.get("movie", "") if request.method == "POST" else request.GET.get("movie", "")
 		variant_adjacency, movie_members, variant_options = self._movie_variant_data()
 
+		# {character_id: "alias1 alias2 ..."} so the picker can match on aliases,
+		# the same way the public graph search does.
+		character_aliases = {}
+		for character_id, alias_name in AlterEgo.objects.values_list("character_id", "name"):
+			if alias_name:
+				character_aliases.setdefault(str(character_id), []).append(alias_name)
+		character_aliases = {cid: " ".join(names) for cid, names in character_aliases.items()}
+
 		# Determine initial rows: prefer DB config, fallback to settings/env default.
 		initial_rows = int(getattr(settings, "CONNECTIONS_BULK_ADD_DEFAULT_ROWS", 15))
 		try:
@@ -523,6 +531,7 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 			"variant_adjacency": variant_adjacency,
 			"movie_members": movie_members,
 			"variant_options": variant_options,
+			"character_aliases": character_aliases,
 			"opts": self.model._meta,
 			"initial_rows": initial_rows,
 			"app_label": self.model._meta.app_label,
