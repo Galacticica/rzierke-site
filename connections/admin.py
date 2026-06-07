@@ -104,12 +104,6 @@ class CharacterAdminForm(forms.ModelForm):
 		widget=SearchableMovieSelect(),
 		label="First appearance movie",
 	)
-	latest_appearance = forms.ModelChoiceField(
-		queryset=Movie.objects.order_by("release_date", "title"),
-		required=False,
-		widget=SearchableMovieSelect(),
-		label="Latest appearance movie",
-	)
 	movies = forms.ModelMultipleChoiceField(
 		queryset=Movie.objects.order_by("release_date", "title"),
 		required=False,
@@ -124,7 +118,6 @@ class CharacterAdminForm(forms.ModelForm):
 			"name",
 			"phase_introduced",
 			"movie_introduced",
-			"latest_appearance",
 			"alignment",
 			"status",
 			"earth_number",
