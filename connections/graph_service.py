@@ -148,21 +148,19 @@ class MCUGraphService:
 		graph.add_node(source_id)
 		graph.add_node(target_id)
 
-		payload = {
-			"source": source_id,
-			"target": target_id,
-			"relationship_type": relationship.relationship_type,
-			"relationship_types": [relationship.relationship_type],
-			"relationship_ids": [relationship.id],
-			"weight": relationship.weight,
-			"directional": edge_directional,
-		}
+		relationship_type = relationship.relationship_type
 
+		# `relationship_segments` groups the relationships between this pair by
+		# type. Each distinct type becomes its own Cytoscape edge (its own line)
+		# in to_cytoscape_format, so e.g. Thor↔Hela (Enemy + Family) renders as
+		# two lines instead of one merged edge. The flat relationship_type /
+		# relationship_types / relationship_ids / weight / directional fields are
+		# kept for path-finding, which only needs a single representative edge.
 		if graph.has_edge(source_id, target_id):
 			existing = graph[source_id][target_id]
 			existing_types = list(existing.get("relationship_types", []))
-			if relationship.relationship_type not in existing_types:
-				existing_types.append(relationship.relationship_type)
+			if relationship_type not in existing_types:
+				existing_types.append(relationship_type)
 
 			existing_ids = list(existing.get("relationship_ids", []))
 			if relationship.id not in existing_ids:
@@ -170,14 +168,39 @@ class MCUGraphService:
 
 			existing["relationship_types"] = existing_types
 			existing["relationship_ids"] = existing_ids
-			existing["relationship_type"] = existing.get("relationship_type") or relationship.relationship_type
+			existing["relationship_type"] = existing.get("relationship_type") or relationship_type
 			existing["weight"] = min(existing.get("weight", relationship.weight), relationship.weight)
 			existing["directional"] = existing.get("directional", False) or edge_directional
 			existing["source"] = source_id
 			existing["target"] = target_id
+
+			segments = existing.setdefault("relationship_segments", {})
+			self._merge_segment(segments, relationship, relationship_type, edge_directional)
 			return
 
-		graph.add_edge(source_id, target_id, **payload)
+		graph.add_edge(
+			source_id,
+			target_id,
+			source=source_id,
+			target=target_id,
+			relationship_type=relationship_type,
+			relationship_types=[relationship_type],
+			relationship_ids=[relationship.id],
+			weight=relationship.weight,
+			directional=edge_directional,
+			relationship_segments=self._merge_segment({}, relationship, relationship_type, edge_directional),
+		)
+
+	def _merge_segment(self, segments, relationship, relationship_type, edge_directional):
+		segment = segments.setdefault(
+			relationship_type,
+			{"relationship_ids": [], "weight": relationship.weight, "directional": False},
+		)
+		if relationship.id not in segment["relationship_ids"]:
+			segment["relationship_ids"].append(relationship.id)
+		segment["weight"] = min(segment["weight"], relationship.weight)
+		segment["directional"] = segment["directional"] or edge_directional
+		return segments
 
 	def _build_graph_from_relationships(self, relationships, include_details=True):
 		graph = nx.DiGraph()
@@ -527,29 +550,54 @@ class MCUGraphService:
 
 		edges = []
 		for source_id, target_id, edge_data in sorted(graph.edges(data=True)):
-			payload = self._edge_payload(
-				{
-					"source": source_id,
-					"target": target_id,
-					**edge_data,
-				}
-			)
-			edges.append(
-				{
-					"data": {
-						"id": payload["edge_id"],
-						"source": str(source_id),
-						"target": str(target_id),
-						"label": payload["label"],
-						"weight": payload["weight"],
-						"relationship_type": payload["relationship_type"],
-						"relationship_types": payload["relationship_types"],
-						"relationship_ids": payload["relationship_ids"],
-						"directional": payload["directional"],
-					},
-					"classes": "directional" if payload["directional"] else "undirected",
-				}
-			)
+			# Emit one edge per relationship type so a pair with multiple kinds of
+			# relationship (e.g. Enemy + Family) shows as distinct, colored lines.
+			# Cytoscape's bezier curve-style fans parallel edges apart automatically.
+			segments = edge_data.get("relationship_segments")
+			if segments:
+				segment_items = sorted(segments.items())
+			else:
+				# Fallback for any edge built without segment data (e.g. an
+				# older cached graph): render it as a single combined edge.
+				segment_items = [
+					(
+						edge_data.get("relationship_type"),
+						{
+							"relationship_ids": list(edge_data.get("relationship_ids", [])),
+							"weight": edge_data.get("weight", 1),
+							"directional": edge_data.get("directional", False),
+						},
+					)
+				]
+
+			for relationship_type, segment in segment_items:
+				payload = self._edge_payload(
+					{
+						"source": source_id,
+						"target": target_id,
+						"relationship_type": relationship_type,
+						"relationship_types": [relationship_type] if relationship_type else [],
+						"relationship_ids": segment.get("relationship_ids", []),
+						"weight": segment.get("weight", 1),
+						"directional": segment.get("directional", False),
+					}
+				)
+				edges.append(
+					{
+						"data": {
+							"id": payload["edge_id"],
+							"source": str(source_id),
+							"target": str(target_id),
+							"label": payload["label"],
+							"weight": payload["weight"],
+							"relationship_type": payload["relationship_type"],
+							"relationship_types": payload["relationship_types"],
+							"relationship_ids": payload["relationship_ids"],
+							"directional": payload["directional"],
+						},
+						"classes": "directional" if payload["directional"] else "undirected",
+					}
+				)
 
 		return {"nodes": nodes, "edges": edges}
 
