@@ -46,7 +46,7 @@
 - [ ] She-Hulk: Attorney at Law (2022)
 - [ ] Werewolf by Night (2022)
 - [ ] Black Panther: Wakanda Forever (2022)
-- [ ] The Guardians of the Galaxy Holiday Special (2022)
+- [x] The Guardians of the Galaxy Holiday Special (2022)
 - [ ] Ant-Man and the Wasp: Quantumania (2023)
 - [ ] Guardians of the Galaxy Vol. 3 (2023)
 - [ ] Secret Invasion (2023)
