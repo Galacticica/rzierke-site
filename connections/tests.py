@@ -306,6 +306,32 @@ class MCUGraphServiceTests(TestCase):
 			],
 		)
 
+	def test_to_cytoscape_format_renders_one_edge_per_relationship_type(self):
+		# Two characters sharing multiple kinds of relationship (e.g. Thor and
+		# Hela are both Enemy and Family) must render as distinct lines, one per
+		# relationship type, rather than a single merged edge.
+		thor = self._character("Thor")
+		hela = self._character("Hela")
+
+		Relationship.objects.create(
+			character1=thor, character2=hela, relationship_type="Enemy", directional=False,
+		)
+		Relationship.objects.create(
+			character1=thor, character2=hela, relationship_type="Family", directional=False,
+		)
+
+		graph = self.graph_service.build_graph(
+			queryset=Relationship.objects.all(), include_details=False,
+		)
+		payload = self.graph_service.to_cytoscape_format(graph, include_details=False)
+
+		self.assertEqual(len(payload["edges"]), 2)
+		types = sorted(edge["data"]["relationship_type"] for edge in payload["edges"])
+		self.assertEqual(types, ["Enemy", "Family"])
+		# Each edge carries a unique id so Cytoscape renders both lines.
+		ids = [edge["data"]["id"] for edge in payload["edges"]]
+		self.assertEqual(len(set(ids)), 2)
+
 	def test_to_cytoscape_format_can_omit_character_details(self):
 		earth = Earth.objects.create(number="Earth-616")
 		character = self._character("Lightweight")
