@@ -114,7 +114,9 @@ if (graphRoot) {
           width: 92, height: 92,
           'background-fit': 'cover',
           'background-clip': 'node',
-          'background-image': 'data(photo_url)',
+          // Function mapper instead of `data(photo_url)` so a character with
+          // no photo falls back to 'none' — cytoscape throws on empty strings.
+          'background-image': (ele) => ele.data('photo_url') || 'none',
           'background-color': '#2A1841',
           'border-width': 4,
           'border-color': '#8B5CF6',
