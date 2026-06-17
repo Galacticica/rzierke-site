@@ -32,34 +32,38 @@
 - [ ] WandaVision (2021)
 - [ ] The Falcon and the Winter Soldier (2021)
 - [ ] Loki (2021)
+    - [ ] Season 1
+    - [ ] Season 2
 - [ ] Black Widow (2021)
 - [ ] What If...? (2021)
-    - [ ] S1 Ep1
-    - [ ] S1 Ep2
-    - [ ] S1 Ep3
-    - [ ] S1 Ep4
-    - [ ] S1 Ep5
-    - [ ] S1 Ep6
-    - [ ] S1 Ep7
-    - [ ] S1 Ep8
-    - [ ] S1 Ep9
-    - [ ] S2 Ep1
-    - [ ] S2 Ep2
-    - [ ] S2 Ep3
-    - [ ] S2 Ep4
-    - [ ] S2 Ep5
-    - [ ] S2 Ep6
-    - [ ] S2 Ep7
-    - [ ] S2 Ep8
-    - [ ] S2 Ep9
-    - [ ] S3 Ep1
-    - [ ] S3 Ep2
-    - [ ] S3 Ep3
-    - [ ] S3 Ep4
-    - [ ] S3 Ep5
-    - [ ] S3 Ep6
-    - [ ] S3 Ep7
-    - [ ] S3 Ep8
+    - [ ] S1 Ep1 What If... Captain Carter Were The First Avenger?
+    - [ ] S1 Ep2 What If... T'Challa Became a Star-Lord?
+    - [ ] S1 Ep3 What If... The World Lost Its Mightiest Heroes?
+    - [ ] S1 Ep4 What If... Doctor Strange Lost His Heart Instead of His Hands?
+    - [ ] S1 Ep5 What If... Zombies?!
+    - [ ] S1 Ep6 What If... Killmonger Rescued Tony Stark?
+    - [ ] S1 Ep7 What If... Thor Were an Only Child?
+    - [ ] S1 Ep8 What If... Ultron Won?
+    - [ ] S1 Ep9 What If... The Watcher Broke His Oath?
+    - [ ] S2 Ep1 What If... Nebula Joined the Nova Corps?
+    - [ ] S2 Ep2 What If... Peter Quill Attacked Earth's Mightiest Heroes?
+    - [ ] S2 Ep3 What If... Happy Hogan Saved Christmas?
+    - [ ] S2 Ep4 What If... Iron Man Crashed Into the Grandmaster?
+    - [ ] S2 Ep5 What If... Captain Carter Fought the Hydra Stomper?
+    - [ ] S2 Ep6 What If... Kahhori Reshaped the World?
+    - [ ] S2 Ep7 What If... Hela Found the Ten Rings?
+    - [ ] S2 Ep8 What If... The Avengers Assembled in 1602?
+    - [ ] S2 Ep9 What If... Strange Supreme Intervened?
+    - [ ] S3 Ep1 What If... The Hulk Fought the Mech Avengers?
+    - [ ] S3 Ep2 What If... Agatha Went to Hollywood?
+    - [ ] S3 Ep3 What If... The Red Guardian Stopped the Winter Soldier?
+    - [ ] S3 Ep4 What If... Howard the Duck Got Hitched?
+    - [ ] S3 Ep5 What If... The Emergence Destroyed the Earth?
+    - [ ] S3 Ep6 What If... 1872?
+    - [ ] S3 Ep7 What If... The Watcher Disappeared?
+    - [ ] S3 Ep8 What If... What If?
+- [ ] Eyes of Wakanda (2025)
+- [ ] Marvel Zombies (2025)
 - [ ] Shang-Chi and the Legend of the Ten Rings (2021)
 - [ ] Eternals (2021)
 - [ ] Hawkeye (2021)
@@ -81,11 +85,11 @@
 - [ ] Agatha All Along (2024)
 - [ ] Captain America: Brave New World (2025)
 - [ ] Daredevil: Born Again (2025)
+    - [ ] Season 1
+    - [ ] Season 2
 - [ ] Thunderbolts* (2025)
 - [ ] Ironheart (2025)
 - [x] The Fantastic Four: First Steps (2025)
-- [ ] Eyes of Wakanda (2025)
-- [ ] Marvel Zombies (2025)
 - [ ] Wonder Man (2026)
 - [ ] The Punisher: One Last Kill (2026)
 - [ ] Spider-Man: Brand New Day (2026)
@@ -95,18 +99,69 @@
 
 ## Marvel Television
 - [ ] Agents of S.H.I.E.L.D. (2013)
+    - [ ] Season 1
+    - [ ] Season 2
+    - [ ] Season 3
+    - [ ] Season 4
+    - [ ] Season 5
+    - [ ] Season 6
+    - [ ] Season 7
 - [ ] Agent Carter (2015)
+    - [ ] Season 1
+    - [ ] Season 2
 - [ ] Daredevil (2015)
+    - [ ] Season 1
+    - [ ] Season 2
+    - [ ] Season 3
 - [ ] Jessica Jones (2015)
+    - [ ] Season 1
+    - [ ] Season 2
+    - [ ] Season 3
 - [ ] Luke Cage (2016)
+    - [ ] Season 1
+    - [ ] Season 2
 - [ ] Iron Fist (2017)
+    - [ ] Season 1
+    - [ ] Season 2
 - [ ] The Defenders (2017)
 - [ ] Inhumans (2017)
 - [ ] The Punisher (2017)
+    - [ ] Season 1
+    - [ ] Season 2
 - [ ] Runaways (2017)
+    - [ ] Season 1
+    - [ ] Season 2
+    - [ ] Season 3
 - [ ] Cloak & Dagger (2018)
+    - [ ] Season 1
+    - [ ] Season 2
+
+## Marvel Animation
 - [ ] X-Men: The Animated Series (1992)
+    - [ ] Season 1
+    - [ ] Season 2
+    - [ ] Season 3
+    - [ ] Season 4
+    - [ ] Season 5
 - [ ] X-Men '97 (2024)
+    - [ ] Season 1
+    - [ ] Season 2
+- [ ] Iron Man (1994)
+    - [ ] Season 1
+    - [ ] Season 2
+- [ ] Fantastic Four: The Animated Series (1994)
+    - [ ] Season 1
+    - [ ] Season 2
+- Spider-Man: The Animated Series (1994) 
+    - [ ] Season 1
+    - [ ] Season 2
+    - [ ] Season 3
+    - [ ] Season 4
+    - [ ] Season 5
+- [ ] The Incredible Hulk (1996)
+    - [ ] Season 1
+    - [ ] Season 2
+- [ ] Silver Surfer (1998)
 - [ ] Your Friendly Neighborhood Spider-Man (2025)
 
 ## Spider-Man / Sony
@@ -164,7 +219,7 @@
 - [x] Fant4stic (2015)
 
 ## Videogames
-- [ ] Marvel's Spider-Man (2018)
+- [x] Marvel's Spider-Man (2018)
 - [ ] Marvel's Avengers (2020)
 - [ ] Marvel's Spider-Man: Miles Morales (2020)
 - [ ] Marvel's Guardians of the Galaxy (2021)
