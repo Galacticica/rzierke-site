@@ -25,15 +25,41 @@
 - [x] Thor: Ragnarok (2017)
 - [x] Black Panther (2018)
 - [x] Avengers: Infinity War (2018)
-- [ ] Ant-Man and the Wasp (2018)
-- [ ] Captain Marvel (2019)
-- [ ] Avengers: Endgame (2019)
+- [x] Ant-Man and the Wasp (2018)
+- [x] Captain Marvel (2019)
+- [x] Avengers: Endgame (2019)
 - [x] Spider-Man: Far From Home (2019)
 - [ ] WandaVision (2021)
 - [ ] The Falcon and the Winter Soldier (2021)
 - [ ] Loki (2021)
 - [ ] Black Widow (2021)
 - [ ] What If...? (2021)
+    - [ ] S1 Ep1
+    - [ ] S1 Ep2
+    - [ ] S1 Ep3
+    - [ ] S1 Ep4
+    - [ ] S1 Ep5
+    - [ ] S1 Ep6
+    - [ ] S1 Ep7
+    - [ ] S1 Ep8
+    - [ ] S1 Ep9
+    - [ ] S2 Ep1
+    - [ ] S2 Ep2
+    - [ ] S2 Ep3
+    - [ ] S2 Ep4
+    - [ ] S2 Ep5
+    - [ ] S2 Ep6
+    - [ ] S2 Ep7
+    - [ ] S2 Ep8
+    - [ ] S2 Ep9
+    - [ ] S3 Ep1
+    - [ ] S3 Ep2
+    - [ ] S3 Ep3
+    - [ ] S3 Ep4
+    - [ ] S3 Ep5
+    - [ ] S3 Ep6
+    - [ ] S3 Ep7
+    - [ ] S3 Ep8
 - [ ] Shang-Chi and the Legend of the Ten Rings (2021)
 - [ ] Eternals (2021)
 - [ ] Hawkeye (2021)
@@ -44,7 +70,7 @@
 - [ ] Thor: Love and Thunder (2022)
 - [ ] I Am Groot (2022)
 - [ ] She-Hulk: Attorney at Law (2022)
-- [ ] Werewolf by Night (2022)
+- [x] Werewolf by Night (2022)
 - [ ] Black Panther: Wakanda Forever (2022)
 - [x] The Guardians of the Galaxy Holiday Special (2022)
 - [ ] Ant-Man and the Wasp: Quantumania (2023)
@@ -57,7 +83,7 @@
 - [ ] Daredevil: Born Again (2025)
 - [ ] Thunderbolts* (2025)
 - [ ] Ironheart (2025)
-- [ ] The Fantastic Four: First Steps (2025)
+- [x] The Fantastic Four: First Steps (2025)
 - [ ] Eyes of Wakanda (2025)
 - [ ] Marvel Zombies (2025)
 - [ ] Wonder Man (2026)

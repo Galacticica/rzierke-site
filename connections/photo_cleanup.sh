@@ -5,7 +5,7 @@
  * Author: Reagan Zierke
  * Email: reaganzierke@gmail.com
  * -----
- * Last Modified: 2026-05-29 14:36:20
+ * Last Modified: 2026-06-16 22:09:48
  * Modified By: Reagan Zierke
  * -----
  * Description: Script to convert all .webp, .jpg, and .jpeg images in the current directory to .png format and then delete the original files.
@@ -17,3 +17,15 @@ find . -type f \( -name "*.webp" -o -name "*.jpg" -o -name "*.jpeg" \) -exec mog
 
 // Windows (PowerShell)
 Get-ChildItem -File | Where-Object { $_.Extension -match '\.(jpg|jpeg|webp)$' } | % { magick $_.FullName "$($_.BaseName).png"; if ($?) { Remove-Item $_.FullName } }
+
+
+
+Get-ChildItem -File |
+Where-Object { $_.Extension -match '\.(jpg|jpeg|webp|avif)$' } |
+ForEach-Object {
+    Write-Host "Converting $($_.Name)..."
+    magick $_.FullName "$($_.BaseName).png"
+    if ($LASTEXITCODE -eq 0) {
+        Remove-Item $_.FullName
+    }
+}
