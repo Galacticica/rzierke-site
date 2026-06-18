@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin, StackedInline
 
-from .models import Project, ProjectImage, StrudelProject, Tool, Skill, Resource, Bot
+from .models import Project, ProjectImage, StrudelProject, Tool, Skill, Resource, Bot, Wheel, WheelItem
 
 
 class ProjectImageInline(StackedInline):
@@ -83,3 +83,27 @@ class StrudelProjectAdmin(ModelAdmin):
     list_display = ("name", "user")
     search_fields = ("name", "text", "user__username")
     ordering = ("name",)
+
+
+class WheelItemInline(StackedInline):
+    """Register WheelItem as inline in Wheel admin."""
+    model = WheelItem
+    extra = 0
+    fields = ("name",)
+
+
+@admin.register(Wheel)
+class WheelAdmin(ModelAdmin):
+    """Register Wheel model in admin with related items shown inline."""
+    list_display = ("name", "owner", "item_count")
+    search_fields = ("name", "owner__username")
+    ordering = ("name",)
+    inlines = [WheelItemInline]
+
+    @admin.display(description="Items")
+    def item_count(self, obj):
+        return obj.items.count()
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.prefetch_related("items")
