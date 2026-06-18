@@ -1,0 +1,83 @@
+<!--
+file: partials/wheel_app.html
+Author: Reagan Zierke
+Description: HTMX swap target for the spin-the-wheel controls (load dropdown, editor,
+             save/delete buttons) plus the JSON item data the canvas reads from.
+-->
+
+<div id="wheel-app" class="space-y-8">
+    {% if user.is_authenticated %}
+    <div class="w-full">
+        <label for="wheel-select" class="label-text block mb-3">Your wheels</label>
+        <select
+            id="wheel-select"
+            class="select select-bordered w-full"
+            name="wheel_id"
+            hx-get="{% url 'wheel-load' %}"
+            hx-trigger="change"
+            hx-include="this"
+            hx-target="#wheel-app"
+            hx-swap="outerHTML">
+            <option value="" {% if not wheel %}selected{% endif %}>New wheel</option>
+            {% for w in wheels %}
+                <option value="{{ w.id }}" {% if wheel and wheel.id == w.id %}selected{% endif %}>{{ w.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    <form id="wheel-form" class="space-y-8" onsubmit="return false;">
+        <input type="hidden" name="wheel_id" value="{{ wheel.id|default_if_none:'' }}">
+
+        <div class="w-full">
+            <label for="wheel-name-input" class="label-text block mb-3">Wheel name</label>
+            <input
+                id="wheel-name-input"
+                type="text"
+                name="name"
+                class="input input-bordered w-full"
+                placeholder="My wheel"
+                value="{{ wheel.name|default_if_none:'' }}">
+        </div>
+
+        <div class="w-full">
+            <label for="wheel-items-input" class="label-text block mb-3">Items (one per line)</label>
+            <textarea
+                id="wheel-items-input"
+                name="items"
+                rows="8"
+                class="textarea textarea-bordered w-full"
+                placeholder="Alice&#10;Bob&#10;Carol">{% for item in items %}{{ item.name }}
+{% endfor %}</textarea>
+        </div>
+
+        {% if user.is_authenticated %}
+        <div class="flex flex-wrap gap-4 pt-2">
+            <button
+                type="button"
+                class="btn btn-primary"
+                hx-post="{% url 'wheel-save' %}"
+                hx-include="#wheel-form"
+                hx-target="#wheel-app"
+                hx-swap="outerHTML">Save</button>
+            {% if wheel %}
+            <button
+                type="button"
+                class="btn btn-outline btn-error"
+                hx-post="{% url 'wheel-delete' %}"
+                hx-include="#wheel-form"
+                hx-target="#wheel-app"
+                hx-swap="outerHTML"
+                hx-confirm="Delete this wheel? This cannot be undone.">Delete</button>
+            {% endif %}
+        </div>
+        {% else %}
+        <p class="text-sm text-base-content/60">
+            <a href="{% url 'login_page' %}?next={{ request.path }}" class="link link-primary">Log in</a>
+            to save, load, and delete your wheels.
+        </p>
+        {% endif %}
+    </form>
+
+    {{ items|json_script:"wheel-items-data" }}
+</div>

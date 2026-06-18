@@ -1,0 +1,259 @@
+<!--
+file: wheel.html
+Author: Reagan Zierke
+Description: Spin-the-wheel page (wheelofnames.com style). The canvas drawing and spin
+             animation are the only client-side logic; all persistence (save/load/delete
+             wheel, delete item) runs through Django views via HTMX.
+-->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+<title>Spin the Wheel</title>
+{% endblock %}
+
+{% block content %}
+<section class="mx-auto w-full max-w-6xl px-4 py-10">
+    <div class="mb-6 flex items-center justify-between">
+        <a href="{% url 'dev-home' %}" class="btn btn-ghost btn-sm">← Back</a>
+    </div>
+
+    <h1 class="text-3xl font-bold tracking-tight mb-8">Spin the Wheel</h1>
+
+    <div class="grid gap-6 lg:grid-cols-2 items-start">
+        <!-- Left: the wheel -->
+        <div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm flex flex-col items-center gap-6">
+            <div id="wheel-stage" class="relative">
+                <canvas id="wheel-canvas" width="420" height="420" class="max-w-full"></canvas>
+                <div id="wheel-pointer" class="text-primary" aria-hidden="true"></div>
+            </div>
+            <button id="wheel-spin" class="btn btn-primary btn-lg w-full">Spin</button>
+        </div>
+
+        <!-- Right: controls (HTMX swap target) -->
+        <div class="rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+            {% include 'development_portfolio/partials/wheel_app.html' %}
+        </div>
+    </div>
+</section>
+
+<!-- Result prompt: keep or remove the landed item -->
+<dialog id="result-modal" class="modal">
+    <div class="modal-box text-center">
+        <h3 class="text-lg font-semibold">Landed on</h3>
+        <p id="result-name" class="text-3xl font-bold my-4 break-words"></p>
+        <div class="flex justify-center gap-3">
+            <button id="result-keep" class="btn btn-success">Keep</button>
+            <button id="result-remove" class="btn btn-error">Remove</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<div
+    id="wheel-endpoints"
+    data-auth="{{ user.is_authenticated|yesno:'true,false' }}"
+    data-item-delete-url="{% url 'wheel-item-delete' item_id=0 %}"
+    hidden></div>
+
+<style>
+    #wheel-stage { width: 420px; max-width: 100%; }
+    #wheel-canvas { display: block; }
+    #wheel-pointer {
+        position: absolute;
+        top: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 16px solid transparent;
+        border-right: 16px solid transparent;
+        border-top: 26px solid currentColor;
+        filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+        z-index: 10;
+    }
+</style>
+
+<script>
+(function () {
+    const canvas = document.getElementById('wheel-canvas');
+    const ctx = canvas.getContext('2d');
+    const palette = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#84cc16'];
+    const endpoints = document.getElementById('wheel-endpoints');
+    const itemDeleteUrlTemplate = endpoints.dataset.itemDeleteUrl; // .../wheel-items/0/delete/
+    const modal = document.getElementById('result-modal');
+    const resultName = document.getElementById('result-name');
+
+    let serverItems = [];   // [{id, name}] from the last server render
+    let currentItems = [];  // [{name, id}] derived from the textarea
+    let rotation = 0;
+    let spinning = false;
+    let landedIndex = -1;
+
+    function readServerItems() {
+        const el = document.getElementById('wheel-items-data');
+        if (!el) return [];
+        try { return JSON.parse(el.textContent) || []; } catch (e) { return []; }
+    }
+
+    // The textarea is the live source of truth for names. We carry the saved item id
+    // through only while a line still matches the server data at the same position;
+    // once edited, id becomes null and removal falls back to client-side.
+    function readTextareaItems() {
+        const ta = document.getElementById('wheel-items-input');
+        if (!ta) return [];
+        const lines = ta.value.split('\n').map(s => s.trim()).filter(Boolean);
+        return lines.map(function (name, i) {
+            const match = serverItems[i];
+            const id = (match && match.name === name) ? match.id : null;
+            return { name: name, id: id };
+        });
+    }
+
+    function syncItems() { currentItems = readTextareaItems(); }
+
+    function draw() {
+        const n = currentItems.length;
+        const cx = canvas.width / 2, cy = canvas.height / 2, r = Math.min(cx, cy) - 4;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (n === 0) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(127,127,127,0.15)';
+            ctx.fill();
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Add names to begin', cx, cy);
+            return;
+        }
+
+        const slice = (Math.PI * 2) / n;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rotation);
+        for (let i = 0; i < n; i++) {
+            const start = i * slice;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.arc(0, 0, r, start, start + slice);
+            ctx.closePath();
+            ctx.fillStyle = palette[i % palette.length];
+            ctx.fill();
+
+            ctx.save();
+            ctx.rotate(start + slice / 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            let label = currentItems[i].name;
+            if (label.length > 18) label = label.slice(0, 17) + '…';
+            ctx.fillText(label, r - 12, 0);
+            ctx.restore();
+        }
+        ctx.restore();
+
+        // hub
+        ctx.beginPath();
+        ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+        ctx.stroke();
+    }
+
+    // The pointer sits at the top of the wheel (1.5π in canvas coords, where 0 = right
+    // and angles increase clockwise). Find which slice is under it.
+    function indexAtPointer() {
+        const n = currentItems.length;
+        if (n === 0) return -1;
+        const slice = (Math.PI * 2) / n;
+        const pointer = 1.5 * Math.PI;
+        const rel = ((pointer - rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        return Math.floor(rel / slice) % n;
+    }
+
+    function spin() {
+        if (spinning) return;
+        syncItems();
+        if (currentItems.length === 0) return;
+        spinning = true;
+
+        const duration = 4200;
+        const startRotation = rotation;
+        const turns = 5 + Math.floor(Math.random() * 4);
+        const target = startRotation + turns * Math.PI * 2 + Math.random() * Math.PI * 2;
+        let startTs = null;
+
+        function frame(ts) {
+            if (startTs === null) startTs = ts;
+            const t = Math.min((ts - startTs) / duration, 1);
+            const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+            rotation = startRotation + (target - startRotation) * eased;
+            draw();
+            if (t < 1) {
+                requestAnimationFrame(frame);
+            } else {
+                spinning = false;
+                landedIndex = indexAtPointer();
+                showResult();
+            }
+        }
+        requestAnimationFrame(frame);
+    }
+
+    function showResult() {
+        if (landedIndex < 0 || landedIndex >= currentItems.length) return;
+        resultName.textContent = currentItems[landedIndex].name;
+        modal.showModal();
+    }
+
+    function removeLanded() {
+        if (landedIndex < 0 || landedIndex >= currentItems.length) { modal.close(); return; }
+        const item = currentItems[landedIndex];
+        const authed = endpoints.dataset.auth === 'true';
+
+        if (authed && item.id != null) {
+            // Saved item: let Django delete the row and return the refreshed controls.
+            const url = itemDeleteUrlTemplate.replace('/0/', '/' + item.id + '/');
+            htmx.ajax('POST', url, { target: '#wheel-app', swap: 'outerHTML' }).then(function () {
+                modal.close();
+            });
+        } else {
+            // Unsaved item: nothing in the DB — just update the editor client-side.
+            currentItems.splice(landedIndex, 1);
+            const ta = document.getElementById('wheel-items-input');
+            if (ta) ta.value = currentItems.map(function (it) { return it.name; }).join('\n');
+            rotation = 0;
+            draw();
+            modal.close();
+        }
+    }
+
+    function initWheel() {
+        serverItems = readServerItems();
+        const ta = document.getElementById('wheel-items-input');
+        if (ta) ta.oninput = function () { syncItems(); draw(); };
+        rotation = 0;
+        syncItems();
+        draw();
+    }
+
+    // Static controls live outside the swapped partial, so bind them once.
+    document.getElementById('wheel-spin').addEventListener('click', spin);
+    document.getElementById('result-keep').addEventListener('click', function () { modal.close(); });
+    document.getElementById('result-remove').addEventListener('click', removeLanded);
+
+    // Re-initialise whenever Django re-renders the controls partial via HTMX.
+    document.body.addEventListener('htmx:afterSwap', function () {
+        if (document.getElementById('wheel-items-input')) initWheel();
+    });
+
+    initWheel();
+})();
+</script>
+{% endblock %}

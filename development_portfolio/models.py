@@ -154,3 +154,17 @@ class StrudelProject(models.Model):
 
     def __str__(self):
         return self.name
+    
+class Wheel(models.Model):
+    name = models.CharField(max_length=100)
+    owner = models.ForeignKey('accounts.User', on_delete=models.CASCADE, related_name='wheels')
+
+    def __str__(self):
+        return self.name
+
+class WheelItem(models.Model):
+    wheel = models.ForeignKey(Wheel, on_delete=models.CASCADE, related_name='items')
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
