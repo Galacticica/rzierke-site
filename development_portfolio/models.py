@@ -8,6 +8,7 @@ Description: The models for the development portfolio section of the website.
 
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 
 class ProjectQuerySet(models.QuerySet):
@@ -47,11 +48,27 @@ class Project(models.Model):
                                        help_text="Tools used in the project.")
     public = models.BooleanField(default=False, help_text="Whether the project is publicly visible.")
     repository_url = models.URLField(blank=True, help_text="URL to the project's code repository.")
+    live_url = models.URLField(blank=True, help_text="External URL to the deployed/live version of the project.")
+    live_url_name = models.CharField(max_length=200, blank=True, help_text="Django URL name for a project hosted on this site (e.g. 'dev-wheel'). Takes precedence over Live URL.")
 
     objects = ProjectQuerySet.as_manager()
 
     def __str__(self):
         return self.project_name
+
+    @property
+    def live_link(self):
+        """Resolve the live link, whether it's an on-site Django route name or an external URL.
+
+        Returns an empty string when nothing is configured (or the route name
+        can't be reversed), so templates can treat it as falsy.
+        """
+        if self.live_url_name:
+            try:
+                return reverse(self.live_url_name)
+            except NoReverseMatch:
+                return ""
+        return self.live_url
     
     def _generate_unique_slug(self) -> str:
         base_slug = slugify(self.project_name)

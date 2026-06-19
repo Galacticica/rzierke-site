@@ -53,7 +53,7 @@ class ProjectAdmin(ModelAdmin):
     This includes inlines for project images, custom list displays,
     search fields, and optimized queryset.
     """
-    list_display = ("project_name", "category", "event", "date", "public", "tools_list")
+    list_display = ("project_name", "category", "event", "date", "public", "live_url", "live_url_name", "tools_list")
     list_filter = ("public", "category", "date")
     search_fields = ("project_name", "description", "event", "category", "tool_used__name")
     filter_horizontal = ("tool_used",)
