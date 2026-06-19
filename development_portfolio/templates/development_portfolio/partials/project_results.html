@@ -37,7 +37,7 @@ Description: Partial template for project results grid. This partial is intended
 						{% endif %}
 					</div>
 				</div>
-				{% if project.live_link and not project.description %}
+				{% if project.live_link %}
 						<a href="{{ project.live_link }}" class="btn btn-primary btn-sm">Visit</a>
 					{% else %}
 						<a href="{% url 'dev-project-detail' project.slug %}" class="btn btn-primary btn-sm">Open</a>
