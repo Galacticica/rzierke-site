@@ -91,6 +91,29 @@ Description: Spin-the-wheel page (wheelofnames.com style). The canvas drawing an
     let spinning = false;
     let landedIndex = -1;
 
+    // A short synthesized "tick" plays each time a slice boundary passes the pointer.
+    // AudioContext is created lazily on the first spin so it starts in a user gesture.
+    let audioCtx = null;
+    function tick() {
+        if (!audioCtx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            audioCtx = new AC();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(900, now);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.03);
+    }
+
     function readServerItems() {
         const el = document.getElementById('wheel-items-data');
         if (!el) return [];
@@ -183,18 +206,27 @@ Description: Spin-the-wheel page (wheelofnames.com style). The canvas drawing an
         if (currentItems.length === 0) return;
         spinning = true;
 
-        const duration = 4200;
+        const duration = 5500;
         const startRotation = rotation;
         const turns = 5 + Math.floor(Math.random() * 4);
         const target = startRotation + turns * Math.PI * 2 + Math.random() * Math.PI * 2;
         let startTs = null;
+        let lastTickIndex = indexAtPointer();
 
         function frame(ts) {
             if (startTs === null) startTs = ts;
             const t = Math.min((ts - startTs) / duration, 1);
-            const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+            const eased = 1 - Math.pow(1 - t, 5); // ease-out quintic — long, pronounced slow-down
             rotation = startRotation + (target - startRotation) * eased;
             draw();
+
+            // Tick once per slice boundary that passes the pointer; the ease-out
+            // deceleration naturally spaces the ticks further apart near the end.
+            const idx = indexAtPointer();
+            if (idx !== lastTickIndex) {
+                tick();
+                lastTickIndex = idx;
+            }
             if (t < 1) {
                 requestAnimationFrame(frame);
             } else {
