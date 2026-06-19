@@ -1,3 +1,4 @@
+{% load chatbot_markdown %}
 <div class="flex h-full flex-col">
   <div class="border-b border-base-300 px-4 py-3 md:px-6">
     {% if conversation %}
@@ -12,7 +13,7 @@
       {% for message in messages %}
         {% if message.sender == 'ai' %}
           <div class="flex justify-start">
-            <article class="max-w-[85%] rounded-2xl rounded-bl-md border border-base-300 bg-base-200 px-4 py-2 text-sm leading-relaxed text-base-content whitespace-pre-wrap">{{ message.content }}</article>
+            <article class="chat-markdown max-w-[85%] rounded-2xl rounded-bl-md border border-base-300 bg-base-200 px-4 py-2 text-sm leading-relaxed text-base-content">{{ message.content|render_markdown }}</article>
           </div>
         {% else %}
           <div class="flex justify-end">
