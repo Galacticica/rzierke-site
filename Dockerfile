@@ -28,6 +28,8 @@ RUN pip install --no-cache-dir \
     "django-htmx>=1.27.0" \
     "django-unfold>=0.83.1" \
     "django-vite>=3.1.0" \
+    "markdown>=3.10.2" \
+    "nh3>=0.3.5" \
     "openai>=2.24.0" \
     "psycopg[binary]>=3.3.2" \
     "python-dotenv>=1.2.1" \
