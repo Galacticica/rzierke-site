@@ -186,7 +186,7 @@ class TeamMembershipInline(TabularInline):
 class CharacterAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 	"""Admin configuration for Character."""
 	form = CharacterAdminForm
-	list_display = ("name", "phase_introduced", "alignment", "status")
+	list_display = ("name", "phase_introduced", "earth_number", "alignment", "status")
 	search_fields = ("name",)
 	list_filter = ("alignment", "status", "phase_introduced")
 	inlines = [AlterEgoInline, TeamMembershipInline]
