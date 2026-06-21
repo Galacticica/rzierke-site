@@ -582,7 +582,12 @@ if (graphRoot) {
     if (_simRafId !== null) { cancelAnimationFrame(_simRafId); _simRafId = null; }
     if (d3Sim) { d3Sim.stop(); d3Sim = null; }
 
-    d3Nodes = cy.nodes().map(n => ({ id: n.id(), x: n.position('x'), y: n.position('y') }));
+    d3Nodes = cy.nodes().map(n => ({
+      id: n.id(),
+      x: n.position('x'),
+      y: n.position('y'),
+      cluster: n.data('earth') ?? '__none__',
+    }));
     d3IdMap = {};
     d3Nodes.forEach(d => { d3IdMap[d.id] = d; });
 
@@ -606,9 +611,50 @@ if (graphRoot) {
     const chargeStrength = BASE_CHARGE    * (0.55 + 0.45 * density);
     const linkDist       = BASE_LINK_DIST * (0.70 + 0.30 * density);
     const collideR       = GRAPH_NODE_R + 18;         // hard floor: no overlap + breathing room, at any count
-    const centerPull     = 0.04 + 0.06 * (1 - density);
     const alphaDecay     = 0.04 + 0.05 * (1 - density);
     const chargeMax      = 1200 + 2800 * density;     // cap Barnes-Hut range so charge stays cheap when huge
+
+    // Cluster by Earth/universe so unrelated movie casts don't pile onto the
+    // origin. The data is heavily skewed — one universe (the main MCU) has
+    // hundreds of characters while dozens of Earths are one-offs — so we only
+    // give SUBSTANTIAL universes their own region. Tiny Earths, "Unknown", and
+    // null-Earth nodes float at the origin, where the link force places them
+    // next to whatever they actually connect to (an isolated one-off just sits
+    // harmlessly in the middle). Anchored universes are spread around a ring
+    // with each one's arc width scaled to its node count, so a 400-node cluster
+    // gets a wide berth and a 6-node cluster gets a sliver — no overlap.
+    //
+    // The x/y forces below pull each node toward its cluster center GENTLY, so
+    // the strong link force still drags cross-Earth characters (e.g. Peter
+    // Parker → Spider-Verse) across to the boundary as visible bridges. With a
+    // single anchored universe (e.g. filtered to one Earth) ringR is 0 and the
+    // layout is identical to the old single-center behavior. The tuning knobs
+    // are clusterPull (separation strength), MIN_CLUSTER (what counts as its
+    // own universe), and ROOM (spacing between universes on the ring).
+    const MIN_CLUSTER = 5;
+    const clusterPull = 0.07;
+    const ROOM        = collideR * 2.2;   // arc length (px) per unit of cluster span
+
+    const sizeOf = {};
+    d3Nodes.forEach(d => { sizeOf[d.cluster] = (sizeOf[d.cluster] || 0) + 1; });
+    const floats = c => c === '__none__' || c === 'Unknown' || sizeOf[c] < MIN_CLUSTER;
+
+    const anchored = Object.keys(sizeOf).filter(c => !floats(c))
+      .sort((a, b) => sizeOf[b] - sizeOf[a]);
+    const span = c => Math.sqrt(sizeOf[c]);   // disk-packing: room ~ sqrt(count)
+    const totalSpan = anchored.reduce((s, c) => s + span(c), 0);
+    const ringR = anchored.length > 1 ? (totalSpan * ROOM) / (2 * Math.PI) : 0;
+
+    const clusterCenter = {};
+    let acc = 0;
+    anchored.forEach(c => {
+      const mid = acc + span(c) / 2;          // center of this universe's arc
+      acc += span(c);
+      const a = (2 * Math.PI * mid) / totalSpan;
+      clusterCenter[c] = { x: Math.cos(a) * ringR, y: Math.sin(a) * ringR };
+    });
+    // Floating clusters (and any unanchored key) resolve to the origin.
+    const centerOf = d => clusterCenter[d.cluster] || { x: 0, y: 0 };
 
     // Build the simulation but keep it stopped — we settle it synchronously
     // below instead of letting d3 animate node positions over many frames.
@@ -617,8 +663,8 @@ if (graphRoot) {
       .force('charge',    d3.forceManyBody().strength(chargeStrength).distanceMax(chargeMax))
       .force('center',    d3.forceCenter(0, 0))
       .force('collision', d3.forceCollide().radius(collideR).strength(0.9))
-      .force('x',         d3.forceX(0).strength(centerPull))
-      .force('y',         d3.forceY(0).strength(centerPull))
+      .force('x',         d3.forceX(d => centerOf(d).x).strength(clusterPull))
+      .force('y',         d3.forceY(d => centerOf(d).y).strength(clusterPull))
       .alphaDecay(alphaDecay)
       .alphaTarget(0)
       .alpha(alpha)
