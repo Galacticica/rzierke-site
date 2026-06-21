@@ -11,10 +11,12 @@ Modified By: Reagan Zierke
 Description: Admin registrations for the connections app.
 """
 
+import itertools
 from urllib.parse import urlencode
 
 from django.contrib import admin, messages
 from django import forms
+from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path
@@ -170,6 +172,35 @@ class RelationshipAdminForm(forms.ModelForm):
 		return relationship
 
 
+class CliqueCharacterSelectMultiple(forms.CheckboxSelectMultiple):
+	"""Movie-grouped multi-select used by the clique bulk-add page.
+
+	Renders the same grouped checkbox layout as ``GroupedCheckboxSelectMultiple``
+	but emits extra DOM hooks (per-option ``data-value``/``data-label``, per-group
+	``data-group-label`` and a ``data-variants-group`` marker) so the page-level
+	movie filter and Variants surfacing can be driven from a single shared script.
+	"""
+
+	template_name = "connections/widgets/clique_character_select.html"
+
+
+class CliqueRelationshipForm(forms.Form):
+	"""One movie-grouped character multi-select per relationship type."""
+
+	def __init__(self, *args, grouped_choices=None, **kwargs):
+		super().__init__(*args, **kwargs)
+		grouped_choices = grouped_choices or []
+		for value, label in Relationship.RELATIONSHIP_CHOICES:
+			field = forms.MultipleChoiceField(
+				required=False,
+				label=label,
+				widget=CliqueCharacterSelectMultiple(),
+			)
+			field.choices = grouped_choices
+			field.widget.choices = grouped_choices
+			self.fields[f"clique_{value}"] = field
+
+
 class AlterEgoInline(TabularInline):
 	"""Editable alter egos on the Character admin page."""
 	model = AlterEgo
@@ -247,12 +278,18 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 
 	def _relationship_character_label(self, character):
 		earth = character.earth_number.number if character.earth_number else None
-		return f"{character.name} ({earth})" if earth else character.name
+		aliases = [alter_ego.name for alter_ego in character.alter_egos.all() if alter_ego.name]
+		label = character.name
+		if aliases:
+			label = f"{label} — {', '.join(aliases)}"
+		if earth:
+			label = f"{label} ({earth})"
+		return label
 
 	def _relationship_character_choices(self, queryset):
 		grouped_choices = {}
 
-		for character in queryset.select_related("earth_number", "movie_introduced").prefetch_related("movies"):
+		for character in queryset.select_related("earth_number", "movie_introduced").prefetch_related("movies", "alter_egos"):
 			related_movies = list(character.movies.all())
 			if character.movie_introduced and character.movie_introduced not in related_movies:
 				related_movies.append(character.movie_introduced)
@@ -410,6 +447,16 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 				self.admin_site.admin_view(self.bulk_add_view),
 				name="connections_relationship_bulk_add",
 			),
+			path(
+				"clique-add/",
+				self.admin_site.admin_view(self.clique_add_view),
+				name="connections_relationship_clique_add",
+			),
+			path(
+				"bulk-delete/",
+				self.admin_site.admin_view(self.bulk_delete_view),
+				name="connections_relationship_bulk_delete",
+			),
 		]
 		return custom_urls + urls
 
@@ -530,6 +577,211 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 			"app_label": self.model._meta.app_label,
 		}
 		return TemplateResponse(request, "connections/admin/bulk_add_relationships.html", context)
+
+	def _character_aliases(self):
+		"""{character_id (str): "alias1 alias2 ..."} so the picker can match aliases."""
+		character_aliases = {}
+		for character_id, alias_name in AlterEgo.objects.values_list("character_id", "name"):
+			if alias_name:
+				character_aliases.setdefault(str(character_id), []).append(alias_name)
+		return {cid: " ".join(names) for cid, names in character_aliases.items()}
+
+	def clique_add_view(self, request):
+		queryset = (
+			Character.objects.select_related("earth_number", "movie_introduced")
+			.prefetch_related("movies")
+			.order_by("earth_number__number", "name")
+		)
+		character_choices = self._relationship_character_choices(queryset)
+		variant_adjacency, movie_members, variant_options = self._movie_variant_data()
+
+		grouped_choices = list(character_choices)
+		if variant_options:
+			grouped_choices.append(("Variants", variant_options))
+
+		created_count = 0
+		skipped_count = 0
+
+		if request.method == "POST":
+			form = CliqueRelationshipForm(request.POST, grouped_choices=grouped_choices)
+			mode = request.POST.get("mode", "clique")
+
+			source_character = None
+			proceed = True
+			if mode == "source":
+				source_id = request.POST.get("source_character", "").strip()
+				if not source_id:
+					messages.error(request, "Please select a source character for single-source mode.")
+					proceed = False
+				else:
+					try:
+						source_character = Character.objects.get(pk=source_id)
+					except Character.DoesNotExist:
+						messages.error(request, "Selected source character does not exist.")
+						proceed = False
+
+			if proceed and form.is_valid():
+				for rel_type, _label in Relationship.RELATIONSHIP_CHOICES:
+					selected_ids = sorted({
+						int(pk) for pk in form.cleaned_data.get(f"clique_{rel_type}", []) if str(pk).isdigit()
+					})
+					if not selected_ids:
+						continue
+
+					# Order-independent record of pairs that already exist for this
+					# type, so a pair stored either way (incl. by the per-row tool)
+					# is treated as existing.
+					existing = {
+						frozenset((c1, c2))
+						for c1, c2 in Relationship.objects.filter(
+							relationship_type=rel_type
+						).values_list("character1_id", "character2_id")
+					}
+
+					# Build (character1_id, character2_id, directional) tuples.
+					pairs = []
+					if mode == "source":
+						directional = bool(request.POST.get(f"directional_{rel_type}"))
+						direction = request.POST.get(f"direction_{rel_type}", "forward")
+						for target_id in selected_ids:
+							if target_id == source_character.pk:
+								continue
+							if directional and direction == "reverse":
+								pairs.append((target_id, source_character.pk, True))
+							elif directional:
+								pairs.append((source_character.pk, target_id, True))
+							else:
+								lo, hi = sorted((source_character.pk, target_id))
+								pairs.append((lo, hi, False))
+					else:
+						for lo, hi in itertools.combinations(selected_ids, 2):
+							pairs.append((lo, hi, False))
+
+					for char1_id, char2_id, directional in pairs:
+						key = frozenset((char1_id, char2_id))
+						if key in existing:
+							skipped_count += 1
+							continue
+						_, created = Relationship.objects.get_or_create(
+							character1_id=char1_id,
+							character2_id=char2_id,
+							relationship_type=rel_type,
+							defaults={"directional": directional},
+						)
+						existing.add(key)
+						if created:
+							created_count += 1
+						else:
+							skipped_count += 1
+
+				if created_count:
+					messages.success(request, f"Created {created_count} relationship(s).")
+				if skipped_count:
+					messages.info(request, f"Skipped {skipped_count} that already existed.")
+				if not created_count and not skipped_count:
+					messages.warning(request, "Nothing selected — no relationships created.")
+
+				if created_count:
+					if "_save" in request.POST:
+						return HttpResponseRedirect("../")
+					return HttpResponseRedirect(request.path)
+		else:
+			form = CliqueRelationshipForm(grouped_choices=grouped_choices)
+
+		type_fields = [
+			(value, label, form[f"clique_{value}"])
+			for value, label in Relationship.RELATIONSHIP_CHOICES
+		]
+
+		context = {
+			**self.admin_site.each_context(request),
+			"title": "Bulk Add Relationships by Type",
+			"form": form,
+			"type_fields": type_fields,
+			"relationship_choices": Relationship.RELATIONSHIP_CHOICES,
+			"character_choices": character_choices,
+			"movie_choices": Movie.objects.order_by("release_date", "title"),
+			"variant_adjacency": variant_adjacency,
+			"movie_members": movie_members,
+			"character_aliases": self._character_aliases(),
+			"relationship_adjacency": self._relationship_adjacency(),
+			"opts": self.model._meta,
+			"app_label": self.model._meta.app_label,
+		}
+		return TemplateResponse(request, "connections/admin/clique_add_relationships.html", context)
+
+	def bulk_delete_view(self, request):
+		character_id = (request.POST.get("character") or request.GET.get("character") or "").strip()
+		selected_character = None
+		if character_id:
+			try:
+				selected_character = Character.objects.select_related("earth_number").get(pk=character_id)
+			except (Character.DoesNotExist, ValueError):
+				messages.error(request, "Selected character does not exist.")
+				selected_character = None
+
+		if request.method == "POST" and selected_character:
+			delete_ids = [pk for pk in request.POST.getlist("delete_ids") if pk.isdigit()]
+			if not delete_ids:
+				messages.warning(request, "No relationships selected to delete.")
+			else:
+				# Scope strictly to relationships involving the chosen character so a
+				# tampered form can never delete unrelated rows.
+				to_delete = Relationship.objects.filter(pk__in=delete_ids).filter(
+					Q(character1=selected_character) | Q(character2=selected_character)
+				)
+				deleted_count = to_delete.count()
+				to_delete.delete()
+				if deleted_count:
+					messages.success(
+						request,
+						f"Deleted {deleted_count} relationship(s) for {selected_character.name}.",
+					)
+				else:
+					messages.warning(request, "Nothing deleted.")
+			return HttpResponseRedirect(f"{request.path}?{urlencode({'character': selected_character.pk})}")
+
+		relationships = []
+		if selected_character:
+			rels = (
+				Relationship.objects.filter(
+					Q(character1=selected_character) | Q(character2=selected_character)
+				)
+				.select_related(
+					"character1", "character2",
+					"character1__earth_number", "character2__earth_number",
+				)
+				.prefetch_related("character1__alter_egos", "character2__alter_egos")
+				.order_by("relationship_type", "id")
+			)
+			for relationship in rels:
+				outgoing = relationship.character1_id == selected_character.pk
+				other = relationship.character2 if outgoing else relationship.character1
+				relationships.append({
+					"id": relationship.id,
+					"type": relationship.relationship_type,
+					"directional": relationship.directional,
+					"outgoing": outgoing,
+					"other_label": self._relationship_character_label(other),
+				})
+
+		character_choices = self._relationship_character_choices(
+			Character.objects.select_related("earth_number", "movie_introduced")
+			.prefetch_related("movies", "alter_egos")
+			.order_by("earth_number__number", "name")
+		)
+
+		context = {
+			**self.admin_site.each_context(request),
+			"title": "Bulk Delete Relationships",
+			"character_choices": character_choices,
+			"selected_character": selected_character,
+			"selected_character_id": str(selected_character.pk) if selected_character else "",
+			"relationships": relationships,
+			"opts": self.model._meta,
+			"app_label": self.model._meta.app_label,
+		}
+		return TemplateResponse(request, "connections/admin/bulk_delete_relationships.html", context)
 
 
 @admin.register(Earth)

@@ -1,0 +1,170 @@
+{% extends "admin/base_site.html" %}
+{% load static i18n %}
+
+{% block title %}Bulk Add Relationships by Type{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'connections/relationship_character_search_select.css' %}">
+<link rel="stylesheet" href="{% static 'connections/movie_search_select.css' %}">
+<link rel="stylesheet" href="{% static 'connections/bulk_add_relationships.css' %}">
+<link rel="stylesheet" href="{% static 'connections/clique_add_relationships.css' %}?v=2">
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'connections/movie_search_select.js' %}" defer></script>
+<script src="{% static 'connections/relationship_character_search_select.js' %}" defer></script>
+<script src="{% static 'connections/clique_add_relationships.js' %}?v=4" defer></script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='connections' %}">Connections</a>
+  &rsaquo; <a href="{% url 'admin:connections_relationship_changelist' %}">Relationships</a>
+  &rsaquo; Bulk Add by Type
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  {{ variant_adjacency|json_script:"clique-variant-adjacency-data" }}
+  {{ movie_members|json_script:"clique-movie-members-data" }}
+  {{ character_aliases|json_script:"clique-character-aliases-data" }}
+  {{ relationship_adjacency|json_script:"clique-relationship-adjacency-data" }}
+  <h1>Bulk Add Relationships by Type</h1>
+
+  <form method="post" id="clique-add-form" novalidate>
+    {% csrf_token %}
+
+    <div class="clique-controls">
+      <p class="clique-controls__intro">
+        In <strong>Clique</strong> mode, everyone in a relationship box is related to everyone else in that box.
+        In <strong>Single source</strong> mode, everyone in a box is related to the one source character only.
+      </p>
+
+      <div class="clique-controls__row">
+        <div class="clique-control">
+          <span class="clique-control__label">Mode</span>
+          <div class="clique-mode-toggle" role="radiogroup" aria-label="Mode">
+            <label class="clique-mode-option">
+              <input type="radio" name="mode" value="clique" checked>
+              <span>Clique</span>
+            </label>
+            <label class="clique-mode-option">
+              <input type="radio" name="mode" value="source">
+              <span>Single source</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="clique-control">
+          <span class="clique-control__label">Movie filter <span class="bulk-add-optional">(optional)</span></span>
+          <div class="movie-search-select" data-movie-search-select>
+            <details class="movie-search-select__dropdown">
+              <summary class="movie-search-select__summary" aria-label="Filter characters by movie">
+                <span class="movie-search-select__label placeholder" data-movie-search-label>All movies</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="movie-search-select__chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                </svg>
+              </summary>
+              <div class="movie-search-select__panel">
+                <input type="text" class="movie-search-select__search" data-movie-search-input placeholder="Search movies…">
+                <select name="movie" id="bulk-movie-filter" class="movie-search-select__native" hidden>
+                  <option value="" selected>All movies</option>
+                  {% for movie in movie_choices %}
+                    <option value="{{ movie.title }}">{{ movie.title }}</option>
+                  {% endfor %}
+                </select>
+                <div class="movie-search-select__options" data-movie-search-options>
+                  <div class="movie-search-select__group" data-movie-search-group>
+                    <button type="button" class="movie-search-select__option is-selected" data-movie-search-option data-value="" data-label="All movies"><span>All movies</span></button>
+                    {% for movie in movie_choices %}
+                      <button type="button" class="movie-search-select__option" data-movie-search-option data-value="{{ movie.title }}" data-label="{{ movie.title }}"><span>{{ movie.title }}</span></button>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="clique-control" id="clique-source-control" hidden>
+          <span class="clique-control__label">Source character</span>
+          <div class="relationship-character-search-select" data-relationship-character-search-select>
+            <details class="relationship-character-search-select__dropdown">
+              <summary class="relationship-character-search-select__summary" aria-label="Choose source character">
+                <span class="relationship-character-search-select__label placeholder" data-relationship-character-search-label>Select a character</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="relationship-character-search-select__chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                </svg>
+              </summary>
+              <div class="relationship-character-search-select__panel">
+                <input type="text" class="relationship-character-search-select__search" data-relationship-character-search-input placeholder="Search characters or movies…">
+                <select name="source_character" id="id_source_character" class="relationship-character-search-select__native" hidden>
+                  <option value="">---------</option>
+                  {% for group_label, group_choices in character_choices %}
+                    {% for pk, label in group_choices %}
+                      <option value="{{ pk }}">{{ label }}</option>
+                    {% endfor %}
+                  {% endfor %}
+                </select>
+                <div class="relationship-character-search-select__options" data-relationship-character-search-options>
+                  {% for group_label, group_choices in character_choices %}
+                    <div class="relationship-character-search-select__group" data-relationship-character-search-group data-group-label="{{ group_label|default:'No Movie Appearance' }}">
+                      {% if group_label %}
+                        <div class="relationship-character-search-select__group-label">{{ group_label }}</div>
+                      {% endif %}
+                      {% for pk, label in group_choices %}
+                        <button type="button" class="relationship-character-search-select__option" data-relationship-character-search-option data-value="{{ pk }}" data-label="{{ label }}">
+                          <span>{{ label }}</span>
+                        </button>
+                      {% endfor %}
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="clique-accordion">
+      {% for value, display, field in type_fields %}
+        <section class="clique-type" data-clique-type="{{ value }}">
+          <button type="button" class="clique-type__header" data-clique-toggle aria-expanded="false">
+            <svg class="clique-type__chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+            </svg>
+            <span class="clique-type__name">{{ display }}</span>
+            <span class="clique-type__count" data-clique-count-badge>0</span>
+          </button>
+          <div class="clique-type__body" data-clique-body hidden>
+            {{ field }}
+            <div class="clique-directional-wrap" data-clique-directional-wrap hidden>
+              <label class="clique-directional-label">
+                <input type="checkbox" name="directional_{{ value }}" class="clique-directional" data-clique-directional>
+                <span>Directional</span>
+              </label>
+              <div class="clique-direction-select" data-clique-direction-select hidden>
+                <select name="direction_{{ value }}">
+                  <option value="forward">Source → Target</option>
+                  <option value="reverse">Target → Source</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+      {% endfor %}
+    </div>
+
+    <div class="submit-row">
+      <input type="submit" name="_addanother" value="Save and add more" class="default">
+      <input type="submit" name="_save" value="Save">
+      <a href="../" class="closelink">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

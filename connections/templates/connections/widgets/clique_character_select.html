@@ -1,0 +1,29 @@
+{% if widget.optgroups %}
+<div class="clique-character-select" data-clique-character-select>
+  <input type="text" class="clique-character-select__search" data-clique-search placeholder="Search characters or movies…">
+  <div class="clique-character-select__actions">
+    <button type="button" class="clique-btn" data-clique-add-cast hidden>Add all (cast)</button>
+    <button type="button" class="clique-btn" data-clique-clear>Clear</button>
+    <span class="clique-character-select__count" data-clique-count>0 selected</span>
+  </div>
+  <div class="clique-character-select__empty" data-clique-empty>
+    Select a movie above to load its cast — or type in the search box to find anyone.
+  </div>
+  <div class="clique-character-select__grid" data-clique-grid hidden>
+    {% for group_name, group_options, group_index in widget.optgroups %}
+      <fieldset class="clique-group" data-clique-group data-group-label="{{ group_name|default:'' }}"{% if group_name == 'Variants' %} data-variants-group{% endif %}>
+        {% if group_name %}
+          <legend class="clique-group__legend">{{ group_name }}</legend>
+        {% endif %}
+        <div class="clique-group__options">
+          {% for option in group_options %}
+            <div class="clique-option" data-clique-option data-value="{{ option.value|stringformat:'s' }}" data-label="{{ option.label }}">
+              {% include option.template_name with widget=option %}
+            </div>
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
