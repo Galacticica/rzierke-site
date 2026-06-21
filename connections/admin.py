@@ -684,9 +684,15 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 				if created_count:
 					if "_save" in request.POST:
 						return HttpResponseRedirect("../")
+					# "Save and add more": keep the movie filter applied.
+					movie_filter = request.POST.get("movie", "").strip()
+					if movie_filter:
+						return HttpResponseRedirect(f"{request.path}?{urlencode({'movie': movie_filter})}")
 					return HttpResponseRedirect(request.path)
 		else:
 			form = CliqueRelationshipForm(grouped_choices=grouped_choices)
+
+		selected_movie = request.POST.get("movie", "") if request.method == "POST" else request.GET.get("movie", "")
 
 		type_fields = [
 			(value, label, form[f"clique_{value}"])
@@ -701,6 +707,7 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 			"relationship_choices": Relationship.RELATIONSHIP_CHOICES,
 			"character_choices": character_choices,
 			"movie_choices": Movie.objects.order_by("release_date", "title"),
+			"selected_movie": selected_movie,
 			"variant_adjacency": variant_adjacency,
 			"movie_members": movie_members,
 			"character_aliases": self._character_aliases(),
