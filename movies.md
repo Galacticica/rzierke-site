@@ -1119,7 +1119,7 @@
 - [ ] Venom (2018)
 - [ ] Venom: Let There Be Carnage (2021)
 - [ ] Morbius (2022)
-- [ ] Spider-Man: Across the Spider-Verse (2023)
+- [x] Spider-Man: Across the Spider-Verse (2023)
 - [ ] Madame Web (2024)
 - [ ] Venom: The Last Dance (2024)
 - [ ] Kraven the Hunter (2024)
@@ -1166,9 +1166,9 @@
 ## Videogames
 - [x] Marvel's Spider-Man (2018)
 - [ ] Marvel's Avengers (2020)
-- [ ] Marvel's Spider-Man: Miles Morales (2020)
+- [x] Marvel's Spider-Man: Miles Morales (2020)
 - [ ] Marvel's Guardians of the Galaxy (2021)
 - [ ] Marvel's Midnight Suns (2022)
-- [ ] Marvel's Spider-Man 2 (2023)
+- [x] Marvel's Spider-Man 2 (2023)
 
 
