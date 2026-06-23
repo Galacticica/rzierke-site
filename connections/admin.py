@@ -606,19 +606,19 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 			form = CliqueRelationshipForm(request.POST, grouped_choices=grouped_choices)
 			mode = request.POST.get("mode", "clique")
 
-			source_character = None
+			source_ids = []
 			proceed = True
 			if mode == "source":
-				source_id = request.POST.get("source_character", "").strip()
-				if not source_id:
-					messages.error(request, "Please select a source character for single-source mode.")
+				# One or more sources; legacy single field still accepted.
+				raw_ids = request.POST.getlist("sources") or [request.POST.get("source_character", "")]
+				source_ids = sorted({int(pk) for pk in raw_ids if str(pk).strip().isdigit()})
+				existing_ids = set(
+					Character.objects.filter(pk__in=source_ids).values_list("pk", flat=True)
+				)
+				source_ids = [pk for pk in source_ids if pk in existing_ids]
+				if not source_ids:
+					messages.error(request, "Please select at least one source character for source mode.")
 					proceed = False
-				else:
-					try:
-						source_character = Character.objects.get(pk=source_id)
-					except Character.DoesNotExist:
-						messages.error(request, "Selected source character does not exist.")
-						proceed = False
 
 			if proceed and form.is_valid():
 				for rel_type, _label in Relationship.RELATIONSHIP_CHOICES:
@@ -643,16 +643,20 @@ class RelationshipAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 					if mode == "source":
 						directional = bool(request.POST.get(f"directional_{rel_type}"))
 						direction = request.POST.get(f"direction_{rel_type}", "forward")
-						for target_id in selected_ids:
-							if target_id == source_character.pk:
-								continue
-							if directional and direction == "reverse":
-								pairs.append((target_id, source_character.pk, True))
-							elif directional:
-								pairs.append((source_character.pk, target_id, True))
-							else:
-								lo, hi = sorted((source_character.pk, target_id))
-								pairs.append((lo, hi, False))
+						source_set = set(source_ids)
+						# Each source × each target — but never source↔source (sources
+						# keep their own relationships independent of each other).
+						for source_id in source_ids:
+							for target_id in selected_ids:
+								if target_id in source_set:
+									continue
+								if directional and direction == "reverse":
+									pairs.append((target_id, source_id, True))
+								elif directional:
+									pairs.append((source_id, target_id, True))
+								else:
+									lo, hi = sorted((source_id, target_id))
+									pairs.append((lo, hi, False))
 					else:
 						for lo, hi in itertools.combinations(selected_ids, 2):
 							pairs.append((lo, hi, False))
