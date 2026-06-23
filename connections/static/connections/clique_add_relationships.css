@@ -98,6 +98,49 @@
   outline-offset: -2px;
 }
 
+/* ── Source chips (source mode, multiple sources) ── */
+.clique-source-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.clique-source-chips:empty {
+  display: none;
+}
+
+.clique-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.3rem 0.25rem 0.7rem;
+  border-radius: 1rem;
+  background: rgb(37, 99, 235);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.clique-chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.clique-chip__remove:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
 /* ── Accordion ── */
 .clique-accordion {
   display: flex;

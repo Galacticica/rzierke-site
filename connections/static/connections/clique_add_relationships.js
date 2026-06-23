@@ -26,14 +26,19 @@ const initCliqueAdd = () => {
   // so naming our movie filter this lets the source picker narrow to the cast too.
   const movieFilter = document.getElementById('bulk-movie-filter');
   const sourceSelect = document.getElementById('id_source_character');
+  const sourceChips = document.getElementById('clique-source-chips');
+  const sourceLabel = document.querySelector('#clique-source-control [data-relationship-character-search-label]');
   const modeRadios = Array.from(document.querySelectorAll('input[name="mode"]'));
+
+  // Selected source character ids (source mode supports several at once).
+  const sourceIds = new Set();
 
   const currentMovie = () => (movieFilter ? movieFilter.value : '');
   const isSourceMode = () => {
     const selected = modeRadios.find((radio) => radio.checked);
     return Boolean(selected && selected.value === 'source');
   };
-  const currentSource = () => (isSourceMode() && sourceSelect ? sourceSelect.value : '');
+  const currentSourceIds = () => (isSourceMode() ? Array.from(sourceIds) : []);
 
   const castIdSet = (movieTitle) => new Set((movieMembers[movieTitle] || []).map(String));
 
@@ -52,9 +57,9 @@ const initCliqueAdd = () => {
       });
     };
     if (isSourceMode()) {
-      const src = currentSource();
-      if (!src) return new Set();
-      add(src);
+      const srcs = currentSourceIds();
+      if (!srcs.length) return new Set();
+      srcs.forEach(add);
     } else {
       (movieMembers[movieTitle] || []).forEach((castId) => add(castId));
     }
@@ -102,8 +107,8 @@ const initCliqueAdd = () => {
       if (showPrompt) return;
 
       const variants = variantIdSet(movie);
-      // In source mode the source can't be related to itself — hide it everywhere.
-      const sourceId = currentSource();
+      // In source mode the sources can't be related to themselves — hide them.
+      const sourceSet = new Set(currentSourceIds());
 
       groups.forEach((group) => {
         const isVariants = group.hasAttribute('data-variants-group');
@@ -124,7 +129,7 @@ const initCliqueAdd = () => {
           if (isVariants) {
             visible = visible && variants.has(value);
           }
-          if (sourceId && value === sourceId) visible = false;
+          if (sourceSet.has(value)) visible = false;
           option.hidden = !visible;
           if (visible) visibleCount += 1;
         });
@@ -179,14 +184,16 @@ const initCliqueAdd = () => {
   // ── Already-related red flagging (single-source mode) ──
   const allOptions = Array.from(document.querySelectorAll('[data-clique-option]'));
   const applyRelatedFlags = () => {
-    const sourceId = currentSource();
-    const related = sourceId ? new Set((relationshipAdjacency[sourceId] || []).map(String)) : null;
+    const srcs = currentSourceIds();
+    const sourceSet = new Set(srcs);
+    const related = new Set();
+    srcs.forEach((sid) => (relationshipAdjacency[sid] || []).forEach((r) => related.add(String(r))));
     allOptions.forEach((option) => {
       const value = option.dataset.value || '';
-      const flag = Boolean(related) && related.has(value) && value !== sourceId;
+      const flag = srcs.length > 0 && related.has(value) && !sourceSet.has(value);
       option.classList.toggle('is-related', flag);
       if (flag) {
-        option.title = 'Already has a relationship with the selected source';
+        option.title = 'Already has a relationship with a selected source';
       } else {
         option.removeAttribute('title');
       }
@@ -212,8 +219,53 @@ const initCliqueAdd = () => {
   };
   modeRadios.forEach((radio) => radio.addEventListener('change', applyMode));
 
-  // Source change → variants (source mode) + red flags both depend on it.
+  // Add a picked character as a removable source chip (with a hidden `sources`
+  // input so the form submits every chosen source).
+  const addSourceChip = (id, label) => {
+    if (!id || sourceIds.has(id) || !sourceChips) return;
+    sourceIds.add(id);
+
+    const chip = document.createElement('span');
+    chip.className = 'clique-chip';
+    chip.dataset.id = id;
+
+    const text = document.createElement('span');
+    text.className = 'clique-chip__label';
+    text.textContent = label;
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'sources';
+    input.value = id;
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'clique-chip__remove';
+    remove.textContent = '✕';
+    remove.setAttribute('aria-label', `Remove ${label}`);
+    remove.addEventListener('click', () => {
+      sourceIds.delete(id);
+      chip.remove();
+      refreshAllBoxes();
+      applyRelatedFlags();
+    });
+
+    chip.append(text, input, remove);
+    sourceChips.appendChild(chip);
+  };
+
+  // Picking from the dropdown adds a chip, then resets the picker for the next pick.
   sourceSelect?.addEventListener('change', () => {
+    const id = sourceSelect.value;
+    if (id) {
+      const label = sourceSelect.selectedOptions[0]?.textContent || id;
+      addSourceChip(id, label);
+    }
+    sourceSelect.value = '';
+    if (sourceLabel) {
+      sourceLabel.textContent = 'Add a character…';
+      sourceLabel.classList.add('placeholder');
+    }
     refreshAllBoxes();
     applyRelatedFlags();
   });
