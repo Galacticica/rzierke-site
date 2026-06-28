@@ -17,5 +17,6 @@ urlpatterns = [
     path("sidebar/", views.chat_sidebar, name="chatbot-sidebar"),
     path("new/", views.chat_new, name="chatbot-new"),
     path("conversation/<int:conversation_id>/", views.chat_conversation, name="chatbot-conversation"),
+    path("conversation/<int:conversation_id>/delete/", views.chat_delete, name="chatbot-delete"),
     path("send/", views.chat_send_message, name="chatbot-send"),
 ]
