@@ -55,6 +55,7 @@ def chat_home(request: HttpRequest) -> HttpResponse:
 			"selected_conversation": selected,
 			"selected_messages": selected_messages,
 			"models": models,
+			"effort_choices": Conversation.EFFORT_CHOICES,
 		},
 	)
 
@@ -91,6 +92,7 @@ def chat_new(request: HttpRequest) -> HttpResponse:
 			"selected_model": models.first(),
 			"conversations": conversations,
 			"selected_conversation_id": None,
+			"effort_choices": Conversation.EFFORT_CHOICES,
 		},
 	)
 
@@ -117,8 +119,53 @@ def chat_conversation(request: HttpRequest, conversation_id: int) -> HttpRespons
 			"selected_model": conversation.model,
 			"conversations": conversations,
 			"selected_conversation_id": conversation.id,
+			"effort_choices": Conversation.EFFORT_CHOICES,
 		},
 	)
+
+
+@login_required
+@require_POST
+def chat_delete(request: HttpRequest, conversation_id: int) -> HttpResponse:
+	'''Delete a conversation owned by the user.
+
+	If the deleted conversation is the one currently open in the main panel, reset that
+	panel to a new chat. Otherwise leave the current conversation untouched and only
+	refresh the sidebar.
+	'''
+	conversation = get_object_or_404(Conversation, pk=conversation_id, user=request.user)
+	current_id = (request.POST.get("current_id") or "").strip()
+	was_open = current_id == str(conversation_id)
+	conversation.delete()
+
+	if was_open:
+		models = AIModel.objects.order_by("name")
+		return render(
+			request,
+			"chatbot/partials/chat_panel_with_sidebar_oob.html",
+			{
+				"conversation": None,
+				"messages": [],
+				"models": models,
+				"selected_model": models.first(),
+				"conversations": _conversation_list_for_user(request),
+				"selected_conversation_id": None,
+				"effort_choices": Conversation.EFFORT_CHOICES,
+			},
+		)
+
+	# A background conversation was deleted: keep the open conversation selected and only
+	# update the sidebar. HX-Reswap: none stops HTMX from swapping the main panel target.
+	response = render(
+		request,
+		"chatbot/partials/sidebar_oob.html",
+		{
+			"conversations": _conversation_list_for_user(request),
+			"selected_conversation_id": int(current_id) if current_id.isdigit() else None,
+		},
+	)
+	response["HX-Reswap"] = "none"
+	return response
 
 
 @login_required
@@ -150,6 +197,11 @@ def chat_send_message(request: HttpRequest) -> HttpResponse:
 			conversation.model = chosen_model
 			conversation.save(update_fields=["model"])
 
+	effort = request.POST.get("effort")
+	if effort in dict(Conversation.EFFORT_CHOICES) and conversation.effort != effort:
+		conversation.effort = effort
+		conversation.save(update_fields=["effort"])
+
 	Message.objects.create(conversation=conversation, sender="user", content=user_content)
 
 	if conversation.messages.count() == 1:
@@ -172,6 +224,7 @@ def chat_send_message(request: HttpRequest) -> HttpResponse:
 			"selected_model": conversation.model,
 			"conversations": _conversation_list_for_user(request),
 			"selected_conversation_id": conversation.id,
+			"effort_choices": Conversation.EFFORT_CHOICES,
 		},
 	)
 	response["HX-Trigger"] = "conversations-changed"

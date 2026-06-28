@@ -68,6 +68,18 @@
   const closeSidebar = () => setSidebarOpen(false);
   const openSidebar = () => setSidebarOpen(true);
 
+  const scrollChatToBottom = () => {
+    const el = document.getElementById('chat-messages');
+    if (!el) return;
+    const toBottom = () => { el.scrollTop = el.scrollHeight; };
+    // Scroll now, then a couple more times so a late layout pass (stylesheets, fonts,
+    // images) can't leave us stranded above the newest message. setTimeout (not rAF) so
+    // this still fires when the tab is backgrounded.
+    toBottom();
+    setTimeout(toBottom, 0);
+    setTimeout(toBottom, 150);
+  };
+
   const toggleButtonState = (form, thinking) => {
     const button = form.querySelector('[data-send-btn]');
     if (!button) return;
@@ -97,6 +109,9 @@
   // Setup initial forms on page load
   document.querySelectorAll('.js-chat-form').forEach(setupFormKeyListener);
   closeSidebar();
+  scrollChatToBottom();
+  // Run again once stylesheets/images have settled so the initial load reliably lands at the newest message.
+  window.addEventListener('load', scrollChatToBottom, { once: true });
 
   document.querySelector('[data-sidebar-open]')?.addEventListener('click', openSidebar);
   document.querySelector('[data-sidebar-close]')?.addEventListener('click', closeSidebar);
@@ -160,12 +175,7 @@
   document.body.addEventListener('htmx:afterSwap', (event) => {
     if (event.detail.target.id === 'chat-main') {
       closeSidebar();
-      const chatMessages = document.getElementById('chat-messages');
-      if (chatMessages) {
-        setTimeout(() => {
-          chatMessages.scrollTop = chatMessages.scrollHeight;
-        }, 0);
-      }
+      scrollChatToBottom();
     }
   });
 

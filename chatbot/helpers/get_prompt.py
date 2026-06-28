@@ -22,6 +22,15 @@ from chatbot.models import Conversation
 logger = logging.getLogger(__name__)
 
 
+EFFORT_CONTEXT_LIMITS = {
+    "very_low": 2,
+    "low": 8,
+    "medium": 12,
+    "high": 16,
+    "very_high": 20,
+}
+
+
 def get_base_context(conversation: Conversation | None) -> str:
     """Return the base context for a conversation.
 
@@ -66,7 +75,8 @@ def get_response_from_ai(conversation: Conversation, user_message: str) -> str:
         return ""
 
     model_name = getattr(settings, "OPENAI_CHAT_MODEL", "gpt-5.2")
-    recent_messages = conversation.messages.order_by("-timestamp").values("sender", "content")[:40]
+    limit = EFFORT_CONTEXT_LIMITS.get(getattr(conversation, "effort", "medium"), 12)
+    recent_messages = conversation.messages.order_by("-timestamp").values("sender", "content")[:limit]
     input_items = []
 
     for message in reversed(list(recent_messages)):
