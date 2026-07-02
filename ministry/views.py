@@ -11,10 +11,11 @@ from django.shortcuts import render, get_object_or_404
 from django.views import View
 from django.views.generic import DetailView
 from django.utils.text import slugify
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.core.paginator import Paginator
 from .utils.build_slides import build_song_pptx_bytes
 from .utils.build_pdf import build_song_print_pdf_bytes
+from .utils.bible_verses import get_categories, get_theme, pick_random_reference, fetch_verse
 from .models import Devotion, Playlist, Song
 from .filters import SongFilter
 
@@ -150,3 +151,42 @@ class PlaylistsView(View):
         playlists = Playlist.objects.order_by("name")
         context = {"playlists": playlists}
         return render(request, "ministry/playlists.html", context)
+
+
+class VersesView(View):
+    """Bible verses by theme: category and sub-theme browser page."""
+
+    def get(self, request):
+        context = {"categories": get_categories()}
+        return render(request, "ministry/verses.html", context)
+
+
+class RandomVerseView(View):
+    """
+    Picks a random verse reference from a sub-theme, fetches its text from
+    bible-api.com (cached), and returns the verse card.
+    Supports HTMX for partial updates.
+    """
+
+    def get(self, request, category_slug, theme_slug):
+        found = get_theme(category_slug, theme_slug)
+        if found is None:
+            raise Http404("Unknown verse theme")
+        category, theme = found
+
+        exclude = request.GET.get("current") or None
+        ref = pick_random_reference(theme, exclude=exclude)
+        verse = fetch_verse(ref)
+
+        context = {
+            "category": category,
+            "theme": theme,
+            "verse": verse,
+            "ref": ref,
+        }
+
+        if getattr(request, "htmx", False):
+            return render(request, "ministry/partials/verse_card.html", context)
+
+        context["categories"] = get_categories()
+        return render(request, "ministry/verses.html", context)

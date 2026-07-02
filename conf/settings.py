@@ -173,6 +173,16 @@ DJANGO_VITE = {
     }
 }
 
+# Explicit default cache (per-process). Used by the ministry Bible-verse
+# proxy to cache verse text from bible-api.com. Verses never change, so a
+# long TTL is safe; locmem means each worker re-warms after a restart.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "OPTIONS": {"MAX_ENTRIES": 2000},
+    }
+}
+
 UNFOLD = {
     "SITE_TITLE": "RZierke Admin",
     "SITE_HEADER": "RZierke Site",

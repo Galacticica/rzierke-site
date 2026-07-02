@@ -1,0 +1,41 @@
+<!--
+file: verse_card.html
+Author: Reagan Zierke
+Date: 2026-07-02
+Description: Template for a single random verse card. This partial is intended
+to be included via HTMX.
+-->
+
+{% if verse %}
+<div class="card bg-base-100 shadow-md border border-base-300">
+	<div class="h-1 w-full bg-primary"></div>
+	<div class="card-body">
+		<div>
+			<span class="badge badge-outline">{{ category.name }} · {{ theme.name }}</span>
+		</div>
+		<blockquote class="mt-3 text-lg leading-relaxed italic">“{{ verse.text }}”</blockquote>
+		<div class="mt-2 flex items-center justify-between gap-3">
+			<span class="font-semibold">{{ verse.reference }}</span>
+			<span class="text-sm text-base-content/60">{{ verse.translation_name }}</span>
+		</div>
+		<div class="card-actions mt-4">
+			<button
+				class="btn btn-primary btn-outline btn-sm"
+				hx-get="{% url 'verse-random' category.slug theme.slug %}?current={{ ref|urlencode }}"
+				hx-target="#verse-display"
+				hx-swap="innerHTML"
+			>Another verse on {{ theme.name }}</button>
+		</div>
+	</div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+	<span>Couldn't load the verse right now. Please try again.</span>
+	<button
+		class="btn btn-sm btn-outline"
+		hx-get="{% url 'verse-random' category.slug theme.slug %}"
+		hx-target="#verse-display"
+		hx-swap="innerHTML"
+	>Try again</button>
+</div>
+{% endif %}

@@ -1,0 +1,70 @@
+<!--
+file: verses.html
+Author: Reagan Zierke
+Date: 2026-07-02
+Description: Template for the Bible verses by theme page. Clicking a sub-theme
+loads a random verse into the display panel via HTMX.
+-->
+
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}
+<title>Bible Verses by Theme</title>
+{% endblock %}
+
+{% block content %}
+
+<section class="mx-auto w-full max-w-4xl px-4 py-10">
+	<div class="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-center">
+		<div class="flex items-center justify-between sm:justify-self-start">
+			<a
+				href="{% url 'min-home' %}"
+				class="btn btn-ghost btn-sm"
+				onclick="if (window.history.length > 1) { event.preventDefault(); window.history.back(); }"
+			>← Back</a>
+		</div>
+
+		<div class="text-center sm:justify-self-center">
+			<h1 class="text-3xl font-bold tracking-tight">Verses by Theme</h1>
+		</div>
+	</div>
+
+	<p class="mt-4 text-center text-base-content/80">
+		Pick a theme below and a verse will appear. Click again for another.
+	</p>
+
+	<div id="verse-display" class="mt-6">
+		{% if ref %}
+			{% include "ministry/partials/verse_card.html" %}
+		{% else %}
+			<div class="card bg-base-100 border border-base-300 shadow-sm">
+				<div class="card-body items-center text-center text-base-content/60">
+					<p>Pick a theme below to see a verse.</p>
+				</div>
+			</div>
+		{% endif %}
+	</div>
+
+	<div class="mt-8 space-y-4">
+		{% for category in categories %}
+			<div class="collapse collapse-arrow bg-base-100 border border-base-300 shadow-sm">
+				<input type="radio" name="verse-categories" {% if forloop.first %}checked{% endif %} />
+				<div class="collapse-title text-lg font-semibold">{{ category.name }}</div>
+				<div class="collapse-content">
+					<div class="flex flex-wrap gap-2">
+						{% for theme in category.themes %}
+							<button
+								class="btn btn-primary btn-outline btn-sm"
+								hx-get="{% url 'verse-random' category.slug theme.slug %}"
+								hx-target="#verse-display"
+								hx-swap="innerHTML"
+							>{{ theme.name }}</button>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+		{% endfor %}
+	</div>
+</section>
+
+{% endblock %}
