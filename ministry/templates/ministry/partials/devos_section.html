@@ -98,7 +98,7 @@ Description: Template for devotions section. This partial is intended to be incl
 					{% endif %}
 
 					<div class="mt-5 leading-relaxed text-base-content/90">
-						<div class="break-words">{{ devo.content|devo_paragraphs }}</div>
+						<div class="break-words rendered-markdown devo-markdown">{{ devo.content|devo_markdown }}</div>
 					</div>
 
 					<footer class="mt-6 flex items-center justify-between gap-3">

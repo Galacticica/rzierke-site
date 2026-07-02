@@ -2,43 +2,54 @@
 File: devo_format.py
 Author: Reagan Zierke <reaganzierke@gmail.com>
 Date: 2026-02-05
-Description: Template filters for formatting devotion content. 
-- Provides consistent paragraph wrapping and spacing.
+Description: Template filters for formatting devotion content.
+- Renders devotion content (stored as markdown) into sanitized HTML.
 """
 
+from __future__ import annotations
 
-import re
-
+import markdown as md
+import nh3
 from django import template
-from django.utils.html import conditional_escape, format_html, format_html_join
 from django.utils.safestring import mark_safe
 
 register = template.Library()
 
+# Tags the rendered markdown is allowed to produce. Everything else is stripped
+# by nh3 before the HTML is marked safe, so raw HTML in devotion content can't
+# inject scripts/styles.
+_ALLOWED_TAGS = {
+    "p", "br", "hr",
+    "h1", "h2", "h3", "h4", "h5", "h6",
+    "ul", "ol", "li",
+    "strong", "em", "del", "code", "pre",
+    "blockquote",
+    "a",
+    "table", "thead", "tbody", "tr", "th", "td",
+}
 
-@register.filter
-def devo_paragraphs(value: str | None):
-    """Render devotion content with consistent wrapping.
+_ALLOWED_ATTRIBUTES = {
+    "a": {"href", "title"},
+}
 
-    - Treat blank lines as paragraph breaks.
-    - Treat single newlines inside a paragraph as spaces (prevents awkward short/long lines).
-    """
-    text = (value or "").replace("\r\n", "\n").replace("\r", "\n").strip()
-    if not text:
+
+@register.filter(name="devo_markdown")
+def devo_markdown(value: str | None):
+    """Convert devotion markdown to sanitized HTML for safe display."""
+    if not value:
         return ""
 
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", text) if p.strip()]
-
-    def normalize_paragraph(p: str) -> str:
-        p = re.sub(r"[\t\n]+", " ", p)
-        p = re.sub(r"\s{2,}", " ", p)
-        return p.strip()
-
-    escaped_paragraphs = [(conditional_escape(normalize_paragraph(p)),) for p in paragraphs]
-
-    html = format_html_join(
-        "",
-        '<p class="mb-4 last:mb-0">{}</p>',
-        escaped_paragraphs,
+    html = md.markdown(
+        value,
+        extensions=["fenced_code", "tables", "sane_lists"],
+        output_format="html",
     )
-    return mark_safe(html)
+
+    clean = nh3.clean(
+        html,
+        tags=_ALLOWED_TAGS,
+        attributes=_ALLOWED_ATTRIBUTES,
+        link_rel="noopener noreferrer nofollow",
+    )
+
+    return mark_safe(clean)

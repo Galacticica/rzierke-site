@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 /* Scan Django templates */
 @source "../../templates/**/*.html";
@@ -44,94 +44,101 @@
   themes: all;
 }
 
-/* Rendered markdown inside chat bubbles. Tailwind's preflight strips default
-   heading/list styling, so restore a compact, readable hierarchy here. */
-.chat-markdown {
+/* Rendered markdown content (chat bubbles, devotions, etc.). Tailwind's
+   preflight strips default heading/list styling, so restore a compact,
+   readable hierarchy here. */
+.rendered-markdown {
   overflow-wrap: anywhere;
 }
-.chat-markdown > :first-child {
+.rendered-markdown > :first-child {
   margin-top: 0;
 }
-.chat-markdown > :last-child {
+.rendered-markdown > :last-child {
   margin-bottom: 0;
 }
-.chat-markdown p {
+.rendered-markdown p {
   margin: 0.5em 0;
 }
-.chat-markdown h1,
-.chat-markdown h2,
-.chat-markdown h3,
-.chat-markdown h4,
-.chat-markdown h5,
-.chat-markdown h6 {
+.rendered-markdown h1,
+.rendered-markdown h2,
+.rendered-markdown h3,
+.rendered-markdown h4,
+.rendered-markdown h5,
+.rendered-markdown h6 {
   font-weight: 600;
   line-height: 1.25;
   margin: 1em 0 0.4em;
 }
-.chat-markdown h1 { font-size: 1.35em; }
-.chat-markdown h2 { font-size: 1.2em; }
-.chat-markdown h3 { font-size: 1.1em; }
-.chat-markdown h4,
-.chat-markdown h5,
-.chat-markdown h6 { font-size: 1em; }
-.chat-markdown ul,
-.chat-markdown ol {
+.rendered-markdown h1 { font-size: 1.35em; }
+.rendered-markdown h2 { font-size: 1.2em; }
+.rendered-markdown h3 { font-size: 1.1em; }
+.rendered-markdown h4,
+.rendered-markdown h5,
+.rendered-markdown h6 { font-size: 1em; }
+.rendered-markdown ul,
+.rendered-markdown ol {
   margin: 0.5em 0;
   padding-left: 1.4em;
 }
-.chat-markdown ul { list-style: disc; }
-.chat-markdown ol { list-style: decimal; }
-.chat-markdown li { margin: 0.2em 0; }
-.chat-markdown li > ul,
-.chat-markdown li > ol { margin: 0.2em 0; }
-.chat-markdown a {
+.rendered-markdown ul { list-style: disc; }
+.rendered-markdown ol { list-style: decimal; }
+.rendered-markdown li { margin: 0.2em 0; }
+.rendered-markdown li > ul,
+.rendered-markdown li > ol { margin: 0.2em 0; }
+.rendered-markdown a {
   color: var(--color-secondary);
   text-decoration: underline;
 }
-.chat-markdown strong { font-weight: 600; }
-.chat-markdown code {
+.rendered-markdown strong { font-weight: 600; }
+.rendered-markdown code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.9em;
   background: var(--color-base-300);
   padding: 0.1em 0.35em;
   border-radius: 0.3rem;
 }
-.chat-markdown pre {
+.rendered-markdown pre {
   margin: 0.6em 0;
   padding: 0.75em 0.9em;
   background: var(--color-base-300);
   border-radius: 0.5rem;
   overflow-x: auto;
 }
-.chat-markdown pre code {
+.rendered-markdown pre code {
   background: transparent;
   padding: 0;
   font-size: 0.85em;
 }
-.chat-markdown blockquote {
+.rendered-markdown blockquote {
   margin: 0.6em 0;
   padding-left: 0.9em;
   border-left: 3px solid var(--color-primary);
   opacity: 0.85;
 }
-.chat-markdown hr {
+.rendered-markdown hr {
   margin: 0.9em 0;
   border: 0;
   border-top: 1px solid var(--color-base-300);
 }
-.chat-markdown table {
+.rendered-markdown table {
   width: 100%;
   margin: 0.6em 0;
   border-collapse: collapse;
   font-size: 0.95em;
 }
-.chat-markdown th,
-.chat-markdown td {
+.rendered-markdown th,
+.rendered-markdown td {
   border: 1px solid var(--color-base-300);
   padding: 0.35em 0.6em;
   text-align: left;
 }
-.chat-markdown th {
+.rendered-markdown th {
   font-weight: 600;
   background: var(--color-base-300);
+}
+
+/* Devotions are long-form reading, so give paragraphs roomier spacing than
+   the compact chat-bubble default. */
+.devo-markdown p {
+  margin: 1rem 0;
 }
