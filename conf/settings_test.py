@@ -10,6 +10,10 @@ from conf.settings import *  # noqa: F401,F403
 
 DEBUG = False
 
+# Never sign image URLs in tests (would require boto3/credentials and hit the
+# network); keep the plain base-URL form instead.
+CONNECTIONS_SIGN_IMAGE_URLS = False
+
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False

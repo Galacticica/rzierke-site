@@ -11,6 +11,7 @@ Modified By: Reagan Zierke
 Description: 
 '''
 
+import threading
 from itertools import pairwise
 
 import networkx as nx
@@ -20,6 +21,29 @@ from django.db.models import Exists, OuterRef, Prefetch
 from django.templatetags.static import static
 
 from .models import AlterEgo, Character, Movie, Relationship, TeamMembership
+
+# Lazily built so importing this module never requires boto3/credentials (e.g. in
+# tests or local dev without Tigris keys). Guarded by a lock for thread safety
+# under gunicorn's threaded workers.
+_s3_client = None
+_s3_client_lock = threading.Lock()
+
+
+def _get_s3_client():
+	global _s3_client
+	if _s3_client is None:
+		with _s3_client_lock:
+			if _s3_client is None:
+				import boto3
+				from botocore.config import Config
+
+				_s3_client = boto3.client(
+					"s3",
+					endpoint_url=settings.CONNECTIONS_S3_ENDPOINT,
+					region_name=settings.CONNECTIONS_S3_REGION,
+					config=Config(signature_version="s3v4"),
+				)
+	return _s3_client
 
 
 class MCUGraphService:
@@ -69,10 +93,39 @@ class MCUGraphService:
 			return ""
 		if photo_path.startswith(("http://", "https://", "/")):
 			return photo_path
+		if settings.CONNECTIONS_SIGN_IMAGE_URLS:
+			signed = self._signed_photo_url(photo_path)
+			if signed:
+				return signed
 		base = settings.CONNECTIONS_IMAGE_BASE_URL
 		if base:
 			return f"{base}/{photo_path}"
 		return static(photo_path)
+
+	def _signed_photo_url(self, photo_path):
+		"""Presigned GET URL for a bucket object, cached so we don't re-sign it
+		on every render. Returns None on any failure so _photo_url falls back to
+		the raw URL rather than breaking the graph."""
+		cache_key = f"{self.CACHE_PREFIX}:imgurl:{photo_path}"
+		url = cache.get(cache_key)
+		if url:
+			return url
+		ttl = settings.CONNECTIONS_SIGNED_URL_TTL
+		try:
+			url = _get_s3_client().generate_presigned_url(
+				"get_object",
+				Params={
+					"Bucket": settings.CONNECTIONS_S3_BUCKET,
+					"Key": photo_path,
+				},
+				ExpiresIn=ttl,
+			)
+		except Exception:
+			return None
+		# Cache a bit under the signing TTL so a cached URL is always still valid
+		# when it's served.
+		cache.set(cache_key, url, max(60, ttl - 300))
+		return url
 
 	def _character_base_queryset(self, queryset):
 		return queryset.select_related("movie_introduced", "earth_number")

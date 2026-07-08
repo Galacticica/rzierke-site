@@ -165,6 +165,21 @@ CONNECTIONS_IMAGE_BASE_URL = os.getenv(
     "https://rzierke-static-connections.fly.storage.tigris.dev",
 ).rstrip("/")
 
+# The Tigris bucket won't serve anonymous reads (its public setting is broken),
+# so when credentials are present we hand the browser presigned URLs instead of
+# raw ones. Presigned URLs are authenticated, so they load from a private bucket.
+CONNECTIONS_S3_ENDPOINT = os.getenv(
+    "CONNECTIONS_S3_ENDPOINT", "https://fly.storage.tigris.dev"
+)
+CONNECTIONS_S3_BUCKET = os.getenv("CONNECTIONS_S3_BUCKET", "rzierke-static-connections")
+CONNECTIONS_S3_REGION = os.getenv("AWS_REGION", "auto")
+# Sign only when Tigris keys are available (set as Fly secrets in production).
+CONNECTIONS_SIGN_IMAGE_URLS = bool(
+    os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY")
+)
+# Presigned URL lifetime (seconds). Kept well under Tigris's 7-day SigV4 max.
+CONNECTIONS_SIGNED_URL_TTL = int(os.getenv("CONNECTIONS_SIGNED_URL_TTL", "86400"))
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
