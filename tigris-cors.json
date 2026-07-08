@@ -3,9 +3,7 @@
     {
       "AllowedOrigins": [
         "https://reaganzierke.com",
-        "https://www.reaganzierke.com",
-        "reaganzierke.com",
-        "www.reaganzierke.com"
+        "https://www.reaganzierke.com"
       ],
       "AllowedMethods": ["GET", "HEAD"],
       "AllowedHeaders": ["*"],
