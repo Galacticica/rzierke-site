@@ -17,6 +17,10 @@ staticfiles/
 node_modules/
 .claude
 
+# Character portraits are served from Tigris object storage, not the repo.
+# Local copies here are just an originals backup.
+static/public/connections/
+
 # Test artifacts
 .pytest_cache/
 .coverage

@@ -158,6 +158,13 @@ if not DEBUG:
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / "static" / "public"
 
+# Character portraits for the connections app live in Tigris object storage,
+# not the repo. Empty string falls back to local /static/ serving.
+CONNECTIONS_IMAGE_BASE_URL = os.getenv(
+    "CONNECTIONS_IMAGE_BASE_URL",
+    "https://rzierke-static-connections.fly.storage.tigris.dev",
+).rstrip("/")
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

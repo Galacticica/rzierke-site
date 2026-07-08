@@ -14,6 +14,7 @@ Description:
 from itertools import pairwise
 
 import networkx as nx
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Exists, OuterRef, Prefetch
 from django.templatetags.static import static
@@ -68,6 +69,9 @@ class MCUGraphService:
 			return ""
 		if photo_path.startswith(("http://", "https://", "/")):
 			return photo_path
+		base = settings.CONNECTIONS_IMAGE_BASE_URL
+		if base:
+			return f"{base}/{photo_path}"
 		return static(photo_path)
 
 	def _character_base_queryset(self, queryset):
