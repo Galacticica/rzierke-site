@@ -22,3 +22,4 @@ tests/
 test-results/
 playwright-report/
 .github/
+static/public/connections/
