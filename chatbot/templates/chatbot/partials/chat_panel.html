@@ -13,11 +13,11 @@
       {% for message in messages %}
         {% if message.sender == 'ai' %}
           <div class="flex justify-start">
-            <article class="rendered-markdown max-w-[85%] rounded-2xl rounded-bl-md border border-base-300 bg-base-200 px-4 py-2 text-sm leading-relaxed text-base-content">{{ message.content|render_markdown }}</article>
+            <article data-testid="chat-message-ai" class="rendered-markdown max-w-[85%] rounded-2xl rounded-bl-md border border-base-300 bg-base-200 px-4 py-2 text-sm leading-relaxed text-base-content">{{ message.content|render_markdown }}</article>
           </div>
         {% else %}
           <div class="flex justify-end">
-            <article class="max-w-[80%] rounded-2xl rounded-br-md border border-primary/35 bg-primary/15 px-4 py-2 text-sm leading-relaxed text-base-content whitespace-pre-wrap">{{ message.content }}</article>
+            <article data-testid="chat-message-user" class="max-w-[80%] rounded-2xl rounded-br-md border border-primary/35 bg-primary/15 px-4 py-2 text-sm leading-relaxed text-base-content whitespace-pre-wrap">{{ message.content }}</article>
           </div>
         {% endif %}
       {% endfor %}

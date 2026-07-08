@@ -12,8 +12,9 @@
 
   <div class="space-y-1 p-2">
     {% for conversation in conversations %}
-      <div class="group flex items-center gap-1">
+      <div class="group flex items-center gap-1" data-testid="sidebar-conversation">
         <button
+          data-testid="sidebar-conversation-open"
           class="btn btn-ghost btn-sm h-auto flex-1 justify-start gap-2 px-3 py-3 text-left normal-case {% if selected_conversation_id == conversation.id %}btn-active{% endif %}"
           hx-get="{% url 'chatbot-conversation' conversation.id %}"
           hx-target="#chat-main"
@@ -22,6 +23,7 @@
           <span class="line-clamp-1 font-medium">{{ conversation.title|default:'New Chat' }}</span>
         </button>
         <button
+          data-testid="sidebar-conversation-delete"
           class="btn btn-ghost btn-sm btn-square text-base-content/50 hover:text-error"
           hx-post="{% url 'chatbot-delete' conversation.id %}"
           hx-vals='js:{current_id: (document.querySelector("#chat-main input[name=conversation_id]")||{}).value || ""}'

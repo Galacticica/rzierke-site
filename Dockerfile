@@ -15,35 +15,24 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python -m pip install --upgrade pip
-
 COPY package.json package-lock.json* ./
 
 RUN npm ci --unsafe-perm
 
-RUN pip install --no-cache-dir \
-    "django>=6.0.1" \
-    "django-browser-reload>=1.21.0" \
-    "django-filter>=25.2" \
-    "django-htmx>=1.27.0" \
-    "django-unfold>=0.83.1" \
-    "django-vite>=3.1.0" \
-    "markdown>=3.10.2" \
-    "nh3>=0.3.5" \
-    "openai>=2.24.0" \
-    "psycopg[binary]>=3.3.2" \
-    "python-dotenv>=1.2.1" \
-    "python-pptx>=1.0.2" \
-    "reportlab>=4.4.9" \
-    "requests>=2.32" \
-    "whitenoise>=6.12.0" \
-    "gunicorn>=20.1.0" \
-    "networkx>=3.6.1"
+# Install Python deps from the lockfile so the image can never drift from
+# pyproject.toml. --no-dev keeps test tooling (pytest, playwright) out of
+# the production image.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY . .
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Strip CR so the entrypoint survives a Windows (CRLF) checkout.
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 RUN npm run build 
 

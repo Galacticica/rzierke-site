@@ -9,6 +9,10 @@ Description: Custom forms for user authentication and registration.
 
 from django import forms
 from django.contrib.auth import authenticate as auth_authenticate
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
 
 
 class LoginForm(forms.Form):
@@ -102,6 +106,15 @@ class SignupForm(forms.Form):
         }),
         label="Last Name"
     )
+
+    def clean_email(self):
+        """Validate that the email is not already in use."""
+        email = self.cleaned_data.get("email")
+
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("An account with this email already exists.")
+
+        return email
 
     def clean(self):
         """Validate that password and confirm_password match."""

@@ -16,3 +16,10 @@ staticfiles/
 # Node.js dependencies
 node_modules/
 .claude
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+test-results/
+playwright-report/

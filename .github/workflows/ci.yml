@@ -1,0 +1,56 @@
+# Runs unit + e2e tests on pushes to master and on PRs.
+# Deliberately does NOT trigger on main: pushes there are deploys
+# (fly-deploy.yml) and tests must never run as part of, or block, a deploy.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: ci-test-secret-key
+      # No OPENAI_API_KEY: the module-level OpenAI clients stay None, so a
+      # forgotten mock can never reach the network.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build # static/dist + manifest.json (gitignored) for e2e
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - run: uv sync
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+      - run: uv run playwright install chromium --with-deps
+
+      - name: Unit tests
+        run: uv run pytest -m "not e2e" --cov=. --cov-report=term
+
+      - name: E2E tests
+        run: >
+          uv run pytest -m e2e --ds=conf.settings_e2e
+          --tracing=retain-on-failure --screenshot=only-on-failure
+          --video=off --output=test-results
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7

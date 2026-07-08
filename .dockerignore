@@ -16,3 +16,9 @@ db.sqlite3
 /.git
 fly.toml
 .git/
+conftest.py
+tests/
+*/tests/
+test-results/
+playwright-report/
+.github/

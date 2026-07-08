@@ -23,3 +23,32 @@ dependencies = [
     "requests>=2.34.2",
     "whitenoise>=6.12.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-django>=4.12.0",
+    "pytest-playwright>=0.8.0",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "conf.settings_test"
+python_files = ["test_*.py", "tests.py"]
+norecursedirs = ["node_modules", "static", "staticfiles", ".venv", "templates", "migrations"]
+addopts = "--strict-markers --tb=short"
+markers = [
+    "e2e: end-to-end browser tests (run `npm run build` first, then `pytest -m e2e --ds=conf.settings_e2e`)",
+]
+
+[tool.coverage.run]
+omit = [
+    "*/migrations/*",
+    "conf/asgi.py",
+    "conf/wsgi.py",
+    "manage.py",
+    "conf/settings*",
+    "*/tests/*",
+    "tests/*",
+    "conftest.py",
+]
