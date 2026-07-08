@@ -87,6 +87,7 @@ class Command(BaseCommand):
 					ExtraArgs={
 						"ContentType": "image/png",
 						"CacheControl": CACHE_CONTROL,
+						"ACL": "public-read",
 					},
 				)
 
