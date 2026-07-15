@@ -19,8 +19,8 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get("SECRET_KEY", get_random_secret_key())
 DEBUG = os.environ.get("DEBUG", "").lower() in ("1", "true", "yes", "on")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_CHAT_MODEL = "gpt-5.2"
-OPENAI_TITLE_MODEL = "gpt-5.2-mini"
+OPENAI_CHAT_MODEL = "gpt-5.6-luna"
+OPENAI_TITLE_MODEL = "gpt-5.4-mini"
 
 # Default initial rows for the connections app bulk-add view. Can be overridden
 # via the environment variable `CONNECTIONS_BULK_ADD_DEFAULT_ROWS`.
