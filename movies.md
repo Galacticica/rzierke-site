@@ -215,6 +215,19 @@
 
         </details>
 - [ ] Agatha All Along (2024)
+    - <details> <summary>Season 1</summary>
+
+        - [ ] Episode 1
+        - [ ] Episode 2
+        - [ ] Episode 3
+        - [ ] Episode 4
+        - [ ] Episode 5
+        - [ ] Episode 6
+        - [ ] Episode 7
+        - [ ] Episode 8
+        - [ ] Episode 9
+
+        </details>
 - [ ] Captain America: Brave New World (2025)
 - [ ] Daredevil: Born Again (2025)
     - <details> <summary>Season 1</summary>
