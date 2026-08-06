@@ -198,6 +198,10 @@ DJANGO_VITE = {
 # Explicit default cache (per-process). Used by the ministry Bible-verse
 # proxy to cache verse text from bible-api.com. Verses never change, so a
 # long TTL is safe; locmem means each worker re-warms after a restart.
+# Optional: enables watch-order metadata lookups (release year, runtime, episode
+# counts). Everything works without it - entries just keep what you type.
+TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",

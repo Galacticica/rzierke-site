@@ -1,17 +1,21 @@
 """API views for the MCU graph endpoints."""
 
+import json
+
 from django.shortcuts import render
 from django.http import JsonResponse
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from django.core.cache import cache
 
 from networkx.exception import NetworkXNoPath, NodeNotFound
 
 from .graph_service import MCUGraphService
-from .models import Character, Movie, Relationship, Team
+from .models import Character, Movie, Relationship, Team, WatchEntry, WatchProgress
+from .watch_order_service import WatchOrderService
 
 
 graph_service = MCUGraphService()
+watch_order_service = WatchOrderService()
 
 
 def _group_character_options(characters):
@@ -148,6 +152,112 @@ def graph_character_detail_view(request, character_id):
 		return JsonResponse({"error": "Character was not found."}, status=404)
 
 	return JsonResponse(details)
+
+
+# --------------------------------------------------------------------------
+# Watch order chart
+# --------------------------------------------------------------------------
+
+
+def _watched_slugs(user):
+	if not user.is_authenticated:
+		return []
+	return list(
+		WatchProgress.objects.filter(user=user).values_list("entry__slug", flat=True)
+	)
+
+
+@require_GET
+def watch_order_page_view(request):
+	"""The watch-order chart.
+
+	Both payloads are inlined with json_script rather than fetched, so the chart
+	paints in one pass with the right progress already applied.
+	"""
+	return render(
+		request,
+		"connections/watch_order.html",
+		{
+			"watch_order_payload": watch_order_service.build_payload(),
+			"watched_slugs": _watched_slugs(request.user),
+		},
+	)
+
+
+def _require_login(request):
+	"""401 JSON instead of a login redirect, which fetch() cannot follow usefully."""
+	if not request.user.is_authenticated:
+		return JsonResponse({"error": "Sign in to save your progress."}, status=401)
+	return None
+
+
+def _json_body(request):
+	try:
+		return json.loads(request.body or "{}"), None
+	except json.JSONDecodeError:
+		return None, _bad_request("Request body must be JSON.")
+
+
+@require_POST
+def watch_order_watched_view(request):
+	"""Mark a single entry watched or unwatched for the signed-in user."""
+	unauthorized = _require_login(request)
+	if unauthorized:
+		return unauthorized
+
+	body, error = _json_body(request)
+	if error:
+		return error
+
+	slug = body.get("slug")
+	if not slug:
+		return _bad_request("'slug' is required.")
+
+	try:
+		entry = WatchEntry.objects.get(slug=slug)
+	except WatchEntry.DoesNotExist:
+		return JsonResponse({"error": "That entry was not found."}, status=404)
+
+	if body.get("watched"):
+		WatchProgress.objects.get_or_create(user=request.user, entry=entry)
+	else:
+		WatchProgress.objects.filter(user=request.user, entry=entry).delete()
+
+	return JsonResponse(
+		{
+			"slug": slug,
+			"watched": bool(body.get("watched")),
+			"watched_count": WatchProgress.objects.filter(user=request.user).count(),
+		}
+	)
+
+
+@require_POST
+def watch_order_sync_view(request):
+	"""Merge slugs ticked while signed out into the account.
+
+	Union only - this never removes progress, so a stale localStorage list can
+	never wipe out what the account already has.
+	"""
+	unauthorized = _require_login(request)
+	if unauthorized:
+		return unauthorized
+
+	body, error = _json_body(request)
+	if error:
+		return error
+
+	slugs = body.get("slugs")
+	if not isinstance(slugs, list):
+		return _bad_request("'slugs' must be a list.")
+
+	entries = WatchEntry.objects.filter(slug__in=slugs)
+	WatchProgress.objects.bulk_create(
+		[WatchProgress(user=request.user, entry=entry) for entry in entries],
+		ignore_conflicts=True,
+	)
+
+	return JsonResponse({"watched": _watched_slugs(request.user)})
 
 
 @require_GET

@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+<title>Marvel Watch Order</title>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .watch-shell {
+    background:
+      radial-gradient(circle at top left, rgba(34, 211, 238, 0.22), transparent 32%),
+      radial-gradient(circle at top right, rgba(139, 92, 246, 0.18), transparent 28%),
+      linear-gradient(180deg, rgba(18, 6, 31, 0.96), rgba(11, 6, 16, 1));
+  }
+
+  #watch-order-chart {
+    --tile-width: 9rem;
+    --column-gap: 3rem;
+    /* The row gap is the corridor every arrow is routed through, so it has to
+       stay comfortably taller than an arrowhead plus a stacked elbow. */
+    --row-gap: 4.5rem;
+  }
+
+  .watch-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.5rem;
+  }
+
+  .watch-canvas {
+    position: relative;
+    width: max-content;
+    min-width: 100%;
+    margin-inline: auto;
+  }
+
+  .watch-arrows {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: visible;
+  }
+
+  .watch-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-auto-rows: min-content;
+    justify-items: center;
+    justify-content: center;
+    column-gap: var(--column-gap);
+    row-gap: var(--row-gap);
+  }
+
+  /* Before the layout script runs, the grid is a plain single column in
+     watch order, so the page is still readable without JS. */
+  .watch-grid:not([data-laid-out]) .watch-tile {
+    grid-column: 1;
+  }
+
+  .watch-tile {
+    width: var(--tile-width);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    scroll-margin: 6rem;
+  }
+
+  .watch-tile[hidden] {
+    display: none;
+  }
+
+  .watch-tile__frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 0.6rem;
+    overflow: hidden;
+    border: 2px solid var(--track-color, #8B5CF6);
+    background: rgba(18, 6, 31, 0.9);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+    padding: 0;
+    display: block;
+    transition: transform 140ms ease, box-shadow 140ms ease;
+  }
+
+  .watch-tile__frame:hover,
+  .watch-tile__frame:focus-visible {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55);
+    outline: none;
+  }
+
+  .watch-tile__frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Entries added from production have no committed poster yet. The text card
+     keeps the exact same footprint so the layout never shifts when one lands. */
+  .watch-tile__placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.5rem;
+    text-align: center;
+    background:
+      linear-gradient(160deg, rgba(139, 92, 246, 0.22), rgba(18, 6, 31, 0.95));
+  }
+
+  .watch-tile__placeholder-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: rgba(248, 250, 252, 0.94);
+  }
+
+  .watch-tile__placeholder-meta {
+    font-size: 0.65rem;
+    color: rgba(248, 250, 252, 0.6);
+  }
+
+  .watch-tile__label {
+    font-size: 0.7rem;
+    line-height: 1.25;
+    text-align: center;
+    color: rgba(248, 250, 252, 0.86);
+  }
+
+  .watch-tile__year {
+    font-size: 0.65rem;
+    color: rgba(248, 250, 252, 0.5);
+  }
+
+  .watch-tile__check {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.3rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 999px;
+    background: rgba(11, 6, 16, 0.78);
+    color: rgba(248, 250, 252, 0.5);
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: background 140ms ease, color 140ms ease;
+  }
+
+  .watch-tile__check:hover {
+    background: rgba(34, 197, 94, 0.35);
+    color: #fff;
+  }
+
+  .watch-tile.is-watched .watch-tile__frame img,
+  .watch-tile.is-watched .watch-tile__placeholder {
+    filter: grayscale(0.75) brightness(0.55);
+  }
+
+  .watch-tile.is-watched .watch-tile__check {
+    background: #22c55e;
+    color: #052e16;
+  }
+
+  .watch-tile.is-watched .watch-tile__label {
+    color: rgba(248, 250, 252, 0.45);
+  }
+
+  .watch-track-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--track-color, #8B5CF6);
+    background: color-mix(in srgb, var(--track-color, #8B5CF6) 18%, transparent);
+    color: rgba(248, 250, 252, 0.92);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: opacity 140ms ease;
+  }
+
+  .watch-track-chip[aria-pressed="false"] {
+    opacity: 0.35;
+    background: transparent;
+  }
+
+  .watch-track-chip__dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: var(--track-color, #8B5CF6);
+  }
+
+  .watch-popup {
+    position: fixed;
+    z-index: 2147483647;
+    width: min(22rem, calc(100vw - 1.5rem));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1rem;
+    background: rgba(18, 6, 31, 0.98);
+    color: rgba(248, 250, 252, 0.96);
+    box-shadow: 0 24px 56px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(18px);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .watch-popup[hidden] {
+    display: none;
+  }
+
+  .watch-empty {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: rgba(248, 250, 252, 0.6);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .watch-tile__frame {
+      transition: none;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ watch_order_payload|json_script:"watch-order-data" }}
+{{ watched_slugs|json_script:"watch-order-watched" }}
+
+<section class="watch-shell min-h-[calc(100vh-8rem)] px-4 py-6 lg:px-8">
+  <div class="mx-auto max-w-[110rem] space-y-6">
+
+    <div class="rounded-box border border-white/10 bg-base-200/80 p-6 shadow-2xl">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div class="space-y-2 max-w-3xl">
+          <h1 class="text-3xl font-bold text-base-content sm:text-4xl">Marvel Watch Order</h1>
+        </div>
+
+        <div class="w-full max-w-sm space-y-2" data-watch-progress>
+          <div class="flex items-baseline justify-between text-sm">
+            <span class="font-semibold" data-watch-progress-count>0 / 0 watched</span>
+            <span class="text-base-content/60" data-watch-progress-remaining></span>
+          </div>
+          <progress class="progress progress-primary w-full" value="0" max="100" data-watch-progress-bar></progress>
+          {% if not user.is_authenticated %}
+          <p class="text-xs text-base-content/50">
+            Saved in this browser. <a class="link" href="{% url 'login_page' %}">Sign in</a> to keep it across devices.
+          </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if watch_order_payload.entries %}
+    <div class="rounded-box border border-white/10 bg-base-200/70 p-4 shadow-xl space-y-3">
+      {% if watch_order_payload.collections %}
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="text-sm font-semibold text-base-content/70" for="watch-collection">List</label>
+        <select id="watch-collection" class="select select-bordered select-sm" data-watch-collection>
+          <option value="">Everything ({{ watch_order_payload.entries|length }})</option>
+          {% for collection in watch_order_payload.collections %}
+          <option value="{{ collection.slug }}">{{ collection.name }} ({{ collection.count }})</option>
+          {% endfor %}
+        </select>
+        <p class="text-xs text-base-content/60" data-watch-collection-note hidden></p>
+      </div>
+      {% endif %}
+
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-sm font-semibold text-base-content/70">Tracks</span>
+        {% for track in watch_order_payload.tracks %}
+        <button type="button" class="watch-track-chip" style="--track-color: {{ track.color }}"
+          data-watch-track="{{ track.slug }}" aria-pressed="true">
+          <span class="watch-track-chip__dot"></span>{{ track.name }}
+        </button>
+        {% endfor %}
+        <button type="button" class="btn btn-ghost btn-xs ml-auto" data-watch-reset>Reset watched</button>
+      </div>
+    </div>
+    {% endif %}
+
+    <div id="watch-order-chart" class="rounded-box border border-white/10 bg-base-200/60 p-4 shadow-xl sm:p-6"
+      data-authenticated="{{ user.is_authenticated|yesno:'true,false' }}"
+      data-watched-url="{% url 'watch-order-watched' %}"
+      data-sync-url="{% url 'watch-order-sync' %}"
+      data-graph-url="{% url 'connections-graph' %}">
+
+      {% if watch_order_payload.entries %}
+      <div class="watch-scroll">
+        <div class="watch-canvas">
+          <svg class="watch-arrows" aria-hidden="true"></svg>
+          <div class="watch-grid">
+            {% for entry in watch_order_payload.entries %}
+            <article class="watch-tile" data-watch-entry="{{ entry.slug }}" data-track="{{ entry.track }}"
+              style="--track-color: {{ entry.track_color }}">
+              <div class="watch-tile__frame-wrap relative">
+                <button type="button" class="watch-tile__frame" data-watch-open
+                  aria-label="Details for {{ entry.title }}">
+                  {% if entry.poster_url %}
+                  <img src="{{ entry.poster_url }}" alt="" loading="lazy" width="200" height="300">
+                  {% else %}
+                  <div class="watch-tile__placeholder">
+                    <span class="watch-tile__placeholder-title">{{ entry.title }}</span>
+                    <span class="watch-tile__placeholder-meta">
+                      {% if entry.year %}{{ entry.year }} &middot; {% endif %}{{ entry.media_type }}
+                    </span>
+                  </div>
+                  {% endif %}
+                </button>
+                <button type="button" class="watch-tile__check" data-watch-toggle
+                  aria-label="Mark {{ entry.title }} as watched" aria-pressed="false">&check;</button>
+              </div>
+              {% if entry.poster_url %}
+              {# A poster-less tile already spells out its title on the card itself. #}
+              <p class="watch-tile__label">
+                {{ entry.title }}
+                {% if entry.year %}<br><span class="watch-tile__year">{{ entry.year }}</span>{% endif %}
+              </p>
+              {% endif %}
+            </article>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <p class="watch-empty">
+        No entries yet. Add tracks and films in the admin and they&rsquo;ll appear here automatically.
+      </p>
+      {% endif %}
+    </div>
+
+    <p class="text-center text-sm text-base-content/50">
+      Looking for how everyone is connected instead?
+      <a class="link" href="{% url 'connections-graph' %}">Explore the character graph</a>.
+    </p>
+  </div>
+</section>
+
+<div class="watch-popup" data-watch-popup hidden>
+  <div class="flex items-start justify-between gap-3">
+    <h2 class="text-lg font-semibold leading-tight" data-watch-popup-title></h2>
+    <button type="button" class="btn btn-ghost btn-xs" data-watch-popup-close aria-label="Close">&times;</button>
+  </div>
+  <p class="text-xs uppercase tracking-wide" data-watch-popup-track></p>
+  <p class="text-sm text-base-content/70" data-watch-popup-meta></p>
+  <p class="text-sm text-base-content/80" data-watch-popup-note></p>
+  <div class="flex flex-wrap gap-2 pt-1">
+    <button type="button" class="btn btn-primary btn-sm" data-watch-popup-toggle>Mark watched</button>
+    <a class="btn btn-ghost btn-sm" data-watch-popup-graph hidden>See in character graph</a>
+  </div>
+</div>
+{% endblock %}

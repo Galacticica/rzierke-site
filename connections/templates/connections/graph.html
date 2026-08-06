@@ -678,6 +678,12 @@
             <div class="graph-toolbar flex items-center justify-between gap-3 px-2 pb-3 relative">
               <div>
                 <h2 class="text-lg font-semibold">MCU Relationship Map</h2>
+                {% comment %}
+                  graph.js writes what the current view is filtered by here. Matters
+                  most on a deep link (?movie=<id>), where the user did not tick the
+                  filter themselves and would otherwise not know why it is narrowed.
+                {% endcomment %}
+                <p id="graph-summary" class="text-sm text-base-content/60"></p>
               </div>
               <div class="flex items-center gap-2">
                 <div id="graph-load-state" class="text-sm text-base-content/60">Loading graph...</div>

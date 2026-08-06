@@ -16,14 +16,24 @@ from urllib.parse import urlencode
 
 from django.contrib import admin, messages
 from django import forms
-from django.db.models import Q
+from django.contrib.staticfiles import finders
+from django.db.models import Count, Q
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path
+from django.templatetags.static import static
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.conf import settings
 from unfold.admin import ModelAdmin, TabularInline
 
-from .models import AlterEgo, Character, Movie, Relationship, Team, TeamMembership, Earth, BulkAddConfig
+from . import tmdb
+from .forms import WatchEntryAdminForm
+from .models import (
+	AlterEgo, Character, Movie, Relationship, Team, TeamMembership, Earth, BulkAddConfig,
+	WatchCollection, WatchEntry, WatchProgress, WatchTrack, renormalize_track,
+)
+from .watch_order_service import WatchOrderService
 
 
 class OrderedChoiceAdminMixin:
@@ -254,6 +264,9 @@ class MovieAdmin(OrderedChoiceAdminMixin, ModelAdmin):
 	"""Admin configuration for Movie."""
 	list_display = ("title", "release_date")
 	search_fields = ("title",)
+	# Autocomplete results are paginated, so an unordered queryset can repeat or
+	# drop rows between pages.
+	ordering = ("release_date", "title")
 
 	def formfield_for_manytomany(self, db_field, request, **kwargs):
 		form_field = super().formfield_for_manytomany(db_field, request, **kwargs)
@@ -809,3 +822,267 @@ class BulkAddConfigAdmin(ModelAdmin):
 	def has_add_permission(self, request):
 		# Only allow a single config instance
 		return not BulkAddConfig.objects.exists()
+
+
+# --------------------------------------------------------------------------
+# Watch order chart
+# --------------------------------------------------------------------------
+
+
+@admin.action(description="Renormalize positions in the selected columns")
+def renormalize_positions(modeladmin, request, queryset):
+	"""Spread a column's positions back out to 10, 20, 30... preserving order.
+
+	Needed in two cases: after repeated inserts between the same two entries have
+	used up the decimal places between them, and once after pointing one track's
+	'continues from' at another, to merge their two independent numberings into
+	one sequence that can interleave.
+	"""
+	if queryset.model is WatchEntry:
+		tracks = WatchTrack.objects.filter(pk__in=queryset.values_list("track_id", flat=True))
+	else:
+		tracks = queryset
+
+	renumbered = 0
+	for track in tracks:
+		renumbered += renormalize_track(track)
+
+	# renormalize_track uses bulk_update, which does not fire post_save.
+	WatchOrderService.invalidate_cache()
+	messages.success(request, f"Renormalized {renumbered} entr(ies) across {len(tracks)} track(s).")
+
+
+@admin.register(WatchTrack)
+class WatchTrackAdmin(ModelAdmin):
+	"""A lane in the watch-order chart."""
+
+	list_display = ("name", "slug", "lane_order", "continues_from", "entry_count", "swatch", "is_active")
+	list_editable = ("lane_order", "is_active")
+	prepopulated_fields = {"slug": ("name",)}
+	ordering = ("lane_order", "name")
+	actions = [renormalize_positions]
+
+	fieldsets = (
+		(None, {"fields": ("name", "slug", "color", "is_active")}),
+		("Column", {
+			"fields": ("lane_order", "continues_from"),
+			"description": "Lane order places the column left to right. 'Continues from' stacks this "
+			               "track underneath another in the same column instead - for two halves of "
+			               "one storyline, like Multiverse Saga after Infinity Saga.",
+		}),
+	)
+
+	def get_queryset(self, request):
+		return super().get_queryset(request).annotate(_entry_count=Count("entries"))
+
+	@admin.display(description="Entries", ordering="_entry_count")
+	def entry_count(self, track):
+		return track._entry_count
+
+	@admin.display(description="Color")
+	def swatch(self, track):
+		return format_html(
+			'<span style="display:inline-block;width:1.25rem;height:1.25rem;border-radius:0.25rem;'
+			'border:1px solid rgba(0,0,0,.2);background:{}"></span>',
+			track.color,
+		)
+
+
+def _run_tmdb_lookup(request, queryset, overwrite):
+	if not tmdb.is_configured():
+		messages.error(
+			request, "Lookups are disabled: add TMDB_API_KEY to your .env (or Fly secrets)."
+		)
+		return
+
+	updated, failed = 0, []
+	for entry in queryset:
+		try:
+			if tmdb.apply_to_entry(entry, overwrite=overwrite):
+				updated += 1
+		except tmdb.TMDBError as error:
+			failed.append(f"{entry.title} ({error})")
+
+	if updated:
+		WatchOrderService.invalidate_cache()
+		messages.success(request, f"Updated {updated} entr(ies) from TMDB.")
+	if failed:
+		messages.warning(request, "Could not look up: " + "; ".join(failed))
+	if not updated and not failed:
+		messages.info(
+			request,
+			"Nothing changed - those entries already have their metadata. To replace values that "
+			"are already set, use 'Re-fetch from TMDB (replace existing values)'.",
+		)
+
+
+@admin.action(description="Fetch missing metadata from TMDB")
+def fetch_tmdb_metadata(modeladmin, request, queryset):
+	"""Fill only the blank year/runtime/episode counts on the selected entries."""
+	_run_tmdb_lookup(request, queryset, overwrite=False)
+
+
+@admin.action(description="Re-fetch from TMDB (replace existing values)")
+def refetch_tmdb_metadata(modeladmin, request, queryset):
+	"""Overwrite year/runtime/episode counts, even where they are already set.
+
+	This is what makes correcting a wrong match work: fixing tmdb_id alone does
+	nothing if the bad values are already in place, because the normal action
+	only touches blanks.
+	"""
+	_run_tmdb_lookup(request, queryset, overwrite=True)
+
+
+@admin.register(WatchEntry)
+class WatchEntryAdmin(ModelAdmin):
+	"""Watch-order entries. Ordering is handled by the form's "insert after" chooser."""
+
+	form = WatchEntryAdminForm
+	list_display = ("title", "track", "position", "release_year", "media_type", "poster_status", "is_published")
+	list_filter = ("track", "collections", "media_type", "is_published")
+	search_fields = ("title", "slug")
+	prepopulated_fields = {"slug": ("title",)}
+	filter_horizontal = ("prerequisites", "collections")
+	autocomplete_fields = ("movie",)
+	readonly_fields = ("poster_preview",)
+	ordering = ("track__lane_order", "position", "pk")
+	actions = [renormalize_positions, fetch_tmdb_metadata, refetch_tmdb_metadata]
+
+	class Media:
+		js = ("connections/watch_entry_movie_search.js",)
+
+	fieldsets = (
+		(None, {"fields": ("title", "slug", "track", "collections", "media_type", "is_published")}),
+		("Placement", {
+			"fields": ("insert_after", "position", "prerequisites"),
+			"description": "Order inside a track comes from 'Insert after'. Prerequisites are only "
+			               "for merges across tracks, like the X-Men lane feeding into Doomsday.",
+		}),
+		("Poster", {
+			"fields": ("poster_preview", "poster_path"),
+			"description": "Leave the path blank and a matching file in static/public/watch-order/ "
+			               "is found automatically on save. Edit it directly to override.",
+		}),
+		("Details", {
+			"fields": ("release_year", "runtime_minutes", "episode_count", "note", "movie"),
+			"description": "Left blank on a new entry, these are looked up on TMDB when you save. "
+			               "Runtime on a series is per episode.",
+		}),
+		("TMDB", {
+			"fields": ("tmdb_id", "tmdb_type", "tmdb_season"),
+			"classes": ("collapse",),
+			"description": "Filled in by the first lookup. Matched the wrong title? Find the right one on "
+			               "themoviedb.org - the id is in the URL, e.g. /movie/<b>1726</b>-iron-man - put it "
+			               "in Tmdb id, set Tmdb type to match (movie or tv), save, then pick this entry in "
+			               "the list and run <b>Re-fetch from TMDB (replace existing values)</b>. The plain "
+			               "'Fetch missing metadata' action only fills blanks and will not correct it.",
+		}),
+	)
+
+	def get_queryset(self, request):
+		return super().get_queryset(request).select_related("track")
+
+	def save_model(self, request, obj, form, change):
+		"""On create, fill any blank metadata from TMDB.
+
+		Deliberately after the save and wrapped: a slow or missing TMDB must
+		never stop an entry being added, so a failure is reported and moved past.
+		"""
+		super().save_model(request, obj, form, change)
+		if change:
+			return
+
+		# Only say anything when a lookup would actually have helped, so an entry
+		# filled in by hand does not nag.
+		wanted = [
+			field for field in ("release_year", "runtime_minutes")
+			if getattr(obj, field) in (None, "")
+		]
+
+		if not tmdb.is_configured():
+			if wanted:
+				messages.info(
+					request,
+					"Saved. Automatic lookups are off, so year and runtime were left blank - "
+					"add TMDB_API_KEY to your .env to have them filled in.",
+				)
+			return
+
+		try:
+			filled = tmdb.apply_to_entry(obj)
+		except tmdb.TMDBError as error:
+			messages.warning(request, f"Saved, but the TMDB lookup failed: {error}")
+			return
+
+		if filled:
+			WatchOrderService.invalidate_cache()
+			messages.info(request, "Filled from TMDB: " + ", ".join(filled) + ".")
+		elif wanted:
+			messages.warning(request, "Saved, but TMDB had nothing to fill in for this title.")
+
+	@admin.display(description="Current poster")
+	def poster_preview(self, entry):
+		"""Show the resolved image and its path, so a wrong auto-match is obvious."""
+		if not entry.pk:
+			return "Saving will look for a matching poster file and fill the path in below."
+		if not entry.poster_path:
+			return "No poster yet - this entry renders as a text card."
+
+		if not finders.find(entry.poster_path):
+			return format_html(
+				'<span style="color:#ef4444">File not found:</span> <code>{}</code>', entry.poster_path
+			)
+		return format_html(
+			'<div style="display:flex;gap:1rem;align-items:center">'
+			'<img src="{}" style="height:9rem;border-radius:.4rem;border:1px solid rgba(255,255,255,.15)">'
+			'<code style="font-size:.8rem">{}</code></div>',
+			static(entry.poster_path),
+			entry.poster_path,
+		)
+
+	@admin.display(description="Poster")
+	def poster_status(self, entry):
+		"""Flag entries whose poster file has not been committed yet.
+
+		Entries added from production render as text cards until their image
+		lands in static/public/watch-order/, so this is the column that says
+		which ones still need one.
+		"""
+		if not entry.poster_path:
+			return mark_safe('<span style="color:#f59e0b">— none</span>')
+		if finders.find(entry.poster_path):
+			return mark_safe('<span style="color:#22c55e">✓ found</span>')
+		return format_html('<span style="color:#ef4444" title="{}">✗ missing file</span>', entry.poster_path)
+
+
+@admin.register(WatchCollection)
+class WatchCollectionAdmin(ModelAdmin):
+	"""Curated cross-track lists, e.g. "Doomsday Prep"."""
+
+	list_display = ("name", "slug", "entry_count", "display_order", "is_active")
+	list_editable = ("display_order", "is_active")
+	prepopulated_fields = {"slug": ("name",)}
+	search_fields = ("name",)
+
+	def get_queryset(self, request):
+		return super().get_queryset(request).annotate(_entry_count=Count("entries"))
+
+	@admin.display(description="Entries", ordering="_entry_count")
+	def entry_count(self, collection):
+		return collection._entry_count
+
+
+@admin.register(WatchProgress)
+class WatchProgressAdmin(ModelAdmin):
+	"""Read-only view of who has watched what."""
+
+	list_display = ("user", "entry", "watched_at")
+	list_filter = ("entry__track", "watched_at")
+	search_fields = ("user__email", "entry__title")
+	autocomplete_fields = ("entry",)
+
+	def has_add_permission(self, request):
+		return False
+
+	def has_change_permission(self, request, obj=None):
+		return False

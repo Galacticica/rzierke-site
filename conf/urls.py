@@ -10,8 +10,6 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include
 
-from connections import views as connections_views
-
 handler404 = "conf.views.custom_page_not_found"
 handler500 = "conf.views.custom_server_error"
 
@@ -19,7 +17,7 @@ urlpatterns = [
     path('account/', include('accounts.urls')),
     path('admin/', admin.site.urls),
     path('api/', include('connections.urls')),
-    path('mcu-relationships/', connections_views.graph_page_view, name='connections-graph'),
+    path('mcu-relationships/', include('connections.page_urls')),
     path('', include('home.urls')),
     path('ministry/', include('ministry.urls')),
     path('rzpercussion/', include('rzpercussion.urls')),
