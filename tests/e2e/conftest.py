@@ -90,6 +90,13 @@ def user(db):
 
 
 @pytest.fixture
+def superuser(db):
+    from accounts.models import User
+
+    return User.objects.create_superuser(email="e2e-admin@example.com", password="password123")
+
+
+@pytest.fixture
 def gpt_creator_user(db):
     from accounts.models import User
 
@@ -149,6 +156,88 @@ def songs(db):
         song.tag.add(classic if i % 2 else upbeat)
         created.append(song)
     return created
+
+
+@pytest.fixture
+def watch_order(db):
+    """Two lanes that converge.
+
+    MCU: Iron Man -> Avengers -> Doomsday (3 deep).
+    X-Men: X-Men -> X2 -> Deadpool & Wolverine (also 3 deep).
+
+    Deadpool & Wolverine is a prerequisite of Doomsday. The X-Men lane is
+    deliberately long enough that the merge pushes Doomsday a row *past* where
+    its own track chain would put it, so hiding the X-Men lane visibly moves it
+    back up.
+    """
+    from connections.models import WatchCollection, WatchEntry, WatchTrack
+
+    mcu = WatchTrack.objects.create(name="MCU", slug="mcu", lane_order=0, color="#8B5CF6")
+    xmen = WatchTrack.objects.create(name="Fox X-Men", slug="fox-x-men", lane_order=1, color="#22D3EE")
+
+    entries = {
+        "iron_man": WatchEntry.objects.create(
+            track=mcu, title="Iron Man", slug="iron-man", release_year=2008, runtime_minutes=126
+        ),
+        "avengers": WatchEntry.objects.create(
+            track=mcu, title="The Avengers", slug="the-avengers", release_year=2012, runtime_minutes=143
+        ),
+        "doomsday": WatchEntry.objects.create(
+            track=mcu, title="Avengers: Doomsday", slug="doomsday", release_year=2026, runtime_minutes=150
+        ),
+        "xmen": WatchEntry.objects.create(
+            track=xmen, title="X-Men", slug="x-men", release_year=2000, runtime_minutes=104
+        ),
+        "x2": WatchEntry.objects.create(
+            track=xmen, title="X2", slug="x2", release_year=2003, runtime_minutes=134
+        ),
+        "deadpool": WatchEntry.objects.create(
+            track=xmen, title="Deadpool & Wolverine", slug="deadpool-wolverine",
+            release_year=2024, runtime_minutes=128,
+        ),
+    }
+    entries["doomsday"].prerequisites.add(entries["deadpool"])
+
+    # A collection holding two entries from the same lane with a hole between
+    # them, and nothing else. Doomsday's only prerequisite is outside the
+    # collection, so the lane chain is the sole thing keeping the two apart -
+    # rebuild it wrong and they land on the same row in the same column.
+    prep = WatchCollection.objects.create(name="Doomsday Prep", slug="doomsday-prep")
+    prep.entries.add(entries["iron_man"], entries["doomsday"])
+
+    entries["tracks"] = {"mcu": mcu, "xmen": xmen}
+    entries["collection"] = prep
+    return entries
+
+
+@pytest.fixture
+def continued_sagas(db):
+    """Infinity Saga continuing into Multiverse Saga, plus a parallel X-Men lane."""
+    from connections.models import WatchEntry, WatchTrack
+
+    infinity = WatchTrack.objects.create(
+        name="Infinity Saga", slug="infinity-saga", lane_order=0, color="#8B5CF6"
+    )
+    multiverse = WatchTrack.objects.create(
+        name="Multiverse Saga", slug="multiverse-saga", lane_order=1, color="#22D3EE",
+        continues_from=infinity,
+    )
+    xmen = WatchTrack.objects.create(
+        name="Fox X-Men", slug="fox-x-men", lane_order=2, color="#F97316"
+    )
+
+    def entry(track, title, slug, year):
+        return WatchEntry.objects.create(
+            track=track, title=title, slug=slug, release_year=year, runtime_minutes=120
+        )
+
+    return {
+        "iron_man": entry(infinity, "Iron Man", "iron-man", 2008),
+        "gotg2": entry(infinity, "Guardians of the Galaxy Vol. 2", "gotg-2", 2017),
+        "groot": entry(multiverse, "I Am Groot", "i-am-groot", 2022),
+        "wakanda": entry(multiverse, "Eyes of Wakanda", "eyes-of-wakanda", 2025),
+        "xmen": entry(xmen, "X-Men", "x-men", 2000),
+    }
 
 
 @pytest.fixture

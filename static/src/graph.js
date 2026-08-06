@@ -1276,7 +1276,30 @@ document.querySelectorAll('[data-graph-filter-search]').forEach(searchInput => {
     });
   });
 
+  // ─── Deep links ────────────────────────────────────────────────────────────
+  // The watch-order chart links here as ?movie=<id> to open the graph already
+  // narrowed to one film's cast. Any filter name works the same way, and repeats
+  // stack (?movie=1&movie=2), because the filters are read off the inputs -
+  // ticking them before the first load is all that is needed.
+  const applyFiltersFromUrl = () => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.toString()) return;
+
+    refreshFilterInputs();
+    params.forEach((value, name) => {
+      filterInputs.forEach(input => {
+        if (input.dataset.graphFilter !== name) return;
+        if (input.type === 'checkbox') {
+          if (input.value === value) input.checked = true;
+        } else {
+          input.value = value;
+        }
+      });
+    });
+  };
+
   // ─── Initial load ──────────────────────────────────────────────────────────
+  applyFiltersFromUrl();
   loadFilteredGraph()
     .then(() => setLoadState('Ready'))
     .catch(err => {
