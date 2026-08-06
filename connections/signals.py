@@ -4,7 +4,9 @@ from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 
 from .graph_service import MCUGraphService
-from .models import Character, Relationship, WatchCollection, WatchEntry, WatchTrack
+from .models import (
+    Character, Relationship, WatchCollection, WatchEntry, WatchOrderConfig, WatchTrack,
+)
 from .watch_order_service import WatchOrderService
 
 
@@ -19,6 +21,7 @@ def invalidate_graph_cache(sender, **kwargs):
 @receiver(post_save, sender=WatchEntry)
 @receiver(post_save, sender=WatchTrack)
 @receiver(post_save, sender=WatchCollection)
+@receiver(post_save, sender=WatchOrderConfig)
 @receiver(post_delete, sender=WatchEntry)
 @receiver(post_delete, sender=WatchTrack)
 @receiver(post_delete, sender=WatchCollection)

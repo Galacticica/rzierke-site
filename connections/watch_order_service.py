@@ -14,7 +14,7 @@ to "watch this after".
 from django.core.cache import cache
 from django.templatetags.static import static
 
-from .models import WatchCollection, WatchEntry, WatchTrack
+from .models import WatchCollection, WatchEntry, WatchOrderConfig, WatchTrack
 
 
 class WatchOrderService:
@@ -79,6 +79,7 @@ class WatchOrderService:
 			"poster_url": self._poster_url(entry.poster_path),
 			"note": entry.note,
 			"movie_id": entry.movie_id,
+			"connects_to_previous": entry.connects_to_previous,
 			"collections": [collection.slug for collection in entry.collections.all()],
 		}
 
@@ -189,6 +190,7 @@ class WatchOrderService:
 			],
 			"entries": [self._entry_payload(entry, lanes) for entry in entries],
 			"edges": edges,
+			"items_per_row": WatchOrderConfig.current().items_per_row or 0,
 		}
 		cache.set(cache_key, payload, self.CACHE_TIMEOUT)
 		return payload
@@ -200,28 +202,22 @@ UNSAVED_PK = -1
 
 
 def build_edge_index(entries, extra_edges=(), ignore_saved_prerequisites_for=()):
-	"""Adjacency for the full DAG: track chains plus prerequisite links.
+	"""Adjacency over prerequisite links only.
+
+	Position order is deliberately excluded. It is the order the list reads in,
+	not a constraint, and folding it in here would reject perfectly good
+	non-linear franchises: X-Men: First Class comes before Origins: Wolverine in
+	story terms while sitting later in the list, which is a contradiction only if
+	position is treated as a rule. The chart resolves that by letting the stated
+	prerequisite win and dropping the implied one.
 
 	`extra_edges` tests edges that are not saved yet, and
 	`ignore_saved_prerequisites_for` drops an entry's stored prerequisites so the
 	admin form can validate the set the user just submitted rather than the one
-	still in the database. Together they let the form reject a prerequisite
-	before it can create a loop.
+	still in the database.
 	"""
 	successors = {entry.pk: set() for entry in entries}
 	ignored = set(ignore_saved_prerequisites_for)
-
-	# Sort unpositioned entries last; a new entry gets its position before the
-	# form validates, but never rely on that here.
-	def sort_key(item):
-		return (item.track_id, item.position is None, item.position or 0, item.pk)
-
-	previous_by_track = {}
-	for entry in sorted(entries, key=sort_key):
-		previous = previous_by_track.get(entry.track_id)
-		if previous is not None:
-			successors[previous.pk].add(entry.pk)
-		previous_by_track[entry.track_id] = entry
 
 	for entry in entries:
 		if entry.pk in ignored or entry.pk == UNSAVED_PK:
@@ -262,9 +258,9 @@ def find_cycle_nodes(successors):
 def would_create_cycle(entry, prerequisite_ids):
 	"""True when giving `entry` these prerequisites closes a loop.
 
-	Checks the whole DAG, track chains included, so it also catches a
-	prerequisite that contradicts the position order of a lane - e.g. making a
-	late MCU film a prerequisite of an early one.
+	Only a genuine loop among stated prerequisites counts - A before B before A.
+	Contradicting the list order is allowed, because the list order is just how
+	the chart reads top to bottom, not a claim about what has to come first.
 
 	`entry` may be unsaved; its submitted prerequisites replace whatever is
 	stored, so removing a prerequisite is never reported as still cyclic.

@@ -491,3 +491,57 @@ class TestInterleavedColumns:
             WatchEntry.objects.order_by("position").values_list("position", flat=True)
         )
         assert positions == [Decimal("10"), Decimal("20"), Decimal("30"), Decimal("40")]
+
+
+class TestConnectsToPrevious:
+    """An entry can drop its incoming arrow while keeping its slot."""
+
+    @pytest.fixture
+    def chain(self, tracks):
+        first = WatchEntry.objects.create(track=tracks["mcu"], title="A", slug="a")
+        second = WatchEntry.objects.create(
+            track=tracks["mcu"], title="B", slug="b", connects_to_previous=False
+        )
+        third = WatchEntry.objects.create(track=tracks["mcu"], title="C", slug="c")
+        return first, second, third
+
+    def test_defaults_to_connected(self, chart):
+        payload = WatchOrderService().build_payload()
+
+        assert all(entry["connects_to_previous"] for entry in payload["entries"])
+
+    def test_the_flag_reaches_the_client(self, chain):
+        payload = WatchOrderService().build_payload()
+        by_slug = {entry["slug"]: entry for entry in payload["entries"]}
+
+        assert by_slug["b"]["connects_to_previous"] is False
+        assert by_slug["a"]["connects_to_previous"] is True
+
+    def test_it_does_not_change_the_order(self, chain):
+        """The slot is kept; only the arrow goes away."""
+        payload = WatchOrderService().build_payload()
+
+        assert [entry["slug"] for entry in payload["entries"]] == ["a", "b", "c"]
+
+
+class TestWrapConfig:
+    def test_defaults_to_no_wrapping(self, chart):
+        payload = WatchOrderService().build_payload()
+
+        assert payload["items_per_row"] == 0
+
+    def test_the_configured_value_reaches_the_client(self, chart):
+        from connections.models import WatchOrderConfig
+
+        WatchOrderConfig.objects.create(items_per_row=3)
+
+        assert WatchOrderService().build_payload()["items_per_row"] == 3
+
+    def test_changing_it_invalidates_the_cache(self, chart):
+        from connections.models import WatchOrderConfig
+
+        service = WatchOrderService()
+        assert service.build_payload()["items_per_row"] == 0
+
+        WatchOrderConfig.objects.create(items_per_row=4)
+        assert service.build_payload()["items_per_row"] == 4

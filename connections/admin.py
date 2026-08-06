@@ -31,7 +31,7 @@ from . import tmdb
 from .forms import WatchEntryAdminForm
 from .models import (
 	AlterEgo, Character, Movie, Relationship, Team, TeamMembership, Earth, BulkAddConfig,
-	WatchCollection, WatchEntry, WatchProgress, WatchTrack, renormalize_track,
+	WatchCollection, WatchEntry, WatchOrderConfig, WatchProgress, WatchTrack, renormalize_track,
 )
 from .watch_order_service import WatchOrderService
 
@@ -954,9 +954,11 @@ class WatchEntryAdmin(ModelAdmin):
 	fieldsets = (
 		(None, {"fields": ("title", "slug", "track", "collections", "media_type", "is_published")}),
 		("Placement", {
-			"fields": ("insert_after", "position", "prerequisites"),
-			"description": "Order inside a track comes from 'Insert after'. Prerequisites are only "
-			               "for merges across tracks, like the X-Men lane feeding into Doomsday.",
+			"fields": ("insert_after", "position", "connects_to_previous", "prerequisites"),
+			"description": "Order inside a column comes from 'Insert after'. Untick 'Connects to "
+			               "previous' to drop the incoming arrow while keeping the slot. "
+			               "Prerequisites are only for merges across columns, like the X-Men lane "
+			               "feeding into Doomsday.",
 		}),
 		("Poster", {
 			"fields": ("poster_preview", "poster_path"),
@@ -1070,6 +1072,17 @@ class WatchCollectionAdmin(ModelAdmin):
 	@admin.display(description="Entries", ordering="_entry_count")
 	def entry_count(self, collection):
 		return collection._entry_count
+
+
+@admin.register(WatchOrderConfig)
+class WatchOrderConfigAdmin(ModelAdmin):
+	"""Display settings for the chart."""
+
+	list_display = ("__str__", "items_per_row")
+
+	def has_add_permission(self, request):
+		# Only allow a single config instance.
+		return not WatchOrderConfig.objects.exists()
 
 
 @admin.register(WatchProgress)

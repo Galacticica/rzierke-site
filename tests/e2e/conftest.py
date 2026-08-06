@@ -241,6 +241,279 @@ def continued_sagas(db):
 
 
 @pytest.fixture
+def long_lane(db):
+    """One lane of 9 entries, so wrapping can be turned on and observed."""
+    from connections.models import WatchEntry, WatchTrack
+
+    saga = WatchTrack.objects.create(name="Saga", slug="saga", lane_order=0, color="#8B5CF6")
+    return [
+        WatchEntry.objects.create(
+            track=saga, title=f"Film {number}", slug=f"film-{number}",
+            release_year=2000 + number, runtime_minutes=120,
+        )
+        for number in range(1, 10)
+    ]
+
+
+@pytest.fixture
+def fan_out(db):
+    """The Defenders, then its four follow-up seasons, then Punisher S2.
+
+    All four seasons name The Defenders as their prerequisite, so they are
+    branches: they belong side by side on one row, not stacked in single file.
+    """
+    from connections.models import WatchEntry, WatchTrack
+
+    netflix = WatchTrack.objects.create(
+        name="Netflix", slug="netflix", lane_order=0, color="#F97316"
+    )
+
+    def entry(title, slug):
+        return WatchEntry.objects.create(
+            track=netflix, title=title, slug=slug, media_type="Series",
+            runtime_minutes=54, episode_count=13,
+        )
+
+    defenders = entry("The Defenders", "defenders")
+    branches = [
+        entry("Daredevil Season 3", "dd-s3"),
+        entry("Jessica Jones Season 3", "jj-s3"),
+        entry("Luke Cage Season 2", "lc-s2"),
+        entry("Iron Fist Season 2", "if-s2"),
+    ]
+    for branch in branches:
+        branch.prerequisites.add(defenders)
+
+    punisher = entry("The Punisher Season 2", "punisher-s2")
+    return {"defenders": defenders, "branches": branches, "punisher": punisher}
+
+
+@pytest.fixture
+def fan_in(db):
+    """Four unconnected Netflix shows all feeding The Defenders.
+
+    Daredevil has a season 1 ahead of its season 2, so the four converging
+    entries sit at different depths - they still have to end up abreast.
+    """
+    from connections.models import WatchEntry, WatchTrack
+
+    netflix = WatchTrack.objects.create(
+        name="Netflix", slug="netflix", lane_order=0, color="#F97316"
+    )
+
+    def entry(title, slug):
+        return WatchEntry.objects.create(
+            track=netflix, title=title, slug=slug, media_type="Series",
+            runtime_minutes=54, episode_count=13,
+        )
+
+    dd1 = entry("Daredevil Season 1", "dd-s1")
+    dd2 = entry("Daredevil Season 2", "dd-s2")
+    jj1 = entry("Jessica Jones Season 1", "jj-s1")
+    lc1 = entry("Luke Cage Season 1", "lc-s1")
+    if1 = entry("Iron Fist Season 1", "if-s1")
+    defenders = entry("The Defenders", "defenders")
+
+    for source in (dd2, jj1, lc1, if1):
+        defenders.prerequisites.add(source)
+
+    return {"dd1": dd1, "sources": [dd2, jj1, lc1, if1], "defenders": defenders}
+
+
+@pytest.fixture
+def netflix_block(db):
+    """The real Netflix shape: 4 shows -> Defenders -> 5 shows, plus a side branch.
+
+    Daredevil S2 also feeds The Punisher S1, so one member of the fan-in has an
+    extra outgoing edge that must not disturb the bracket.
+    """
+    from connections.models import WatchEntry, WatchTrack
+
+    netflix = WatchTrack.objects.create(
+        name="Netflix", slug="netflix", lane_order=0, color="#EC4899"
+    )
+
+    def entry(title, slug):
+        return WatchEntry.objects.create(
+            track=netflix, title=title, slug=slug, media_type="Series",
+            runtime_minutes=54, episode_count=13,
+        )
+
+    dd1 = entry("Daredevil Season 1", "dd-s1")
+    jj1 = entry("Jessica Jones Season 1", "jj-s1")
+    dd2 = entry("Daredevil Season 2", "dd-s2")
+    lc1 = entry("Luke Cage Season 1", "lc-s1")
+    if1 = entry("Iron Fist Season 1", "if-s1")
+    defenders = entry("The Defenders", "defenders")
+    punisher1 = entry("The Punisher Season 1", "punisher-s1")
+
+    dd2.prerequisites.add(dd1)
+    for source in (jj1, dd2, lc1, if1):
+        defenders.prerequisites.add(source)
+    punisher1.prerequisites.add(dd2)
+
+    after = []
+    for title, slug in [
+        ("Jessica Jones Season 2", "jj-s2"), ("Luke Cage Season 2", "lc-s2"),
+        ("Iron Fist Season 2", "if-s2"), ("Daredevil Season 3", "dd-s3"),
+        ("The Punisher Season 2", "punisher-s2"),
+    ]:
+        made = entry(title, slug)
+        made.prerequisites.add(defenders)
+        after.append(made)
+
+    return {"first": dd1, "fan_in": [jj1, dd2, lc1, if1], "defenders": defenders, "after": after}
+
+
+@pytest.fixture
+def xmen_franchise(db):
+    """The X-Men tangle: story order and list order disagree.
+
+    Listed in release order, but told in story order via prerequisites:
+      First Class -> Origins: Wolverine   (1962 then 1979)
+      X-Men -> X2 -> The Last Stand       (the original trilogy)
+      Days of Future Past follows BOTH branches.
+
+    First Class sits *later* in the list than Origins, so the implied
+    "next in the list" edge runs opposite to the stated one.
+    """
+    from connections.models import WatchEntry, WatchTrack
+
+    fox = WatchTrack.objects.create(name="Fox X-Men", slug="fox", lane_order=0, color="#F97316")
+
+    def entry(title, slug, year):
+        return WatchEntry.objects.create(
+            track=fox, title=title, slug=slug, release_year=year, runtime_minutes=120
+        )
+
+    # Listed in release order.
+    xmen = entry("X-Men", "x-men", 2000)
+    x2 = entry("X2: X-Men United", "x2", 2003)
+    last_stand = entry("X-Men: The Last Stand", "last-stand", 2006)
+    origins = entry("X-Men Origins: Wolverine", "origins", 2009)
+    first_class = entry("X-Men: First Class", "first-class", 2011)
+    dofp = entry("X-Men: Days of Future Past", "dofp", 2014)
+
+    x2.prerequisites.add(xmen)
+    last_stand.prerequisites.add(x2)
+    origins.prerequisites.add(first_class)   # points backwards through the list
+    dofp.prerequisites.add(last_stand, origins)
+
+    return {
+        "xmen": xmen, "x2": x2, "last_stand": last_stand,
+        "origins": origins, "first_class": first_class, "dofp": dofp,
+    }
+
+
+@pytest.fixture
+def scattered_fan_in(db):
+    """A fan-in whose sources are NOT next to each other in the list.
+
+    Real lists interleave: a Punisher season sits between two of the shows that
+    feed The Defenders. The group must still be recognised as one fan.
+    """
+    from connections.models import WatchEntry, WatchTrack
+
+    netflix = WatchTrack.objects.create(
+        name="Netflix", slug="netflix", lane_order=0, color="#EC4899"
+    )
+
+    def entry(title, slug):
+        return WatchEntry.objects.create(
+            track=netflix, title=title, slug=slug, media_type="Series",
+            runtime_minutes=54, episode_count=13,
+        )
+
+    jj1 = entry("Jessica Jones Season 1", "jj-s1")
+    dd2 = entry("Daredevil Season 2", "dd-s2")
+    filler = entry("A Standalone Special", "filler")   # <- breaks up the group
+    lc1 = entry("Luke Cage Season 1", "lc-s1")
+    if1 = entry("Iron Fist Season 1", "if-s1")
+    defenders = entry("The Defenders", "defenders")
+
+    for source in (jj1, dd2, lc1, if1):
+        defenders.prerequisites.add(source)
+
+    return {"sources": [jj1, dd2, lc1, if1], "filler": filler, "defenders": defenders}
+
+
+@pytest.fixture
+def real_shape(db):
+    """The two lanes as they actually are, taken from dump_watch_order.
+
+    Netflix: DD S1 -> {JJ S1, DD S2, LC S1, IF S1} -> Defenders -> four seasons,
+    with the Punisher line running alongside off Daredevil S2.
+    Fox: a straight list where Days of Future Past states First Class and The
+    Last Stand - two entries four apart, so they are sequential, not parallel.
+    """
+    from connections.models import WatchEntry, WatchTrack
+
+    fox = WatchTrack.objects.create(name="Fox X-Men", slug="fox", lane_order=0, color="#F97316")
+    netflix = WatchTrack.objects.create(name="Netflix", slug="netflix", lane_order=1, color="#EC4899")
+
+    def add(track, title, slug):
+        return WatchEntry.objects.create(track=track, title=title, slug=slug, runtime_minutes=120)
+
+    fc = add(fox, "First Class", "fc")
+    add(fox, "Origins Wolverine", "ow")
+    add(fox, "X-Men", "xm")
+    x2 = add(fox, "X2", "x2")
+    ls = add(fox, "The Last Stand", "ls")
+    add(fox, "The Wolverine", "tw")
+    dofp = add(fox, "Days of Future Past", "dofp")
+    add(fox, "Apocalypse", "apoc")
+    dofp.prerequisites.add(fc, ls)
+
+    dd1 = add(netflix, "Daredevil S1", "dd1")
+    jj1 = add(netflix, "Jessica Jones S1", "jj1")
+    dd2 = add(netflix, "Daredevil S2", "dd2")
+    lc1 = add(netflix, "Luke Cage S1", "lc1")
+    if1 = add(netflix, "Iron Fist S1", "if1")
+    defenders = add(netflix, "The Defenders", "dfn")
+    punisher1 = add(netflix, "Punisher S1", "pn1")
+    after = [add(netflix, n, s) for n, s in
+             [("Jessica Jones S2", "jj2"), ("Luke Cage S2", "lc2"),
+              ("Iron Fist S2", "if2"), ("Daredevil S3", "dd3")]]
+    punisher2 = add(netflix, "Punisher S2", "pn2")
+
+    dd2.prerequisites.add(dd1)
+    defenders.prerequisites.add(jj1, dd2, lc1, if1)
+    punisher1.prerequisites.add(dd2)
+    for entry in after:
+        entry.prerequisites.add(defenders)
+    punisher2.prerequisites.add(punisher1)
+
+    return {"heads": ["fc", "dd1"]}
+
+
+@pytest.fixture
+def long_reach(db):
+    """One column where Days of Future Past reaches back to First Class.
+
+    Six films apart in the same column, so a straight arrow between them would
+    pass through every tile in between.
+    """
+    from connections.models import WatchEntry, WatchTrack
+
+    fox = WatchTrack.objects.create(name="Fox X-Men", slug="fox", lane_order=0, color="#F97316")
+
+    def add(title, slug):
+        return WatchEntry.objects.create(track=fox, title=title, slug=slug, runtime_minutes=120)
+
+    first_class = add("First Class", "fc")
+    add("Origins Wolverine", "ow")
+    add("X-Men", "xm")
+    add("X2", "x2")
+    add("The Last Stand", "ls")
+    wolverine = add("The Wolverine", "tw")
+    dofp = add("Days of Future Past", "dofp")
+    add("Apocalypse", "apoc")
+
+    dofp.prerequisites.add(first_class, wolverine)
+    return {"first_class": first_class, "wolverine": wolverine, "dofp": dofp}
+
+
+@pytest.fixture
 def characters(db):
     """Start—Hub—Finish chain so the shortest path has one intermediate node."""
     from connections.models import Character, Relationship

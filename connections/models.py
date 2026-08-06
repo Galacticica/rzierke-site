@@ -304,6 +304,11 @@ class WatchEntry(models.Model):
         help_text="Curated lists this belongs to. An entry can be in as many as you like.",
     )
     is_published = models.BooleanField(default=True, help_text="Uncheck to keep the entry off the public chart.")
+    connects_to_previous = models.BooleanField(
+        default=True,
+        help_text="Uncheck to break the arrow coming in from the entry above. It still takes "
+                  "the next slot on the chart - only the arrow goes away.",
+    )
 
     tmdb_id = models.IntegerField(
         null=True, blank=True, db_index=True,
@@ -364,6 +369,30 @@ class WatchProgress(models.Model):
 
     def __str__(self):
         return f"{self.user} watched {self.entry.title}"
+
+
+class WatchOrderConfig(models.Model):
+    """Singleton-ish display settings for the watch-order chart."""
+
+    items_per_row = models.IntegerField(
+        default=0,
+        help_text="How many entries sit side by side before the list wraps onto the next row. "
+                  "The order reads left to right, then down, like a page of text. "
+                  "0 disables wrapping and keeps one entry per row, running straight down.",
+    )
+
+    class Meta:
+        verbose_name = "Watch Order Configuration"
+        verbose_name_plural = "Watch Order Configuration"
+
+    def __str__(self):
+        if self.items_per_row:
+            return f"{self.items_per_row} across, then wrap"
+        return "No wrapping"
+
+    @classmethod
+    def current(cls):
+        return cls.objects.first() or cls()
 
 
 def column_entries(track):

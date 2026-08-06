@@ -10,6 +10,7 @@
 
 const STORAGE_KEY = 'mcu-watch-order:watched';
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const EMPTY = new Set();
 
 const chart = document.getElementById('watch-order-chart');
 const dataElement = document.getElementById('watch-order-data');
@@ -39,6 +40,9 @@ function init(payload) {
 	const watched = new Set(readInitialWatched());
 	let activeCollection = '';
 	let visibleEdges = [];
+	let spots = new Map();
+	let drawnPaths = new Set();
+	let suppressClick = false;
 
 	buildMarkers(svg, payload.tracks || []);
 
@@ -66,38 +70,394 @@ function init(payload) {
 		// Keyed by lane rather than track: tracks that continue one another share
 		// a lane, so the chain runs straight on from the last entry of one into
 		// the first of the next without needing a prerequisite between them.
-		const chainEdges = [];
-		const previousInLane = new Map();
-		visible.forEach((entry) => {
-			const previous = previousInLane.get(entry.lane);
-			if (previous) {
-				chainEdges.push({ source: previous.slug, target: entry.slug, kind: 'track' });
-			}
-			previousInLane.set(entry.lane, entry);
-		});
-
-		visibleEdges = chainEdges.concat(
-			edges.filter((edge) => visibleSlugs.has(edge.source) && visibleSlugs.has(edge.target))
+		const merges = edges.filter(
+			(edge) => visibleSlugs.has(edge.source) && visibleSlugs.has(edge.target)
 		);
 
+		const statedSources = new Map();
+		merges.forEach((edge) => {
+			const set = statedSources.get(edge.target) || new Set();
+			set.add(edge.source);
+			statedSources.set(edge.target, set);
+		});
+		const states = (slug) => statedSources.get(slug) || EMPTY;
+
+		// A prerequisite in another lane fixes nothing about where an entry sits in
+		// its own: Doomsday waiting on the X-Men lane still follows the MCU film
+		// above it. Only a same-lane prerequisite replaces the list order.
+		const statesInLane = (slug) => {
+			const lane = entryBySlug.get(slug).lane;
+			return [...states(slug)].some((source) => entryBySlug.get(source).lane === lane);
+		};
+
+		// Siblings are entries in one lane that share a stated relative: either a
+		// common parent (four shows all following The Defenders) or a common child
+		// (four shows all feeding it). They must not be chained to one another, or
+		// a fan collapses into single file with arrows cutting through the tiles.
+		const groups = new Map();
+		const groupOf = new Map();
+
+		// `kind` namespaces the key: an entry can be both the child of a fan-in and
+		// the parent of a fan-out, and without it the two groupings collide on the
+		// same key and one silently replaces the other.
+		// Where each entry sits in its lane's running order, so contiguity can be
+		// checked below.
+		const slotInLane = new Map();
+		const counter = new Map();
+		visible.forEach((entry) => {
+			const next = counter.get(entry.lane) || 0;
+			slotInLane.set(entry.slug, next);
+			counter.set(entry.lane, next + 1);
+		});
+
+		const collect = (kind, pairs) => {
+			const byKey = new Map();
+			pairs.forEach(([relative, slug]) => {
+				const key = `${kind}:${relative}@${entryBySlug.get(slug).lane}`;
+				byKey.set(key, (byKey.get(key) || []).concat(slug));
+			});
+			byKey.forEach((members, key) => {
+				if (members.length < 2) {
+					return;
+				}
+				// Only a run of neighbours is a fan. Entries sharing a relative from
+				// opposite ends of the list are sequential, not parallel: X-Men: First
+				// Class and The Last Stand both feed Days of Future Past, yet three
+				// films sit between them and one plainly leads to the other.
+				const slots = members.map((slug) => slotInLane.get(slug));
+				if (Math.max(...slots) - Math.min(...slots) !== members.length - 1) {
+					return;
+				}
+				groups.set(key, members);
+				members.forEach((slug) => {
+					if (!groupOf.has(slug)) {
+						groupOf.set(slug, key);
+					}
+				});
+			});
+		};
+
+		collect('in', merges.map((edge) => [edge.target, edge.source]));
+		collect('out', merges.map((edge) => [edge.source, edge.target]));
+
+		const chainEdges = [];
+		const previousInLane = new Map();
+		const pendingInLane = new Map();
+		// Groups already wired, tracked by key rather than by "currently open":
+		// a group's members need not sit together in the list, and an entry in
+		// between must not cause the rest of them to be wired a second time.
+		const wiredGroups = new Set();
+
+		visible.forEach((entry) => {
+			const pending = pendingInLane.get(entry.lane) || [];
+			const group = groupOf.get(entry.slug);
+
+			// A sibling after the first in its group was wired up alongside the head,
+			// so it only needs adding to the frontier.
+			if (group && wiredGroups.has(group)) {
+				pending.push(entry);
+				pendingInLane.set(entry.lane, pending);
+				return;
+			}
+
+			// The first ordinary entry after a fan closes it: it comes after every
+			// member, not just whichever happened to be last in the list.
+			const previous = previousInLane.get(entry.lane);
+			const sources = pending.length ? pending : previous ? [previous] : [];
+
+			// The whole group is wired from the same predecessor at once, so members
+			// stating nothing of their own still have something pointing at them.
+			const members = group
+				? (groups.get(group) || [])
+						.map((slug) => entryBySlug.get(slug))
+						.filter((item) => item && visibleSlugs.has(item.slug))
+				: [entry];
+
+			members.forEach((member) => {
+				// An entry naming a predecessor in its own lane is already placed by it.
+				// Adding the list-order frontier on top drags it below everything that
+				// happens to precede it - The Punisher Season 2 names only Season 1,
+				// but the frontier would push it a row under the whole Defenders fan.
+				if (statesInLane(member.slug)) {
+					return;
+				}
+				sources.forEach((source) => {
+					// Never duplicate an edge the user stated explicitly.
+					if (states(member.slug).has(source.slug)) {
+						return;
+					}
+					chainEdges.push({
+						source: source.slug,
+						target: member.slug,
+						kind: 'track',
+						// "Connects to previous" unchecked: the entry still takes the next
+						// slot, so the edge stays in the row maths, but nothing is drawn.
+						drawn: member.connects_to_previous !== false,
+					});
+				});
+			});
+
+			previousInLane.set(entry.lane, entry);
+			if (group) {
+				wiredGroups.add(group);
+			}
+			pendingInLane.set(entry.lane, group ? [entry] : []);
+		});
+
+		// Safety net: nothing may be left dangling. An entry can fall through the
+		// rules above - a fan-in member whose group was wired before it appeared,
+		// for instance - and with no incoming edge at all it floats to row 0 and
+		// lands at the top of a column it has no business heading.
+		const reached = new Set(merges.concat(chainEdges).map((edge) => edge.target));
+		const lastSeen = new Map();
+		visible.forEach((entry) => {
+			const previous = lastSeen.get(entry.lane);
+			if (previous && !reached.has(entry.slug)) {
+				chainEdges.push({
+					source: previous.slug,
+					target: entry.slug,
+					kind: 'track',
+					drawn: entry.connects_to_previous !== false,
+				});
+				reached.add(entry.slug);
+			}
+			lastSeen.set(entry.lane, entry);
+		});
+
+		// Stated prerequisites are authoritative; the chain is only a guess from the
+		// list order. Where the two disagree - X-Men: First Class comes before
+		// Origins: Wolverine in story terms but after it in the list - the guess is
+		// dropped. Without this the two form a loop, no topological order exists,
+		// and the layout falls back to arbitrary rows with arrows running backwards
+		// up the page.
+		visibleEdges = keepAcyclic(chainEdges, merges, visible).concat(merges);
+
 		const rows = assignRows(visible, visibleEdges);
+		levelSiblings(rows, groups, visibleEdges);
+		const placement = placeInColumns(visible, rows, lanes, laneColumn);
+		spots = placement.spots;
 
 		tiles.forEach((tile, slug) => {
-			const entry = entryBySlug.get(slug);
 			const isVisible = visibleSlugs.has(slug);
 			tile.hidden = !isVisible;
 			if (!isVisible) {
 				return;
 			}
-			tile.style.gridRow = String(rows.get(slug) + 1);
-			tile.style.gridColumn = String(laneColumn.get(entry.lane) + 1);
+			const spot = placement.spots.get(slug);
+			tile.style.gridRow = String(spot.row + 1);
+			tile.style.gridColumn = String(spot.column + 1);
 		});
 
-		grid.style.gridTemplateColumns = `repeat(${Math.max(lanes.length, 1)}, var(--tile-width))`;
+		grid.style.gridTemplateColumns = `repeat(${Math.max(placement.columns, 1)}, var(--tile-width))`;
 		grid.dataset.laidOut = 'true';
+		// Wrap stubs sit just above the first row and just below the last, so the
+		// grid needs breathing room or they get clipped by the container.
+		grid.toggleAttribute('data-wrapped', (payload.items_per_row || 0) > 1);
 
 		// Positions are only final once the browser has reflowed the grid.
 		requestAnimationFrame(draw);
+	}
+
+	/**
+	 * Keep only the candidate edges that leave the graph acyclic.
+	 *
+	 * `authoritative` edges are all kept. Each candidate is admitted only if its
+	 * target cannot already reach its source, so a guessed edge never closes a
+	 * loop against a stated one. The result is always a DAG, which is what lets
+	 * the row assignment below be a plain topological pass.
+	 */
+	function keepAcyclic(candidates, authoritative, nodes) {
+		const adjacency = new Map(nodes.map((entry) => [entry.slug, []]));
+		authoritative.forEach((edge) => {
+			if (adjacency.has(edge.source)) {
+				adjacency.get(edge.source).push(edge.target);
+			}
+		});
+
+		const reaches = (start, goal) => {
+			const stack = [start];
+			const seen = new Set(stack);
+			while (stack.length) {
+				const at = stack.pop();
+				if (at === goal) {
+					return true;
+				}
+				(adjacency.get(at) || []).forEach((next) => {
+					if (!seen.has(next)) {
+						seen.add(next);
+						stack.push(next);
+					}
+				});
+			}
+			return false;
+		};
+
+		const kept = [];
+		candidates.forEach((edge) => {
+			if (!adjacency.has(edge.source) || !adjacency.has(edge.target)) {
+				return;
+			}
+			if (reaches(edge.target, edge.source)) {
+				return;
+			}
+			adjacency.get(edge.source).push(edge.target);
+			kept.push(edge);
+		});
+		return kept;
+	}
+
+	/**
+	 * Drop every sibling in a group onto the same row, then let that ripple down.
+	 *
+	 * Siblings usually arrive at different depths - Daredevil Season 2 follows a
+	 * season 1, while Luke Cage Season 1 starts fresh - so the longest-path rows
+	 * alone would leave them staggered down one column. Levelling them is what
+	 * puts a fan-in abreast; re-running the edges afterwards keeps everything
+	 * downstream below its sources.
+	 */
+	function levelSiblings(rows, groups, activeEdges) {
+		if (!groups.size) {
+			return;
+		}
+
+		// Only level entries that are genuinely parallel. X-Men: The Last Stand and
+		// Origins: Wolverine both feed Days of Future Past, but one leads to the
+		// other, so they cannot share a row - forcing it makes each pass shove them
+		// further apart and the chart ends up with a chasm down the middle.
+		const adjacency = new Map();
+		activeEdges.forEach((edge) => {
+			if (!adjacency.has(edge.source)) {
+				adjacency.set(edge.source, []);
+			}
+			adjacency.get(edge.source).push(edge.target);
+		});
+
+		const reaches = (start, goal) => {
+			const stack = [start];
+			const seen = new Set(stack);
+			while (stack.length) {
+				const at = stack.pop();
+				if (at === goal) {
+					return true;
+				}
+				(adjacency.get(at) || []).forEach((next) => {
+					if (!seen.has(next)) {
+						seen.add(next);
+						stack.push(next);
+					}
+				});
+			}
+			return false;
+		};
+
+		const parallel = [...groups.values()].filter((members) => {
+			const present = members.filter((slug) => rows.has(slug));
+			if (present.length < 2) {
+				return false;
+			}
+			return !present.some((one) =>
+				present.some((other) => one !== other && reaches(one, other))
+			);
+		});
+
+		for (let pass = 0; pass < 20; pass += 1) {
+			let changed = false;
+
+			parallel.forEach((members) => {
+				const present = members.filter((slug) => rows.has(slug));
+				if (present.length < 2) {
+					return;
+				}
+				const deepest = Math.max(...present.map((slug) => rows.get(slug)));
+				present.forEach((slug) => {
+					if (rows.get(slug) < deepest) {
+						rows.set(slug, deepest);
+						changed = true;
+					}
+				});
+			});
+
+			activeEdges.forEach((edge) => {
+				if (!rows.has(edge.source) || !rows.has(edge.target)) {
+					return;
+				}
+				const needed = rows.get(edge.source) + 1;
+				if (rows.get(edge.target) < needed) {
+					rows.set(edge.target, needed);
+					changed = true;
+				}
+			});
+
+			if (!changed) {
+				return;
+			}
+		}
+	}
+
+	/**
+	 * Turn DAG rows into grid coordinates.
+	 *
+	 * With wrapping off, a lane is one column and the DAG row is used directly,
+	 * which keeps rows aligned across lanes so every merge points downwards.
+	 *
+	 * With wrapping on, a lane reads like a page of text: `itemsPerRow` entries
+	 * across, then down to the next row and back to the left. Lanes no longer
+	 * share a row scale, so a merge can land in any direction - the arrow router
+	 * copes with all of them.
+	 */
+	function placeInColumns(visible, rows, lanes, laneColumn) {
+		const perRow = payload.items_per_row || 0;
+		const spots = new Map();
+
+		if (perRow <= 1) {
+			// A lane is as wide as its busiest row. Several entries sharing a row
+			// means a fan-out - four shows all following The Defenders, say - and
+			// they belong side by side rather than stacked in single file.
+			let offset = 0;
+			lanes.forEach((lane) => {
+				const byRow = new Map();
+				visible
+					.filter((entry) => entry.lane === lane)
+					.forEach((entry) => {
+						const row = rows.get(entry.slug);
+						if (!byRow.has(row)) {
+							byRow.set(row, []);
+						}
+						byRow.get(row).push(entry);
+					});
+
+				const width = Math.max(1, ...[...byRow.values()].map((group) => group.length));
+				byRow.forEach((group, row) => {
+					// Centred, so a single entry sits under the middle of a fan-out.
+					const start = offset + Math.floor((width - group.length) / 2);
+					group.forEach((entry, index) => {
+						spots.set(entry.slug, { row, column: start + index });
+					});
+				});
+				offset += width;
+			});
+
+			return { spots, columns: Math.max(offset, 1) };
+		}
+
+		let columnOffset = 0;
+		lanes.forEach((lane) => {
+			const inLane = visible
+				.filter((entry) => entry.lane === lane)
+				.sort((a, b) => rows.get(a.slug) - rows.get(b.slug));
+
+			inLane.forEach((entry, index) => {
+				spots.set(entry.slug, {
+					row: Math.floor(index / perRow),
+					column: columnOffset + (index % perRow),
+				});
+			});
+			// A lane narrower than the limit only claims the columns it fills, so
+			// short lanes sit snugly beside long ones.
+			columnOffset += Math.max(1, Math.min(inLane.length, perRow));
+		});
+
+		return { spots, columns: columnOffset };
 	}
 
 	/**
@@ -156,11 +516,23 @@ function init(payload) {
 
 	function draw() {
 		clearPaths(svg);
+		drawnPaths = new Set();
 		if (!visibleEdges.length) {
 			return;
 		}
 
 		const canvasRect = canvas.getBoundingClientRect();
+		const canvasWidth = canvas.scrollWidth;
+
+		// Which grid cells actually hold a visible tile, so a detour is only taken
+		// when one stands between the two ends of an edge.
+		const occupied = new Set();
+		spots.forEach((spot, slug) => {
+			const tile = tiles.get(slug);
+			if (tile && !tile.hidden) {
+				occupied.add(`${spot.column}:${spot.row}`);
+			}
+		});
 		const columnGap = parseFloat(getComputedStyle(grid).columnGap) || 32;
 		const boxes = new Map();
 		tiles.forEach((tile, slug) => {
@@ -171,8 +543,11 @@ function init(payload) {
 			boxes.set(slug, {
 				top: rect.top - canvasRect.top,
 				bottom: rect.bottom - canvasRect.top,
+				left: rect.left - canvasRect.left,
+				right: rect.right - canvasRect.left,
 				width: rect.width,
 				centerX: rect.left + rect.width / 2 - canvasRect.left,
+				centerY: rect.top + rect.height / 2 - canvasRect.top,
 			});
 		});
 
@@ -185,10 +560,19 @@ function init(payload) {
 		const seen = new Map();
 
 		const fragment = document.createDocumentFragment();
+
+		// Fan-ins and fan-outs are drawn as one bracket rather than as a handful of
+		// independent elbows, which is what turns four arrows into The Defenders
+		// from a weave into a single tidy shape.
+		const bussed = drawBuses(fragment, boxes, columnGap);
+
 		visibleEdges.forEach((edge) => {
+			if (edge.drawn === false || bussed.has(edgeKey(edge))) {
+				return;
+			}
 			const from = boxes.get(edge.source);
 			const to = boxes.get(edge.target);
-			if (!from || !to || to.top <= from.bottom - 1) {
+			if (!from || !to) {
 				return;
 			}
 
@@ -196,16 +580,55 @@ function init(payload) {
 			seen.set(edge.target, index + 1);
 
 			const color = entryBySlug.get(edge.source).track_color;
-			const path = document.createElementNS(SVG_NS, 'path');
-			path.setAttribute('class', 'watch-arrow');
-			path.setAttribute('d', buildPath(from, to, index, arrivals.get(edge.target), columnGap));
-			path.setAttribute('fill', 'none');
-			path.setAttribute('stroke', color);
-			path.setAttribute('stroke-width', edge.kind === 'prerequisite' ? '2.5' : '2');
-			path.setAttribute('stroke-linecap', 'round');
-			path.setAttribute('opacity', edge.kind === 'prerequisite' ? '0.95' : '0.7');
-			path.setAttribute('marker-end', `url(#${markerId(color)})`);
-			fragment.appendChild(path);
+
+			const fromSpot = spots.get(edge.source);
+			const toSpot = spots.get(edge.target);
+
+			// Neighbours on the same row sit side by side, so the arrow runs across
+			// rather than down.
+			if (fromSpot && toSpot && fromSpot.row === toSpot.row && toSpot.column > fromSpot.column) {
+				append(
+					fragment,
+					makeArrow(sidewaysPath(from, to), color, {
+						width: edge.kind === 'prerequisite' ? '2.5' : '2',
+						opacity: edge.kind === 'prerequisite' ? '0.95' : '0.7',
+					})
+				);
+				return;
+			}
+
+			// A chain edge reaching back up the page has nowhere sensible to run, so
+			// it becomes a pair of short stubs instead of a stripe across the chart.
+			if (edge.kind === 'track' && to.top < from.bottom) {
+				wrapStubs(from, to).forEach((d) => {
+					append(fragment, makeArrow(d, color, { dashed: true, wrap: true, width: '2' }));
+				});
+				return;
+			}
+
+			// Only detour when something is genuinely in the way. Rows are global, so
+			// a lane often has gaps: an edge can span several rows with nothing but
+			// empty space between, and that wants a plain straight line.
+			const blocked = isBlocked(fromSpot, toSpot, occupied);
+
+			// A link between lanes is a sync point - "by now you have also seen
+			// this" - not part of either lane's flow. Drawn dashed, because at three
+			// columns apart a solid line looks like the running order has bolted
+			// off across the page.
+			const crossLane =
+				entryBySlug.get(edge.source).lane !== entryBySlug.get(edge.target).lane;
+
+			append(
+				fragment,
+				makeArrow(
+					buildPath(from, to, index, arrivals.get(edge.target), columnGap, blocked, canvasWidth),
+					color,
+					{
+					width: crossLane ? '2' : edge.kind === 'prerequisite' ? '2.5' : '2',
+					opacity: edge.kind === 'prerequisite' ? '0.95' : '0.7',
+					dashed: crossLane,
+				})
+			);
 		});
 		svg.appendChild(fragment);
 	}
@@ -218,11 +641,179 @@ function init(payload) {
 	 * path only ever travels through empty space: the row gaps directly below the
 	 * source and above the target, and the column gap beside the source.
 	 */
-	function buildPath(from, to, index, arrivalCount, columnGap) {
+	/**
+	 * Draw every fan-in and fan-out as a bracket, and report which edges it took.
+	 *
+	 * A bracket is three parts: a short stub off each entry on the many side, one
+	 * horizontal rail joining them, and a single drop into the one side. Routing
+	 * those edges separately instead gives each its own elbow through the same
+	 * gutter, and half a dozen of them cross into an unreadable weave.
+	 *
+	 * Only groups whose "many" side share a row qualify - staggered entries have
+	 * no single rail to sit on.
+	 */
+	function drawBuses(fragment, boxes, columnGap) {
+		const taken = new Set();
+		const drawable = visibleEdges.filter(
+			(edge) => edge.drawn !== false && boxes.has(edge.source) && boxes.has(edge.target)
+		);
+
+		const group = (edges, keyOf) => {
+			const grouped = new Map();
+			edges.forEach((edge) => {
+				const key = keyOf(edge);
+				grouped.set(key, (grouped.get(key) || []).concat(edge));
+			});
+			return grouped;
+		};
+
+		const sameRow = (slugs) =>
+			new Set(slugs.map((slug) => spots.get(slug) && spots.get(slug).row)).size === 1;
+
+		// Fan-in first: many into one.
+		group(drawable, (edge) => edge.target).forEach((edges, target) => {
+			if (edges.length < 2 || !sameRow(edges.map((edge) => edge.source))) {
+				return;
+			}
+			const sources = edges.map((edge) => boxes.get(edge.source));
+			const to = boxes.get(target);
+			const railY = Math.max(...sources.map((box) => box.bottom)) + columnGap / 2;
+			if (railY >= to.top - 8) {
+				return;
+			}
+
+			const color = entryBySlug.get(edges[0].source).track_color;
+			bracket(fragment, color, {
+				stubs: sources.map((box) => [box.centerX, box.bottom]),
+				railY,
+				drops: [[to.centerX, to.top - 4]],
+			});
+			edges.forEach((edge) => taken.add(edgeKey(edge)));
+		});
+
+		// Then fan-out: one into many, ignoring edges already bracketed.
+		group(
+			drawable.filter((edge) => !taken.has(edgeKey(edge))),
+			(edge) => edge.source
+		).forEach((edges, source) => {
+			if (edges.length < 2 || !sameRow(edges.map((edge) => edge.target))) {
+				return;
+			}
+			const from = boxes.get(source);
+			const targets = edges.map((edge) => boxes.get(edge.target));
+			const railY = Math.min(...targets.map((box) => box.top)) - columnGap / 2;
+			if (railY <= from.bottom + 8) {
+				return;
+			}
+
+			const color = entryBySlug.get(source).track_color;
+			bracket(fragment, color, {
+				stubs: [[from.centerX, from.bottom]],
+				railY,
+				drops: targets.map((box) => [box.centerX, box.top - 4]),
+			});
+			edges.forEach((edge) => taken.add(edgeKey(edge)));
+		});
+
+		return taken;
+	}
+
+	/** Stubs up to a rail, the rail itself, then drops away from it. */
+	function bracket(fragment, color, { stubs, railY, drops }) {
+		stubs.forEach(([x, y]) => {
+			append(fragment, makeArrow(`M ${x} ${y} L ${x} ${railY}`, color, { head: false }));
+		});
+
+		const xs = stubs.map(([x]) => x).concat(drops.map(([x]) => x));
+		append(
+			fragment,
+			makeArrow(`M ${Math.min(...xs)} ${railY} L ${Math.max(...xs)} ${railY}`, color, {
+				head: false,
+			})
+		);
+
+		drops.forEach(([x, y]) => {
+			append(fragment, makeArrow(`M ${x} ${railY} L ${x} ${y}`, color));
+		});
+	}
+
+	function makeArrow(d, color, { dashed = false, wrap = false, width = '2', opacity = '0.7', head = true } = {}) {
+		// Two brackets can legitimately want the same stroke - a shared source at
+		// the same rail height - and stacking them just darkens the line.
+		const signature = `${d}|${color}|${head}|${dashed}`;
+		if (drawnPaths.has(signature)) {
+			return null;
+		}
+		drawnPaths.add(signature);
+
+		const path = document.createElementNS(SVG_NS, 'path');
+		path.setAttribute('class', 'watch-arrow');
+		path.setAttribute('d', d);
+		path.setAttribute('fill', 'none');
+		path.setAttribute('stroke', color);
+		path.setAttribute('stroke-width', width);
+		path.setAttribute('stroke-linecap', 'round');
+		path.setAttribute('opacity', dashed ? '0.6' : opacity);
+		if (head) {
+			path.setAttribute('marker-end', `url(#${markerId(color)})`);
+		}
+		if (dashed) {
+			path.setAttribute('stroke-dasharray', '5 4');
+		}
+		if (wrap) {
+			path.setAttribute('data-watch-wrap', '');
+		}
+		return path;
+	}
+
+	/** Straight across from one tile's right edge into the next tile's left edge. */
+	function sidewaysPath(from, to) {
+		const endX = to.left - 4;
+		if (Math.abs(from.centerY - to.centerY) < 1) {
+			return roundedPath([
+				{ x: from.right, y: from.centerY },
+				{ x: endX, y: from.centerY },
+			]);
+		}
+
+		// Tiles in a row can differ in height; jog through the gap between them.
+		const midX = (from.right + endX) / 2;
+		return roundedPath([
+			{ x: from.right, y: from.centerY },
+			{ x: midX, y: from.centerY },
+			{ x: midX, y: to.centerY },
+			{ x: endX, y: to.centerY },
+		]);
+	}
+
+	/** Two short marks for a column wrap: leaving the foot, arriving at the head. */
+	function wrapStubs(from, to) {
+		const drop = 22;
+		const reach = 26;
+		return [
+			roundedPath([
+				{ x: from.centerX, y: from.bottom },
+				{ x: from.centerX, y: from.bottom + drop },
+				{ x: from.centerX + reach, y: from.bottom + drop },
+			]),
+			roundedPath([
+				{ x: to.centerX - reach, y: to.top - drop },
+				{ x: to.centerX, y: to.top - drop },
+				{ x: to.centerX, y: to.top - 4 },
+			]),
+		];
+	}
+
+	function buildPath(from, to, index, arrivalCount, columnGap, blocked = false, canvasWidth = Infinity) {
 		// Leave room for the arrowhead so its tip lands on the tile, not inside it.
 		const endY = to.top - 4;
+		const sameColumn = Math.abs(to.centerX - from.centerX) < 1;
+		const goingDown = endY > from.bottom;
 
-		if (Math.abs(to.centerX - from.centerX) < 1) {
+		// Straight down whenever the column between the two is clear. It only needs
+		// routing around when a tile actually sits in the way - X-Men: First Class
+		// reaching Days of Future Past past six other films, say.
+		if (sameColumn && goingDown && !blocked) {
 			return roundedPath([
 				{ x: from.centerX, y: from.bottom },
 				{ x: from.centerX, y: endY },
@@ -233,13 +824,25 @@ function init(payload) {
 		const spread = arrivalCount > 1 ? index * 8 : 0;
 		let exitY = from.bottom + 24;
 		let approachY = endY - 24 - spread;
-		if (approachY <= exitY) {
+		if (goingDown && approachY <= exitY) {
 			// Adjacent rows: there is only one gap, so both turns share it.
 			exitY = approachY = (from.bottom + endY) / 2;
 		}
+		// Travelling up or level (a wrap to the next column) is fine as it stands:
+		// the vertical leg runs through a column gutter, which holds no tiles.
 
-		const direction = to.centerX > from.centerX ? 1 : -1;
-		const channelX = from.centerX + direction * (from.width / 2 + columnGap / 2);
+		// Straight down the same column means there is no natural side to leave
+		// from; go right, into the gutter, and come back in at the target.
+		const offset = from.width / 2 + columnGap / 2;
+		let direction = sameColumn ? 1 : to.centerX > from.centerX ? 1 : -1;
+
+		// A source in the outermost column has no gutter on that side, and the
+		// detour would be drawn past the edge of the chart entirely. Leave from
+		// whichever side actually has room.
+		if (from.centerX + direction * offset > canvasWidth - 2 || from.centerX + direction * offset < 2) {
+			direction = -direction;
+		}
+		const channelX = clamp(from.centerX + direction * offset, 2, Math.max(2, canvasWidth - 2));
 
 		return roundedPath([
 			{ x: from.centerX, y: from.bottom },
@@ -453,9 +1056,116 @@ function init(payload) {
 		popupSlug = null;
 	}
 
+	// ---------------------------------------------------------------- panning
+
+	/**
+	 * Drag the chart around with the mouse.
+	 *
+	 * Sideways moves the scroller, downwards moves the page, so a wide chart and
+	 * a long one both feel the same to drag. Deltas are taken between moves
+	 * rather than from the start: scrolling the page shifts the content under a
+	 * stationary cursor, and measuring from the start would feed that back.
+	 */
+	function enablePanning(scroller) {
+		let panning = false;
+		let lastX = 0;
+		let lastY = 0;
+		let travelled = 0;
+		let vertical = { min: 0, max: 0 };
+
+		/**
+		 * How far the page may scroll while still showing part of the chart.
+		 *
+		 * Dragging moves the window, so without this the chart can be hauled clean
+		 * off-screen and you are left staring at the footer with nothing to drag
+		 * back. Measured once per drag; the chart does not resize mid-gesture.
+		 */
+		function measureVerticalLimits() {
+			const rect = chart.getBoundingClientRect();
+			const top = rect.top + window.scrollY;
+			const margin = 16;
+			const furthest = Math.max(
+				0,
+				document.documentElement.scrollHeight - window.innerHeight
+			);
+
+			const min = Math.min(Math.max(0, top - margin), furthest);
+			const max = Math.min(furthest, Math.max(min, top + rect.height - window.innerHeight + margin));
+			return { min, max };
+		}
+
+		scroller.addEventListener('pointerdown', (event) => {
+			// Touch and pens already scroll natively, and hijacking them costs the
+			// momentum flick.
+			if (event.pointerType !== 'mouse' || event.button !== 0) {
+				return;
+			}
+			panning = true;
+			travelled = 0;
+			suppressClick = false;
+			lastX = event.clientX;
+			lastY = event.clientY;
+			vertical = measureVerticalLimits();
+		});
+
+		window.addEventListener('pointermove', (event) => {
+			if (!panning) {
+				return;
+			}
+			const dx = event.clientX - lastX;
+			const dy = event.clientY - lastY;
+			lastX = event.clientX;
+			lastY = event.clientY;
+
+			travelled += Math.abs(dx) + Math.abs(dy);
+			// Below the threshold this is still a click on a tile, not a drag.
+			if (travelled < 6) {
+				return;
+			}
+			if (!suppressClick) {
+				suppressClick = true;
+				scroller.classList.add('is-panning');
+			}
+
+			// Clamped both ways, so a drag can never carry the chart into empty space.
+			const furthestLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+			scroller.scrollLeft = clamp(scroller.scrollLeft - dx, 0, furthestLeft);
+			window.scrollTo(
+				window.scrollX,
+				clamp(window.scrollY - dy, vertical.min, vertical.max)
+			);
+			event.preventDefault();
+		});
+
+		const stop = () => {
+			if (!panning) {
+				return;
+			}
+			panning = false;
+			scroller.classList.remove('is-panning');
+			// Cleared after the click event that follows this pointerup.
+			window.setTimeout(() => {
+				suppressClick = false;
+			}, 0);
+		};
+
+		window.addEventListener('pointerup', stop);
+		window.addEventListener('pointercancel', stop);
+	}
+
+	const scroller = chart.querySelector('.watch-scroll');
+	if (scroller) {
+		enablePanning(scroller);
+	}
+
 	// --------------------------------------------------------------- events
 
 	chart.addEventListener('click', (event) => {
+		// A drag that ends over a tile must not also open or tick it.
+		if (suppressClick) {
+			return;
+		}
+
 		const toggle = event.target.closest('[data-watch-toggle]');
 		if (toggle) {
 			const slug = toggle.closest('[data-watch-entry]').dataset.watchEntry;
@@ -601,6 +1311,41 @@ function roundedPath(points, radius = 10) {
 
 	const last = corners[corners.length - 1];
 	return `${d} L ${last.x} ${last.y}`;
+}
+
+function append(fragment, node) {
+	if (node) {
+		fragment.appendChild(node);
+	}
+}
+
+function clamp(value, low, high) {
+	return Math.min(Math.max(value, low), high);
+}
+
+/**
+ * True when a visible tile sits between two spots in the same column.
+ *
+ * Rows are global across every lane, so one lane routinely has gaps: an edge
+ * can span several rows with nothing but empty space in between, and that wants
+ * a plain straight line rather than a detour out into the gutter.
+ */
+function isBlocked(from, to, occupied) {
+	if (!from || !to || from.column !== to.column) {
+		return false;
+	}
+	const first = Math.min(from.row, to.row);
+	const last = Math.max(from.row, to.row);
+	for (let row = first + 1; row < last; row += 1) {
+		if (occupied.has(`${from.column}:${row}`)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function edgeKey(edge) {
+	return `${edge.source}>${edge.target}`;
 }
 
 function markerId(color) {

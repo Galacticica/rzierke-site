@@ -165,13 +165,16 @@ class TestCycleDetection:
 
         assert not would_create_cycle(doomsday, [deadpool.pk])
 
-    def test_prerequisite_pointing_backwards_along_a_track_is_a_cycle(self, mcu):
-        early = make_entry(mcu, "Iron Man")
-        late = make_entry(mcu, "Avengers: Doomsday")
+    def test_pointing_backwards_along_the_list_is_allowed(self, mcu):
+        """The X-Men case: story order and list order legitimately disagree.
 
-        # Doomsday already follows Iron Man through the track chain, so making it
-        # a prerequisite of Iron Man closes a loop.
-        assert would_create_cycle(early, [late.pk])
+        First Class sits later in the list than Origins: Wolverine but comes
+        first in the story. Treating list order as a rule would forbid saying so.
+        """
+        early = make_entry(mcu, "X-Men Origins: Wolverine")
+        late = make_entry(mcu, "X-Men: First Class")
+
+        assert not would_create_cycle(early, [late.pk])
 
     def test_two_entries_cannot_require_each_other(self, mcu, xmen):
         first = make_entry(mcu, "Avengers: Doomsday")
@@ -180,13 +183,28 @@ class TestCycleDetection:
 
         assert would_create_cycle(first, [second.pk])
 
-    def test_unsaved_entry_is_checked_too(self, mcu, xmen):
-        make_entry(mcu, "Iron Man")
-        late = make_entry(mcu, "Avengers: Doomsday")
+    def test_an_unsaved_entry_can_never_loop(self, mcu):
+        """Nothing can reference an entry that does not exist yet.
 
-        # A brand-new entry at the front of the MCU track requiring Doomsday.
+        With list order out of the picture, a brand-new entry has no incoming
+        edges at all, so whatever prerequisites it is given are always safe.
+        """
+        first = make_entry(mcu, "Iron Man")
+        second = make_entry(mcu, "The Avengers")
+        second.prerequisites.add(first)
+
         probe = WatchEntry(track=mcu, position=Decimal("5"))
-        assert would_create_cycle(probe, [late.pk])
+        assert not would_create_cycle(probe, [first.pk, second.pk])
+
+    def test_a_longer_loop_is_caught(self, mcu):
+        first = make_entry(mcu, "A")
+        second = make_entry(mcu, "B")
+        third = make_entry(mcu, "C")
+        second.prerequisites.add(first)
+        third.prerequisites.add(second)
+
+        # A after C closes A -> B -> C -> A.
+        assert would_create_cycle(first, [third.pk])
 
     def test_removing_a_prerequisite_clears_the_cycle(self, mcu, xmen):
         first = make_entry(mcu, "Avengers: Doomsday")
@@ -244,15 +262,30 @@ class TestAdminForm:
     def test_cyclic_prerequisite_is_rejected(self, mcu):
         early = make_entry(mcu, "Iron Man")
         late = make_entry(mcu, "Avengers: Doomsday")
+        late.prerequisites.add(early)
 
-        # Doomsday already follows Iron Man down the track, so requiring it here
-        # would mean Iron Man comes both before and after Doomsday.
+        # Doomsday already states it comes after Iron Man, so Iron Man cannot
+        # also come after Doomsday.
         form = WatchEntryAdminForm(
             instance=early,
             data=self._form_data(mcu, title="Iron Man", slug="iron-man", prerequisites=[late.pk]),
         )
         assert not form.is_valid()
         assert "prerequisites" in form.errors
+
+    def test_a_prerequisite_against_the_list_order_is_accepted(self, mcu):
+        """Story order beats list order; only a real loop is refused."""
+        early = make_entry(mcu, "X-Men Origins: Wolverine")
+        late = make_entry(mcu, "X-Men: First Class")
+
+        form = WatchEntryAdminForm(
+            instance=early,
+            data=self._form_data(
+                mcu, title="X-Men Origins: Wolverine", slug="x-men-origins-wolverine",
+                prerequisites=[late.pk],
+            ),
+        )
+        assert form.is_valid(), form.errors
 
     def test_editing_keeps_position_when_insert_after_is_blank(self, mcu):
         make_entry(mcu, "Iron Man")

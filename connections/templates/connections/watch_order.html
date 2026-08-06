@@ -26,13 +26,35 @@
     overflow-x: auto;
     overflow-y: hidden;
     padding-bottom: 0.5rem;
+    cursor: grab;
+  }
+
+  /* Only while a drag is in progress, so text stays selectable otherwise. */
+  .watch-scroll.is-panning {
+    cursor: grabbing;
+    user-select: none;
+  }
+
+  .watch-scroll.is-panning .watch-tile__frame:hover {
+    transform: none;
+  }
+
+  /* Sized in JS to the scaled canvas, so the scroller knows how far to scroll. */
+  .watch-zoom {
+    width: max-content;
+    min-width: 100%;
+    margin-inline: auto;
   }
 
   .watch-canvas {
     position: relative;
     width: max-content;
-    min-width: 100%;
-    margin-inline: auto;
+    transform-origin: 0 0;
+  }
+
+  .watch-zoom-controls .btn {
+    min-height: 1.75rem;
+    height: 1.75rem;
   }
 
   .watch-arrows {
@@ -54,6 +76,11 @@
     justify-content: center;
     column-gap: var(--column-gap);
     row-gap: var(--row-gap);
+  }
+
+  /* Room for the "continues"/"resumes" stubs drawn at a column's foot and head. */
+  .watch-grid[data-wrapped] {
+    padding-block: 2.25rem;
   }
 
   /* Before the layout script runs, the grid is a plain single column in
@@ -292,7 +319,13 @@
           <span class="watch-track-chip__dot"></span>{{ track.name }}
         </button>
         {% endfor %}
-        <button type="button" class="btn btn-ghost btn-xs ml-auto" data-watch-reset>Reset watched</button>
+        <span class="watch-zoom-controls ml-auto flex items-center gap-1">
+          <button type="button" class="btn btn-ghost btn-xs" data-watch-zoom="out" aria-label="Zoom out">&minus;</button>
+          <span class="text-xs tabular-nums text-base-content/60 w-10 text-center" data-watch-zoom-level>100%</span>
+          <button type="button" class="btn btn-ghost btn-xs" data-watch-zoom="in" aria-label="Zoom in">+</button>
+          <button type="button" class="btn btn-ghost btn-xs" data-watch-zoom="fit">Fit</button>
+        </span>
+        <button type="button" class="btn btn-ghost btn-xs" data-watch-reset>Reset watched</button>
       </div>
     </div>
     {% endif %}
@@ -305,6 +338,7 @@
 
       {% if watch_order_payload.entries %}
       <div class="watch-scroll">
+        <div class="watch-zoom">
         <div class="watch-canvas">
           <svg class="watch-arrows" aria-hidden="true"></svg>
           <div class="watch-grid">
@@ -338,6 +372,7 @@
             </article>
             {% endfor %}
           </div>
+        </div>
         </div>
       </div>
       {% else %}
