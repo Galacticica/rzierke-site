@@ -514,6 +514,36 @@ def long_reach(db):
 
 
 @pytest.fixture
+def two_detours(db):
+    """One lane where two separate long reaches both need the same gutter.
+
+    First Class -> Days of Future Past and Deadpool 2 -> Deadpool 3 each skip
+    over films in between, so both detour out of the column - and drawn on the
+    same line they read as one arrow going nowhere.
+    """
+    from connections.models import WatchEntry, WatchTrack
+
+    fox = WatchTrack.objects.create(name="Fox X-Men", slug="fox", lane_order=0, color="#F97316")
+
+    def add(title, slug):
+        return WatchEntry.objects.create(track=fox, title=title, slug=slug, runtime_minutes=120)
+
+    first_class = add("First Class", "fc")
+    add("Origins Wolverine", "ow")
+    deadpool2 = add("Deadpool 2", "dp2")
+    add("The Last Stand", "ls")
+    wolverine = add("The Wolverine", "tw")
+    dofp = add("Days of Future Past", "dofp")
+    deadpool3 = add("Deadpool 3", "dp3")
+
+    # Two prerequisites each, so the later one holds the entry down the column
+    # and the earlier one becomes a long reach past everything in between.
+    dofp.prerequisites.add(first_class, wolverine)
+    deadpool3.prerequisites.add(deadpool2, dofp)
+    return {"fc": first_class, "dofp": dofp, "dp2": deadpool2, "dp3": deadpool3}
+
+
+@pytest.fixture
 def characters(db):
     """Start—Hub—Finish chain so the shortest path has one intermediate node."""
     from connections.models import Character, Relationship

@@ -43,6 +43,7 @@ function init(payload) {
 	let spots = new Map();
 	let drawnPaths = new Set();
 	let suppressClick = false;
+	let scale = 1;
 
 	buildMarkers(svg, payload.tracks || []);
 
@@ -517,12 +518,15 @@ function init(payload) {
 	function draw() {
 		clearPaths(svg);
 		drawnPaths = new Set();
+		const gutterUse = new Map();
 		if (!visibleEdges.length) {
 			return;
 		}
 
+		// Rects come back multiplied by the zoom, while the SVG draws in the
+		// canvas's own unscaled units, so every measurement is divided back down.
 		const canvasRect = canvas.getBoundingClientRect();
-		const canvasWidth = canvas.scrollWidth;
+		const canvasWidth = canvas.offsetWidth;
 
 		// Which grid cells actually hold a visible tile, so a detour is only taken
 		// when one stands between the two ends of an edge.
@@ -541,13 +545,13 @@ function init(payload) {
 			}
 			const rect = tile.getBoundingClientRect();
 			boxes.set(slug, {
-				top: rect.top - canvasRect.top,
-				bottom: rect.bottom - canvasRect.top,
-				left: rect.left - canvasRect.left,
-				right: rect.right - canvasRect.left,
-				width: rect.width,
-				centerX: rect.left + rect.width / 2 - canvasRect.left,
-				centerY: rect.top + rect.height / 2 - canvasRect.top,
+				top: (rect.top - canvasRect.top) / scale,
+				bottom: (rect.bottom - canvasRect.top) / scale,
+				left: (rect.left - canvasRect.left) / scale,
+				right: (rect.right - canvasRect.left) / scale,
+				width: rect.width / scale,
+				centerX: (rect.left + rect.width / 2 - canvasRect.left) / scale,
+				centerY: (rect.top + rect.height / 2 - canvasRect.top) / scale,
 			});
 		});
 
@@ -618,10 +622,25 @@ function init(payload) {
 			const crossLane =
 				entryBySlug.get(edge.source).lane !== entryBySlug.get(edge.target).lane;
 
+			// Several detours can want the same gutter - the X-Men lane sends both
+			// First Class -> Days of Future Past and Deadpool 2 -> Deadpool 3 down
+			// it - and drawn on the same line they read as one arrow going nowhere.
+			const endsY = to.top - 4;
+			const detours =
+				!(Math.abs(to.centerX - from.centerX) < 1 && endsY > from.bottom && !blocked);
+			let channelX = null;
+			if (detours) {
+				channelX = channelFor(from, to, columnGap, canvasWidth);
+				const key = Math.round(channelX);
+				const used = gutterUse.get(key) || 0;
+				gutterUse.set(key, used + 1);
+				channelX += spacingFor(used) * (channelX > from.centerX ? 1 : -1);
+			}
+
 			append(
 				fragment,
 				makeArrow(
-					buildPath(from, to, index, arrivals.get(edge.target), columnGap, blocked, canvasWidth),
+					buildPath(from, to, index, arrivals.get(edge.target), columnGap, blocked, channelX),
 					color,
 					{
 					width: crossLane ? '2' : edge.kind === 'prerequisite' ? '2.5' : '2',
@@ -766,6 +785,28 @@ function init(payload) {
 		return path;
 	}
 
+	/**
+	 * Which vertical gutter a detour should travel down.
+	 *
+	 * Straight down the same column means there is no natural side to leave from,
+	 * so it goes right. A source in the outermost column has no gutter on that
+	 * side and would be drawn past the edge of the chart, so it leaves via
+	 * whichever side actually has room.
+	 */
+	function channelFor(from, to, columnGap, canvasWidth) {
+		const offset = from.width / 2 + columnGap / 2;
+		const sameColumn = Math.abs(to.centerX - from.centerX) < 1;
+		let direction = sameColumn ? 1 : to.centerX > from.centerX ? 1 : -1;
+
+		if (
+			from.centerX + direction * offset > canvasWidth - 2 ||
+			from.centerX + direction * offset < 2
+		) {
+			direction = -direction;
+		}
+		return clamp(from.centerX + direction * offset, 2, Math.max(2, canvasWidth - 2));
+	}
+
 	/** Straight across from one tile's right edge into the next tile's left edge. */
 	function sidewaysPath(from, to) {
 		const endX = to.left - 4;
@@ -804,7 +845,7 @@ function init(payload) {
 		];
 	}
 
-	function buildPath(from, to, index, arrivalCount, columnGap, blocked = false, canvasWidth = Infinity) {
+	function buildPath(from, to, index, arrivalCount, columnGap, blocked = false, channelX = null) {
 		// Leave room for the arrowhead so its tip lands on the tile, not inside it.
 		const endY = to.top - 4;
 		const sameColumn = Math.abs(to.centerX - from.centerX) < 1;
@@ -831,24 +872,14 @@ function init(payload) {
 		// Travelling up or level (a wrap to the next column) is fine as it stands:
 		// the vertical leg runs through a column gutter, which holds no tiles.
 
-		// Straight down the same column means there is no natural side to leave
-		// from; go right, into the gutter, and come back in at the target.
-		const offset = from.width / 2 + columnGap / 2;
-		let direction = sameColumn ? 1 : to.centerX > from.centerX ? 1 : -1;
-
-		// A source in the outermost column has no gutter on that side, and the
-		// detour would be drawn past the edge of the chart entirely. Leave from
-		// whichever side actually has room.
-		if (from.centerX + direction * offset > canvasWidth - 2 || from.centerX + direction * offset < 2) {
-			direction = -direction;
-		}
-		const channelX = clamp(from.centerX + direction * offset, 2, Math.max(2, canvasWidth - 2));
+		const lane = channelX === null ? channelFor(from, to, columnGap, Infinity) : channelX;
+		const direction = lane > from.centerX ? 1 : -1;
 
 		return roundedPath([
 			{ x: from.centerX, y: from.bottom },
 			{ x: from.centerX, y: exitY },
-			{ x: channelX, y: exitY },
-			{ x: channelX, y: approachY },
+			{ x: lane, y: exitY },
+			{ x: lane, y: approachY },
 			{ x: to.centerX, y: approachY },
 			{ x: to.centerX, y: endY },
 		]);
@@ -920,11 +951,14 @@ function init(payload) {
 			return;
 		}
 
-		// Progress follows the selected collection, not the track chips: hiding a
-		// lane to declutter the view should not change what you have watched.
-		const counted = activeCollection
-			? entries.filter((entry) => entry.collections.includes(activeCollection))
-			: entries;
+		// Counted over exactly what is on screen: both the selected collection and
+		// the track chips narrow it, so the totals always describe the chart you
+		// are actually looking at.
+		const counted = entries.filter(
+			(entry) =>
+				!hiddenTracks.has(entry.track) &&
+				(!activeCollection || entry.collections.includes(activeCollection))
+		);
 
 		const total = counted.length;
 		const done = counted.filter((entry) => watched.has(entry.slug)).length;
@@ -1056,6 +1090,116 @@ function init(payload) {
 		popupSlug = null;
 	}
 
+	// ------------------------------------------------------------------- zoom
+
+	const zoomWrap = chart.querySelector('.watch-zoom');
+	const zoomLabel = document.querySelector('[data-watch-zoom-level]');
+
+	const MAX_SCALE = 2;
+
+	/**
+	 * Smallest scale worth allowing: the one where the chart just fits the width.
+	 *
+	 * Below that the content would no longer fill the canvas and you would be
+	 * zooming out into empty space, so it is the floor. A chart already narrower
+	 * than the view has nothing to gain from zooming out at all, hence the cap at
+	 * 1 - shrinking it further would only add margins.
+	 */
+	function minimumScale() {
+		const scroller = chart.querySelector('.watch-scroll');
+		const natural = canvas.offsetWidth;
+		if (!scroller || !natural) {
+			return 1;
+		}
+		return Math.min(1, scroller.clientWidth / natural);
+	}
+
+	/**
+	 * Rescale the chart, keeping the point under `anchor` where it is on screen.
+	 *
+	 * Returns whether anything actually changed, so the wheel handler can let a
+	 * scroll through instead of swallowing it once a limit is reached.
+	 */
+	function applyZoom(next, anchor = null) {
+		const scroller = chart.querySelector('.watch-scroll');
+		const previous = scale;
+		scale = clamp(next, minimumScale(), MAX_SCALE);
+
+		if (zoomLabel) {
+			zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+		}
+		if (scale === previous) {
+			return false;
+		}
+
+		// Where the anchor sits in the canvas's own unscaled units, before the
+		// rescale moves everything.
+		let held = null;
+		if (anchor && scroller) {
+			const rect = canvas.getBoundingClientRect();
+			held = {
+				x: (anchor.x - rect.left) / previous,
+				y: (anchor.y - rect.top) / previous,
+				screenX: anchor.x,
+				screenY: anchor.y,
+			};
+		}
+
+		canvas.style.transform = scale === 1 ? '' : `scale(${scale})`;
+		// The transform does not affect layout, so the wrapper carries the scaled
+		// size - otherwise the scroller has no idea there is more to scroll to.
+		zoomWrap.style.width = `${canvas.offsetWidth * scale}px`;
+		zoomWrap.style.height = `${canvas.offsetHeight * scale}px`;
+
+		if (held) {
+			const rect = canvas.getBoundingClientRect();
+			scroller.scrollLeft += rect.left + held.x * scale - held.screenX;
+			window.scrollBy(0, rect.top + held.y * scale - held.screenY);
+		}
+
+		requestAnimationFrame(draw);
+		return true;
+	}
+
+	function scrollerCentre() {
+		const scroller = chart.querySelector('.watch-scroll');
+		if (!scroller) {
+			return null;
+		}
+		const rect = scroller.getBoundingClientRect();
+		return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+	}
+
+	document.querySelectorAll('[data-watch-zoom]').forEach((button) => {
+		button.addEventListener('click', () => {
+			const how = button.dataset.watchZoom;
+			if (how === 'fit') {
+				applyZoom(minimumScale());
+			} else {
+				applyZoom(scale * (how === 'in' ? 1.25 : 0.8), scrollerCentre());
+			}
+		});
+	});
+
+	// The wheel zooms while the pointer is over the chart. Once a limit is
+	// reached the event is left alone, so the page scrolls on as usual rather
+	// than the wheel appearing to have stopped working.
+	chart.addEventListener(
+		'wheel',
+		(event) => {
+			const zoomingIn = event.deltaY < 0;
+			const atLimit = zoomingIn
+				? scale >= MAX_SCALE - 0.0001
+				: scale <= minimumScale() + 0.0001;
+			if (atLimit) {
+				return;
+			}
+			event.preventDefault();
+			applyZoom(scale * (zoomingIn ? 1.12 : 0.88), { x: event.clientX, y: event.clientY });
+		},
+		{ passive: false }
+	);
+
 	// ---------------------------------------------------------------- panning
 
 	/**
@@ -1105,7 +1249,13 @@ function init(payload) {
 			suppressClick = false;
 			lastX = event.clientX;
 			lastY = event.clientY;
+
 			vertical = measureVerticalLimits();
+			// Never yank the page on the first move. Zooming changes the chart's
+			// height, so the view can already sit outside the range - widen it to
+			// take in wherever we are, and the clamp only stops it drifting further.
+			vertical.min = Math.min(vertical.min, window.scrollY);
+			vertical.max = Math.max(vertical.max, window.scrollY);
 		});
 
 		window.addEventListener('pointermove', (event) => {
@@ -1192,6 +1342,7 @@ function init(payload) {
 			chip.setAttribute('aria-pressed', String(!nowHidden));
 			closePopup();
 			layout();
+			paintProgress();
 		});
 	});
 
@@ -1268,6 +1419,7 @@ function init(payload) {
 	});
 
 	layout();
+	applyZoom(1);
 	paintWatched();
 	if (authenticated) {
 		syncLocalProgress();
@@ -1342,6 +1494,15 @@ function isBlocked(from, to, occupied) {
 		}
 	}
 	return false;
+}
+
+/** Nudge the nth detour off the gutter's centre line: 0, -7, +7, -14, ... */
+function spacingFor(used) {
+	if (!used) {
+		return 0;
+	}
+	const step = Math.ceil(used / 2) * 7;
+	return used % 2 === 1 ? -step : step;
 }
 
 function edgeKey(edge) {

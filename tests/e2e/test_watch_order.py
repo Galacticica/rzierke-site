@@ -431,7 +431,10 @@ def test_every_converging_arrow_is_drawn(page: Page, live_server, fan_in):
 def incoming_arrow_targets(page: Page):
     """Slugs of tiles that an arrowhead actually lands on."""
     return set(page.evaluate("""() => {
-        const canvas = document.querySelector('.watch-canvas').getBoundingClientRect();
+        const el = document.querySelector('.watch-canvas');
+        const canvas = el.getBoundingClientRect();
+        const t = getComputedStyle(el).transform;
+        const scale = t === 'none' ? 1 : parseFloat(t.split('(')[1].split(',')[0]);
         const heads = [...document.querySelectorAll('.watch-arrow[marker-end]')].map((path) => {
             const point = path.getPointAtLength(path.getTotalLength());
             return { x: point.x, y: point.y };
@@ -440,9 +443,9 @@ def incoming_arrow_targets(page: Page):
         document.querySelectorAll('[data-watch-entry]').forEach((tile) => {
             if (tile.hidden) return;
             const rect = tile.getBoundingClientRect();
-            const top = rect.top - canvas.top;
-            const left = rect.left - canvas.left;
-            const right = rect.right - canvas.left;
+            const top = (rect.top - canvas.top) / scale;
+            const left = (rect.left - canvas.left) / scale;
+            const right = (rect.right - canvas.left) / scale;
             if (heads.some((h) => Math.abs(h.y - top) < 14 && h.x > left - 6 && h.x < right + 6)) {
                 hit.push(tile.dataset.watchEntry);
             }
@@ -918,3 +921,366 @@ def test_no_arrow_escapes_across_lanes(page: Page, live_server, watch_order):
     page.wait_for_timeout(400)
 
     assert arrows_outside_the_canvas(page) == []
+
+
+def zoom_level(page: Page):
+    return page.evaluate("""() => {
+        const t = getComputedStyle(document.querySelector('.watch-canvas')).transform;
+        if (t === 'none') return 1;
+        return parseFloat(t.split('(')[1].split(',')[0]);
+    }""")
+
+
+def test_zoom_in_and_out(page: Page, live_server, netflix_block):
+    page.set_viewport_size({"width": 700, "height": 800})
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    start = zoom_level(page)
+    page.locator('[data-watch-zoom="in"]').click()
+    page.wait_for_timeout(200)
+    assert zoom_level(page) > start
+
+    page.locator('[data-watch-zoom="out"]').click()
+    page.locator('[data-watch-zoom="out"]').click()
+    page.wait_for_timeout(200)
+    assert zoom_level(page) < start
+
+
+def test_cannot_zoom_out_past_the_content(page: Page, live_server, netflix_block):
+    """The floor is the scale where the chart just fills the width.
+
+    Below it you would be zooming out into empty space either side.
+    """
+    page.set_viewport_size({"width": 700, "height": 800})
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    for _ in range(20):
+        page.locator('[data-watch-zoom="out"]').click()
+    page.wait_for_timeout(300)
+
+    fit = page.evaluate("""() => {
+        const s = document.querySelector('.watch-scroll');
+        return Math.min(1, s.clientWidth / document.querySelector('.watch-canvas').offsetWidth);
+    }""")
+    assert zoom_level(page) >= fit - 0.01, f"zoomed below the fit scale: {zoom_level(page)} < {fit}"
+
+
+def test_fit_shows_the_whole_width(page: Page, live_server, netflix_block):
+    page.set_viewport_size({"width": 700, "height": 800})
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    page.locator('[data-watch-zoom="fit"]').click()
+    page.wait_for_timeout(300)
+
+    overflow = page.evaluate("""() => {
+        const s = document.querySelector('.watch-scroll');
+        return s.scrollWidth - s.clientWidth;
+    }""")
+    assert overflow <= 2, f"still {overflow}px of hidden chart after Fit"
+
+
+def test_zoom_is_capped_on_the_way_in(page: Page, live_server, netflix_block):
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    for _ in range(20):
+        page.locator('[data-watch-zoom="in"]').click()
+    page.wait_for_timeout(300)
+
+    assert zoom_level(page) <= 2.01
+
+
+def test_arrows_stay_attached_when_zoomed(page: Page, live_server, netflix_block):
+    """Rects come back scaled; measuring without dividing them back down would
+    scatter every arrow away from its tile."""
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    page.locator('[data-watch-zoom="in"]').click()
+    page.locator('[data-watch-zoom="in"]').click()
+    page.wait_for_timeout(500)
+
+    assert arrows_outside_the_canvas(page) == []
+    assert "defenders" in incoming_arrow_targets(page)
+
+
+def test_the_zoom_level_is_shown(page: Page, live_server, netflix_block):
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    expect(page.locator("[data-watch-zoom-level]")).to_have_text("100%")
+
+
+def test_two_detours_do_not_share_a_line(page: Page, live_server, two_detours):
+    """Both reaches leave the same column, so they must be spaced apart.
+
+    Drawn on the same line they merge into one stroke that appears to go
+    nowhere - which is what makes a chart with two long reaches unreadable.
+    """
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    # The longest straight vertical run of each arrow: its detour gutter.
+    legs = page.evaluate("""() => {
+        const found = [];
+        document.querySelectorAll('.watch-arrow').forEach((path) => {
+            const total = path.getTotalLength();
+            if (total < 150) return;
+            let best = null;
+            let run = null;
+            for (let d = 0; d <= total; d += 3) {
+                const p = path.getPointAtLength(d);
+                if (run && Math.abs(p.x - run.x) < 1) {
+                    run.to = p.y;
+                    continue;
+                }
+                if (run && (!best || Math.abs(run.to - run.from) > Math.abs(best.to - best.from))) {
+                    best = run;
+                }
+                run = { x: p.x, from: p.y, to: p.y };
+            }
+            if (run && (!best || Math.abs(run.to - run.from) > Math.abs(best.to - best.from))) {
+                best = run;
+            }
+            if (best && Math.abs(best.to - best.from) > 150) {
+                found.push(best);
+            }
+        });
+        return found;
+    }""")
+
+    assert len(legs) >= 2, f"expected two long detours, got {legs}"
+
+    for index, first in enumerate(legs):
+        for second in legs[index + 1:]:
+            overlapping = first["from"] < second["to"] and second["from"] < first["to"]
+            if overlapping:
+                assert abs(first["x"] - second["x"]) >= 5, (
+                    f"two detours drawn on the same line at x={first['x']:.0f}"
+                )
+
+
+def test_starting_a_drag_does_not_jump_the_page(page: Page, live_server, netflix_block):
+    """The first move must continue from where you are, not snap into range.
+
+    Zooming changes the chart's height, so the pan limits can already exclude
+    the current scroll position - and clamping to them jumps the view.
+    """
+    page.set_viewport_size({"width": 900, "height": 500})
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    page.locator('[data-watch-zoom="out"]').click()
+    page.locator('[data-watch-zoom="out"]').click()
+    page.wait_for_timeout(300)
+
+    # Sit above the chart, where the clamp used to snap from.
+    page.evaluate("() => window.scrollTo(0, 0)")
+    page.wait_for_timeout(200)
+    before = page.evaluate("() => window.scrollY")
+
+    box = page.locator(".watch-scroll").bounding_box()
+    page.mouse.move(box["x"] + 40, box["y"] + 40)
+    page.mouse.down()
+    page.mouse.move(box["x"] + 40, box["y"] + 28, steps=4)
+    page.mouse.up()
+
+    after = page.evaluate("() => window.scrollY")
+    assert abs(after - before) < 60, f"the page jumped from {before} to {after}"
+
+
+def test_a_drag_still_stops_at_the_chart_edge_after_zooming(page: Page, live_server, netflix_block):
+    """Widening the range must not disable the clamp altogether."""
+    page.set_viewport_size({"width": 900, "height": 500})
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    page.locator('[data-watch-zoom="out"]').click()
+    page.wait_for_timeout(300)
+
+    box = page.locator(".watch-scroll").bounding_box()
+    for _ in range(6):
+        drag(page, box["x"] + 30, box["y"] + box["height"] - 10, box["x"] + 30, box["y"] - 400)
+
+    still_showing = page.evaluate("""() => {
+        const r = document.getElementById('watch-order-chart').getBoundingClientRect();
+        return r.bottom > 0 && r.top < window.innerHeight;
+    }""")
+    assert still_showing, "the chart was dragged out of view"
+
+
+def wheel_over_chart(page: Page, delta):
+    """Wheel over a point that is inside the chart *and* inside the viewport.
+
+    The chart is routinely taller than the window, so its centre is often off
+    screen and a wheel aimed there lands on nothing.
+    """
+    box = page.locator(".watch-scroll").bounding_box()
+    size = page.viewport_size
+    x = min(max(box["x"] + box["width"] / 2, 5), size["width"] - 5)
+    y = min(max(box["y"] + 40, 5), size["height"] - 5)
+    page.mouse.move(x, y)
+    page.mouse.wheel(0, delta)
+    page.wait_for_timeout(250)
+
+
+def test_the_wheel_zooms_over_the_chart(page: Page, live_server, netflix_block):
+    page.set_viewport_size({"width": 700, "height": 800})
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    start = zoom_level(page)
+    wheel_over_chart(page, -120)
+    assert zoom_level(page) > start
+
+    wheel_over_chart(page, 120)
+    wheel_over_chart(page, 120)
+    assert zoom_level(page) < start
+
+
+def test_the_wheel_cannot_zoom_below_the_fit(page: Page, live_server, netflix_block):
+    page.set_viewport_size({"width": 700, "height": 800})
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    for _ in range(25):
+        wheel_over_chart(page, 120)
+
+    fit = page.evaluate("""() => {
+        const s = document.querySelector('.watch-scroll');
+        return Math.min(1, s.clientWidth / document.querySelector('.watch-canvas').offsetWidth);
+    }""")
+    assert zoom_level(page) >= fit - 0.01
+
+
+def test_the_wheel_scrolls_the_page_once_zoom_bottoms_out(page: Page, live_server, netflix_block):
+    """Swallowing the wheel at the limit would leave the page unscrollable."""
+    page.set_viewport_size({"width": 700, "height": 500})
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    page.locator('[data-watch-zoom="fit"]').click()
+    page.wait_for_timeout(300)
+    before = page.evaluate("() => window.scrollY")
+
+    wheel_over_chart(page, 200)
+    wheel_over_chart(page, 200)
+
+    assert page.evaluate("() => window.scrollY") > before, "the wheel stopped scrolling the page"
+
+
+def test_the_wheel_scrolls_the_page_once_zoom_tops_out(page: Page, live_server, netflix_block):
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    for _ in range(12):
+        wheel_over_chart(page, -120)
+    assert zoom_level(page) >= 1.99
+
+    page.evaluate("() => window.scrollTo(0, 200)")
+    page.wait_for_timeout(150)
+    before = page.evaluate("() => window.scrollY")
+    wheel_over_chart(page, -200)
+
+    assert page.evaluate("() => window.scrollY") != before or before == 0
+
+
+def test_zooming_keeps_the_point_under_the_cursor(page: Page, live_server, netflix_block):
+    """Zoom should grow around the cursor, not fling the chart across the view."""
+    page.set_viewport_size({"width": 700, "height": 800})
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    page.wait_for_timeout(400)
+
+    tile = page.locator('[data-watch-entry="jj-s1"]')
+    tile.scroll_into_view_if_needed()
+    page.wait_for_timeout(200)
+    before = tile.bounding_box()
+
+    page.mouse.move(before["x"] + before["width"] / 2, before["y"] + before["height"] / 2)
+    page.mouse.wheel(0, -120)
+    page.wait_for_timeout(400)
+
+    after = tile.bounding_box()
+    moved = abs(
+        (after["x"] + after["width"] / 2) - (before["x"] + before["width"] / 2)
+    )
+    assert moved < 40, f"the tile under the cursor slid {moved:.0f}px"
+
+
+def test_hiding_a_track_updates_the_counter(page: Page, live_server, watch_order):
+    """The totals describe the chart on screen, chips included."""
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    expect(page.locator("[data-watch-progress-count]")).to_have_text("0 / 6 watched")
+
+    page.locator('[data-watch-track="fox-x-men"]').click()
+
+    # The three X-Men entries drop out of the count.
+    expect(page.locator("[data-watch-progress-count]")).to_have_text("0 / 3 watched")
+
+
+def test_hiding_a_track_updates_the_hours_left(page: Page, live_server, watch_order):
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+    expect(page.locator("[data-watch-progress-remaining]")).to_have_text("13 hrs left")
+
+    page.locator('[data-watch-track="fox-x-men"]').click()
+
+    # 126 + 143 + 150 = 419 minutes -> 7 hours.
+    expect(page.locator("[data-watch-progress-remaining]")).to_have_text("7 hrs left")
+
+
+def test_showing_a_track_again_restores_the_counter(page: Page, live_server, watch_order):
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+
+    chip = page.locator('[data-watch-track="fox-x-men"]')
+    chip.click()
+    expect(page.locator("[data-watch-progress-count]")).to_have_text("0 / 3 watched")
+
+    chip.click()
+    expect(page.locator("[data-watch-progress-count]")).to_have_text("0 / 6 watched")
+
+
+def test_watching_something_in_a_hidden_track_is_not_counted(page: Page, live_server, watch_order):
+    """A tick still stands; it just is not part of the visible total."""
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+
+    page.locator('[data-watch-entry="x-men"] [data-watch-toggle]').click()
+    expect(page.locator("[data-watch-progress-count]")).to_have_text("1 / 6 watched")
+
+    page.locator('[data-watch-track="fox-x-men"]').click()
+    expect(page.locator("[data-watch-progress-count]")).to_have_text("0 / 3 watched")
+
+    page.locator('[data-watch-track="fox-x-men"]').click()
+    expect(page.locator("[data-watch-progress-count]")).to_have_text("1 / 6 watched")
+
+
+def test_chips_and_a_collection_narrow_together(page: Page, live_server, watch_order):
+    page.goto(live_server.url + WATCH_URL)
+    expect(page.locator(".watch-grid[data-laid-out]")).to_be_visible(timeout=20000)
+
+    select_collection(page, "doomsday-prep")
+    expect(page.locator("[data-watch-progress-count]")).to_have_text("0 / 2 watched")
+
+    # Both Doomsday Prep entries are in the MCU lane, so hiding it empties the count.
+    page.locator('[data-watch-track="mcu"]').click()
+    expect(page.locator("[data-watch-progress-count]")).to_have_text("0 / 0 watched")
