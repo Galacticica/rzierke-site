@@ -1,0 +1,63 @@
+<!--
+file: qr_code.html
+Author: Reagan Zierke
+Description: QR code generator page. The whole tool runs in the browser
+             (static/src/qr.js); the server only renders this shell.
+-->
+
+{% extends 'base.html' %}
+
+{% block title %}
+<title>QR Code Generator</title>
+{% endblock %}
+
+{% block content %}
+<section class="mx-auto w-full max-w-6xl px-4 py-10">
+    <div class="mb-6 flex items-center justify-between">
+        <a href="{% url 'dev-project-list' %}" class="btn btn-ghost btn-sm">← Back</a>
+    </div>
+
+    <h1 class="text-3xl font-bold tracking-tight mb-8">QR Code Generator</h1>
+
+    <div class="mx-auto w-full max-w-xl rounded-2xl border border-base-300/60 bg-base-100 p-7 shadow-sm">
+        <label class="label-text" for="qr-input">Link</label>
+        <input
+            id="qr-input"
+            type="url"
+            class="input input-bordered w-full mt-1"
+            placeholder="https://example.com"
+            autocomplete="off"
+            spellcheck="false">
+        <p id="qr-error" class="text-error text-sm mt-2 min-h-5" role="alert"></p>
+
+        <div id="qr-stage" class="mt-4 flex flex-col items-center gap-6">
+            <canvas id="qr-canvas" width="1024" height="1024" hidden></canvas>
+            <div id="qr-placeholder" class="text-base-content/60 text-sm">
+                Paste a link to generate a QR code
+            </div>
+            <button id="qr-download" class="btn btn-primary w-full" disabled>Download PNG</button>
+        </div>
+    </div>
+</section>
+
+<style>
+    /* An explicit `display` beats the [hidden] attribute, so restore it. */
+    #qr-canvas[hidden], #qr-placeholder[hidden] { display: none; }
+    /* Display width is set in qr.js, which has to beat the library's inline style. */
+    #qr-canvas {
+        display: block;
+        max-width: 100%;
+        border-radius: 0.5rem;
+    }
+    #qr-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 320px;
+        max-width: 100%;
+        aspect-ratio: 1 / 1;
+        border: 1px dashed var(--color-base-300, rgba(127, 127, 127, 0.4));
+        border-radius: 0.5rem;
+    }
+</style>
+{% endblock %}

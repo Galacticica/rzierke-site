@@ -88,3 +88,10 @@ class TestBotGraveyardView:
         assert styles[:8] == [f"style-{n}" for n in range(1, 9)]
         # The ninth bot wraps back around to style-1.
         assert styles[8] == "style-1"
+
+
+class TestQRCodeView:
+    def test_returns_200_with_template(self, client):
+        response = client.get(reverse("dev-qr-code"))
+        assert response.status_code == 200
+        assert "development_portfolio/qr_code.html" in [t.name for t in response.templates]

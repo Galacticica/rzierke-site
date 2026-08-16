@@ -221,6 +221,13 @@ class WheelView(View):
         return render(request, "development_portfolio/wheel.html", context)
 
 
+class QRCodeView(View):
+    """QR code generator page. Runs entirely in the browser; nothing is stored."""
+
+    def get(self, request):
+        return render(request, "development_portfolio/qr_code.html")
+
+
 class WheelLoadView(View):
     """Return the controls partial populated with one of the user's saved wheels."""
 

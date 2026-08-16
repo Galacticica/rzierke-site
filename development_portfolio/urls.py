@@ -18,6 +18,7 @@ urlpatterns = [
     path('strudel-projects/<int:project_id>/', views.StrudelProjectDetailView.as_view(), name='strudel-project-detail'),
     path('strudel-projects/save/', views.StrudelProjectSaveView.as_view(), name='strudel-project-save'),
     path('wheel/', views.WheelView.as_view(), name='dev-wheel'),
+    path('qr-code/', views.QRCodeView.as_view(), name='dev-qr-code'),
     path('wheels/load/', views.WheelLoadView.as_view(), name='wheel-load'),
     path('wheels/save/', views.WheelSaveView.as_view(), name='wheel-save'),
     path('wheels/delete/', views.WheelDeleteView.as_view(), name='wheel-delete'),

@@ -7,3 +7,7 @@ if (document.getElementById('mcu-graph')) {
 if (document.getElementById('watch-order-chart')) {
 	import('./watch-order');
 }
+
+if (document.getElementById('qr-canvas')) {
+	import('./qr');
+}
