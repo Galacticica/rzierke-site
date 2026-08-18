@@ -1140,9 +1140,9 @@
 - [ ] Spider-Man: Beyond the Spider-Verse (2027)
 
 ## X-Men
-- [ ] X-Men (2000)
-- [ ] X2: X-Men United (2003)
-- [ ] X-Men: The Last Stand (2006)
+- [x] X-Men (2000)
+- [x] X2: X-Men United (2003)
+- [x] X-Men: The Last Stand (2006)
 - [ ] X-Men Origins: Wolverine (2009)
 - [ ] X-Men: First Class (2011)
 - [ ] The Wolverine (2013)
