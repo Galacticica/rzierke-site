@@ -29,20 +29,7 @@
 - [x] Captain Marvel (2019)
 - [x] Avengers: Endgame (2019)
 - [x] Spider-Man: Far From Home (2019)
-- [ ] WandaVision (2021)
-    - <details> <summary>Season 1</summary>
-
-        - [ ] Episode 1
-        - [ ] Episode 2
-        - [ ] Episode 3
-        - [ ] Episode 4
-        - [ ] Episode 5
-        - [ ] Episode 6
-        - [ ] Episode 7
-        - [ ] Episode 8
-        - [ ] Episode 9
-
-        </details>
+- [x] WandaVision (2021)
 - [ ] The Falcon and the Winter Soldier (2021)
     - <details> <summary>Season 1</summary>
 
@@ -158,7 +145,7 @@
         - [ ] Episode 6
 
         </details>
-- [ ] Doctor Strange in the Multiverse of Madness (2022)
+- [x] Doctor Strange in the Multiverse of Madness (2022)
 - [ ] Ms. Marvel (2022)
     - <details> <summary>Season 1</summary>
 
@@ -282,7 +269,7 @@
 
         </details>
 - [ ] The Punisher: One Last Kill (2026)
-- [ ] Spider-Man: Brand New Day (2026)
+- [x] Spider-Man: Brand New Day (2026)
 - [ ] VisionQuest (2026)
 - [ ] Avengers: Doomsday (2026)
 - [ ] Avengers: Secret Wars (2027)
